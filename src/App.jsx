@@ -296,6 +296,8 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
 function FormContratto({ onSave, onBack }) {
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
+  const [customMode, setCustomMode] = useState(false)
+  const [customText, setCustomText] = useState('')
   const [form, setForm] = useState({
     categoria: '', fornitore: '', intestatario: '', codice: '',
     metodo_ricezione: 'email', domiciliazione: false, data_inizio: '', note: '',
@@ -346,8 +348,6 @@ function FormContratto({ onSave, onBack }) {
   if (step === 1) {
     const catInfo = CATEGORIE.find(c => c.id === form.categoria)
     const fornitori = FORNITORI[form.categoria] || []
-    const [customMode, setCustomMode] = useState(catInfo?.freeText || false)
-    const [customText, setCustomText] = useState('')
 
     if (catInfo?.freeText || customMode) {
       return (

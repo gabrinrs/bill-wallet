@@ -634,6 +634,21 @@ export default function App() {
   const [screen, setScreen] = useState('dashboard')
   const [selectedContrattoId, setSelectedContrattoId] = useState(null)
 
+  // Se supabase non è configurato, mostra errore
+  if (!supabase) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-red-200 p-6 max-w-sm text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="text-red-600" size={32} />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 mb-2">Configurazione mancante</h2>
+          <p className="text-sm text-gray-600">Le variabili d'ambiente di Supabase non sono configurate. Controlla VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY nelle impostazioni di Vercel.</p>
+        </div>
+      </div>
+    )
+  }
+
   // Auth listener
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {

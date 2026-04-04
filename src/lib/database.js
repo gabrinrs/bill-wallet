@@ -47,6 +47,13 @@ export async function updateContratto(id, updates) {
   return data
 }
 
+export async function deleteContratto(id) {
+  // Prima elimina le bollette collegate
+  await supabase.from('bollette').delete().eq('contratto_id', id)
+  const { error } = await supabase.from('contratti').delete().eq('id', id)
+  if (error) throw error
+}
+
 // ============================================================
 // BOLLETTE
 // ============================================================
@@ -79,6 +86,11 @@ export async function createBolletta(bolletta) {
     .single()
   if (error) throw error
   return data
+}
+
+export async function deleteBolletta(id) {
+  const { error } = await supabase.from('bollette').delete().eq('id', id)
+  if (error) throw error
 }
 
 export async function togglePagata(id, pagata) {

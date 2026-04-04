@@ -26,4 +26,34 @@ export const FORNITORI = {
   altro: [],
 }
 
+export const PORTALI_PAGAMENTO = {
+  'Enel Energia': 'https://www.enel.it/area-clienti',
+  'Edison': 'https://www.edison.it/area-clienti',
+  'A2A': 'https://www.a2a.it/area-clienti',
+  'Iren': 'https://www.irenlucegas.it/area-riservata',
+  'Hera': 'https://www.gruppohera.it/clienti',
+  'ENI Plenitude': 'https://eniplenitude.com/area-clienti',
+  'Acquedotto Pugliese': 'https://www.aqp.it/area-clienti',
+  'MM Milano': 'https://www.metropolitanamilanese.it/area-clienti',
+  'ACEA': 'https://www.acea.it/area-clienti',
+  'TIM': 'https://www.tim.it/area-clienti',
+  'Vodafone': 'https://www.vodafone.it/area-personale',
+  'WindTre': 'https://www.windtre.it/area-clienti',
+  'Iliad': 'https://www.iliad.it/account',
+  'Fastweb': 'https://www.fastweb.it/myfastweb',
+  'Sky WiFi': 'https://www.sky.it/mysky',
+  'UnipolSai': 'https://www.unipolsai.it/area-riservata',
+  'Allianz': 'https://www.allianz.it/area-clienti',
+  'Generali': 'https://www.generali.it/area-clienti',
+  'AXA': 'https://www.axa.it/area-clienti',
+  'Zurich': 'https://www.zurich.it/area-clienti',
+  'Netflix': 'https://www.netflix.com/account',
+  'Spotify': 'https://www.spotify.com/account',
+  'Amazon Prime': 'https://www.amazon.it/gp/primecentral',
+  'Disney+': 'https://www.disneyplus.com/account',
+  'DAZN': 'https://www.dazn.com/account',
+  'YouTube Premium': 'https://www.youtube.com/paid_memberships',
+  'Apple One': 'https://appleid.apple.com/account/manage',
+}
+
 export const getCategoria = (id) => CATEGORIE.find(c => c.id === id) || CATEGORIE[CATEGORIE.length - 1]

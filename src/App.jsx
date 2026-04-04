@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from './lib/supabase'
-import { getContratti, getBollette, createContratto, createBolletta, togglePagata } from './lib/database'
-import { CATEGORIE, FORNITORI, getCategoria } from './lib/categorie'
+import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta } from './lib/database'
+import { CATEGORIE, FORNITORI, getCategoria, PORTALI_PAGAMENTO } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import Auth from './components/Auth'
 import {
   Home, Plus, Bell, ChevronLeft, ChevronRight, Upload, Check,
   AlertTriangle, Zap, Flame, Droplets, Phone, Wifi, Shield, Package,
-  TrendingUp, Calendar, Repeat, Tv, CreditCard, Landmark, PenLine, LogOut, Loader2
+  TrendingUp, Calendar, Repeat, Tv, CreditCard, Landmark, PenLine, LogOut, Loader2,
+  Trash2, ExternalLink, Pencil
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -159,9 +160,6 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-gray-900">I tuoi contratti</h2>
-          <button onClick={() => onNavigate('aggiungi-contratto')} className="flex items-center gap-1 text-sm font-medium text-blue-600">
-            <Plus size={16} /> Aggiungi
-          </button>
         </div>
         <div className="space-y-2">
           {contratti.map(c => {
@@ -202,23 +200,54 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
 // DETTAGLIO CONTRATTO
 // ============================================================
 
-function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, onTogglePagata }) {
+function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, onTogglePagata, onDeleteContratto, onEditContratto, onDeleteBolletta }) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deletingBollettaId, setDeletingBollettaId] = useState(null)
   const bolletteOrdinate = useMemo(() => [...bollette].sort((a, b) => new Date(b.periodo) - new Date(a.periodo)), [bollette])
   const chartData = useMemo(() =>
     [...bollette].sort((a, b) => new Date(a.periodo) - new Date(b.periodo)).map(b => ({ periodo: formatPeriodo(b.periodo), importo: Number(b.importo) }))
   , [bollette])
   const cat = getCategoria(contratto.categoria)
+  const portaleUrl = PORTALI_PAGAMENTO[contratto.fornitore]
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-600" /></button>
         <CategoriaIcon categoriaId={contratto.categoria} />
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold text-gray-900">{contratto.fornitore}</h1>
           <p className="text-sm text-gray-500">{cat.label}{contratto.codice ? ` · ${contratto.codice}` : ''}</p>
         </div>
+        <button onClick={() => onEditContratto(contratto)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400"><Pencil size={18} /></button>
+        <button onClick={() => setShowDeleteConfirm(true)} className="p-2 rounded-xl hover:bg-red-50 text-gray-400"><Trash2 size={18} /></button>
       </div>
+
+      {showDeleteConfirm && (
+        <Card className="p-4 border-red-200 bg-red-50">
+          <p className="font-medium text-red-800 mb-1">Eliminare questo contratto?</p>
+          <p className="text-sm text-red-600 mb-3">Verranno eliminate anche tutte le bollette collegate. Questa azione non si può annullare.</p>
+          <div className="flex gap-2">
+            <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2 rounded-xl border border-gray-300 text-sm font-medium text-gray-700">Annulla</button>
+            <button onClick={() => onDeleteContratto(contratto.id)} className="flex-1 py-2 rounded-xl bg-red-600 text-white text-sm font-medium">Elimina</button>
+          </div>
+        </Card>
+      )}
+
+      {!contratto.domiciliazione && portaleUrl && (
+        <a href={portaleUrl} target="_blank" rel="noopener noreferrer" className="block">
+          <Card className="p-4 bg-blue-50 border-blue-200">
+            <div className="flex items-center gap-3">
+              <ExternalLink size={20} className="text-blue-600" />
+              <div className="flex-1">
+                <p className="font-medium text-blue-800">Vai al portale per pagare</p>
+                <p className="text-xs text-blue-600 mt-0.5">Apri l'area clienti di {contratto.fornitore}</p>
+              </div>
+              <ChevronRight size={18} className="text-blue-400" />
+            </div>
+          </Card>
+        </a>
+      )}
 
       <Card className="p-4 space-y-3">
         <div className="grid grid-cols-2 gap-3 text-sm">
@@ -275,6 +304,16 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
                     {!b.pagata && (
                       <button onClick={e => { e.stopPropagation(); onTogglePagata(b.id) }} className="p-1.5 rounded-lg hover:bg-green-50 text-green-600" title="Segna come pagata">
                         <Check size={18} />
+                      </button>
+                    )}
+                    {deletingBollettaId === b.id ? (
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setDeletingBollettaId(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 text-xs">No</button>
+                        <button onClick={() => { onDeleteBolletta(b.id); setDeletingBollettaId(null) }} className="p-1.5 rounded-lg bg-red-100 text-red-600 text-xs font-medium">Elimina</button>
+                      </div>
+                    ) : (
+                      <button onClick={e => { e.stopPropagation(); setDeletingBollettaId(b.id) }} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300" title="Elimina bolletta">
+                        <Trash2 size={15} />
                       </button>
                     )}
                   </div>
@@ -667,6 +706,125 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
 }
 
 // ============================================================
+// FORM MODIFICA CONTRATTO
+// ============================================================
+
+function FormModificaContratto({ contratto, onSave, onBack }) {
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({
+    categoria: contratto.categoria || '',
+    fornitore: contratto.fornitore || '',
+    intestatario: contratto.intestatario || '',
+    codice: contratto.codice || '',
+    metodo_ricezione: contratto.metodo_ricezione || 'email',
+    domiciliazione: contratto.domiciliazione || false,
+    data_inizio: contratto.data_inizio || '',
+    note: contratto.note || '',
+    ricorrente: contratto.ricorrente || false,
+    importo_ricorrente: contratto.importo_ricorrente || '',
+    frequenza: contratto.frequenza || 'mensile',
+    prossimo_addebito: contratto.prossimo_addebito || '',
+  })
+  const update = (f, v) => setForm(p => ({ ...p, [f]: v }))
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const data = { ...form }
+      if (data.ricorrente) data.importo_ricorrente = parseFloat(data.importo_ricorrente)
+      else { delete data.importo_ricorrente; delete data.frequenza; delete data.prossimo_addebito }
+      await onSave(data)
+    } catch (e) { console.error(e) }
+    setSaving(false)
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-600" /></button>
+        <h1 className="text-xl font-bold text-gray-900">Modifica contratto</h1>
+      </div>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Fornitore</label>
+          <input type="text" value={form.fornitore} onChange={e => update('fornitore', e.target.value)} placeholder="Nome fornitore"
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Intestatario</label>
+          <input type="text" value={form.intestatario} onChange={e => update('intestatario', e.target.value)} placeholder="Nome e cognome"
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Codice cliente / N° contratto</label>
+          <input type="text" value={form.codice} onChange={e => update('codice', e.target.value)} placeholder="Opzionale"
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Ricezione bollette</label>
+          <div className="flex gap-2">
+            {['email', 'portale', 'cartaceo'].map(m => (
+              <button key={m} onClick={() => update('metodo_ricezione', m)}
+                className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${form.metodo_ricezione === m ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-200 text-gray-600'}`}>
+                {m.charAt(0).toUpperCase() + m.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium text-gray-700">Domiciliazione bancaria</label>
+          <button onClick={() => update('domiciliazione', !form.domiciliazione)} className={`w-12 h-7 rounded-full transition-colors ${form.domiciliazione ? 'bg-blue-500' : 'bg-gray-300'}`}>
+            <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${form.domiciliazione ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Data inizio</label>
+          <input type="date" value={form.data_inizio} onChange={e => update('data_inizio', e.target.value)}
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900"
+            style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+        </div>
+        <div className="pt-2 border-t border-gray-100">
+          <div className="flex items-center justify-between">
+            <div><label className="text-sm font-medium text-gray-700">Importo fisso ricorrente</label><p className="text-xs text-gray-400 mt-0.5">Per abbonamenti e spese a importo fisso</p></div>
+            <button onClick={() => update('ricorrente', !form.ricorrente)} className={`w-12 h-7 rounded-full transition-colors ${form.ricorrente ? 'bg-pink-500' : 'bg-gray-300'}`}>
+              <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${form.ricorrente ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+          {form.ricorrente && (
+            <div className="mt-3 space-y-3 p-3 bg-pink-50 rounded-xl">
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Importo (€)</label>
+                <input type="number" step="0.01" value={form.importo_ricorrente} onChange={e => update('importo_ricorrente', e.target.value)} placeholder="es. 13.99"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none" />
+              </div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Frequenza</label>
+                <div className="flex gap-2">
+                  {[{ id: 'mensile', l: 'Mensile' }, { id: 'trimestrale', l: 'Trimestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
+                    <button key={f.id} onClick={() => update('frequenza', f.id)}
+                      className={`flex-1 py-2 rounded-xl text-sm font-medium border ${form.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
+                  ))}
+                </div>
+              </div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Prossimo addebito</label>
+                <input type="date" value={form.prossimo_addebito} onChange={e => update('prossimo_addebito', e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none bg-white text-gray-900"
+                  style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+              </div>
+            </div>
+          )}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
+          <textarea value={form.note} onChange={e => update('note', e.target.value)} rows={2} placeholder="Opzionale"
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none" />
+        </div>
+      </div>
+      <button onClick={handleSave} disabled={saving || !form.fornitore}
+        className="w-full py-3 bg-blue-600 text-white font-semibold rounded-xl disabled:opacity-40">{saving ? 'Salvataggio...' : 'Salva modifiche'}</button>
+    </div>
+  )
+}
+
+// ============================================================
 // NOTIFICHE (calcolate lato client)
 // ============================================================
 
@@ -721,6 +879,7 @@ export default function App() {
   const [bollette, setBollette] = useState([])
   const [screen, setScreen] = useState('dashboard')
   const [selectedContrattoId, setSelectedContrattoId] = useState(null)
+  const [editingContratto, setEditingContratto] = useState(null)
 
   // Se supabase non è configurato, mostra errore
   if (!supabase) {
@@ -793,6 +952,30 @@ export default function App() {
     setScreen(selectedContrattoId ? 'dettaglio' : 'dashboard')
   }
 
+  const handleDeleteContratto = async (id) => {
+    await deleteContratto(id)
+    await loadData()
+    setScreen('dashboard')
+  }
+
+  const handleEditContratto = (contratto) => {
+    setEditingContratto(contratto)
+    setScreen('modifica-contratto')
+  }
+
+  const handleUpdateContratto = async (form) => {
+    await updateContratto(editingContratto.id, form)
+    await loadData()
+    setSelectedContrattoId(editingContratto.id)
+    setEditingContratto(null)
+    setScreen('dettaglio')
+  }
+
+  const handleDeleteBolletta = async (id) => {
+    await deleteBolletta(id)
+    await loadData()
+  }
+
   const handleTogglePagata = async (id) => {
     await togglePagata(id, true)
     await loadData()
@@ -806,7 +989,7 @@ export default function App() {
       case 'dettaglio': {
         const c = contratti.find(x => x.id === selectedContrattoId)
         if (!c) { setScreen('dashboard'); return null }
-        return <DettaglioContratto contratto={c} bollette={bollette.filter(b => b.contratto_id === c.id)} onBack={() => setScreen('dashboard')} onAggiungiBolletta={() => setScreen('aggiungi-bolletta')} onTogglePagata={handleTogglePagata} />
+        return <DettaglioContratto contratto={c} bollette={bollette.filter(b => b.contratto_id === c.id)} onBack={() => setScreen('dashboard')} onAggiungiBolletta={() => setScreen('aggiungi-bolletta')} onTogglePagata={handleTogglePagata} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteBolletta={handleDeleteBolletta} />
       }
       case 'aggiungi':
         return (
@@ -829,6 +1012,7 @@ export default function App() {
           </div>
         )
       case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => setScreen('aggiungi')} />
+      case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} /> : null
       case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} />
       case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} />
       default: return null

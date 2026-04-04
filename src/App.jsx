@@ -529,26 +529,99 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
         </Card>
       )}
 
-      {mode !== 'pdf' && (
-        <>
-          <div className="space-y-4">
-            {mode === 'contratto' && !contrattoId && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contratto</label>
-                <select value={form.contratto_id} onChange={e => update('contratto_id', e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white">
-                  {contratti.map(c => <option key={c.id} value={c.id}>{c.fornitore} ({getCategoria(c.categoria).label})</option>)}
-                </select>
-              </div>
+      {mode === 'contratto' && !contrattoId && !form.contratto_id && (
+        contratti.length === 0 ? (
+          <Card className="p-6 text-center">
+            <Package size={32} className="text-gray-300 mx-auto mb-3" />
+            <p className="font-medium text-gray-700">Nessun contratto ancora</p>
+            <p className="text-sm text-gray-400 mt-1">Crea prima un contratto dalla sezione "Nuovo contratto", poi potrai aggiungere bollette qui.</p>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm text-gray-500">Seleziona il contratto</p>
+            {contratti.map(c => (
+              <Card key={c.id} className="p-4" onClick={() => update('contratto_id', c.id)}>
+                <div className="flex items-center gap-3">
+                  <CategoriaIcon categoriaId={c.categoria} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900">{c.fornitore}</p>
+                    <p className="text-sm text-gray-500">{getCategoria(c.categoria).label}</p>
+                  </div>
+                  <ChevronRight size={18} className="text-gray-400" />
+                </div>
+              </Card>
+            ))}
+          </div>
+        )
+      )}
+
+      {mode === 'contratto' && (contrattoId || form.contratto_id) && (() => {
+        const selContratto = contratti.find(c => c.id === (contrattoId || Number(form.contratto_id)))
+        return (
+          <>
+            {!contrattoId && (
+              <Card className="p-4 border-blue-200 bg-blue-50" onClick={() => update('contratto_id', '')}>
+                <div className="flex items-center gap-3">
+                  <CategoriaIcon categoriaId={selContratto?.categoria} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900">{selContratto?.fornitore}</p>
+                    <p className="text-sm text-blue-600">Tocca per cambiare</p>
+                  </div>
+                </div>
+              </Card>
             )}
-            {mode === 'libero' && (
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione pagamento</label>
-                <input type="text" value={form.descrizione_libera} onChange={e => update('descrizione_libera', e.target.value)}
-                  placeholder="Scrivi cosa devi pagare, es. Rata frigorifero, Bollo auto..." autoFocus
+                <label className="block text-sm font-medium text-gray-700 mb-1">Importo (€)</label>
+                <input type="number" step="0.01" value={form.importo} onChange={e => update('importo', e.target.value)} placeholder="0.00"
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
               </div>
-            )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Periodo di competenza</label>
+                <input type="month" value={form.periodo} onChange={e => update('periodo', e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900"
+                  style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Emissione</label>
+                  <input type="date" value={form.emissione} onChange={e => update('emissione', e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900"
+                    style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+                </div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Scadenza</label>
+                  <input type="date" value={form.scadenza} onChange={e => update('scadenza', e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900"
+                    style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Metodo di pagamento</label>
+                <div className="flex gap-2">
+                  {[{ id: 'rid', l: 'RID' }, { id: 'bollettino', l: 'Bollettino' }, { id: 'manuale', l: 'Manuale' }].map(m => (
+                    <button key={m.id} onClick={() => update('metodo_pagamento', m.id)}
+                      className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${form.metodo_pagamento === m.id ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-200 text-gray-600'}`}>
+                      {m.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <button onClick={handleSave}
+              disabled={saving || !form.importo || !form.scadenza}
+              className="w-full py-3 bg-blue-600 text-white font-semibold rounded-xl disabled:opacity-40">{saving ? 'Salvataggio...' : 'Salva bolletta'}</button>
+          </>
+        )
+      })()}
+
+      {mode === 'libero' && (
+        <>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione pagamento</label>
+              <input type="text" value={form.descrizione_libera} onChange={e => update('descrizione_libera', e.target.value)}
+                placeholder="Scrivi cosa devi pagare, es. Rata frigorifero, Bollo auto..." autoFocus
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Importo (€)</label>
               <input type="number" step="0.01" value={form.importo} onChange={e => update('importo', e.target.value)} placeholder="0.00"
@@ -585,7 +658,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
             </div>
           </div>
           <button onClick={handleSave}
-            disabled={saving || !form.importo || !form.scadenza || (mode === 'libero' && !form.descrizione_libera.trim()) || (mode === 'contratto' && !form.contratto_id)}
+            disabled={saving || !form.importo || !form.scadenza || !form.descrizione_libera.trim()}
             className="w-full py-3 bg-blue-600 text-white font-semibold rounded-xl disabled:opacity-40">{saving ? 'Salvataggio...' : 'Salva bolletta'}</button>
         </>
       )}

@@ -329,7 +329,7 @@ function FormContratto({ onSave, onBack }) {
           {CATEGORIE.map(cat => {
             const Icon = IconMap[cat.icon] || Package
             return (
-              <Card key={cat.id} className="p-4 text-center" onClick={() => { update('categoria', cat.id); setStep(1) }}>
+              <Card key={cat.id} className="p-4 text-center" onClick={() => { update('categoria', cat.id); setCustomMode(cat.freeText || false); setCustomText(''); setStep(1) }}>
                 <div className="flex flex-col items-center gap-2">
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
                     <Icon size={24} style={{ color: cat.color }} />
@@ -479,7 +479,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     contratto_id: contrattoId || (contratti[0]?.id || ''),
-    importo: '', periodo: '', emissione: '', scadenza: '', descrizione_libera: '',
+    importo: '', periodo: '', emissione: '', scadenza: '', descrizione_libera: '', metodo_pagamento: 'rid',
   })
   const update = (f, v) => setForm(p => ({ ...p, [f]: v }))
 
@@ -491,6 +491,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
         periodo: form.periodo ? form.periodo + '-01' : null,
         emissione: form.emissione || null,
         scadenza: form.scadenza,
+        metodo_pagamento: form.metodo_pagamento,
       }
       if (mode === 'libero') {
         data.descrizione_libera = form.descrizione_libera
@@ -556,16 +557,30 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Periodo di competenza</label>
               <input type="month" value={form.periodo} onChange={e => update('periodo', e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900"
+                style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Emissione</label>
                 <input type="date" value={form.emissione} onChange={e => update('emissione', e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900"
+                  style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
               </div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Scadenza</label>
                 <input type="date" value={form.scadenza} onChange={e => update('scadenza', e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900"
+                  style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Metodo di pagamento</label>
+              <div className="flex gap-2">
+                {[{ id: 'rid', l: 'RID' }, { id: 'bollettino', l: 'Bollettino' }, { id: 'manuale', l: 'Manuale' }].map(m => (
+                  <button key={m.id} onClick={() => update('metodo_pagamento', m.id)}
+                    className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${form.metodo_pagamento === m.id ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-200 text-gray-600'}`}>
+                    {m.l}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -720,8 +735,28 @@ export default function App() {
         if (!c) { setScreen('dashboard'); return null }
         return <DettaglioContratto contratto={c} bollette={bollette.filter(b => b.contratto_id === c.id)} onBack={() => setScreen('dashboard')} onAggiungiBolletta={() => setScreen('aggiungi-bolletta')} onTogglePagata={handleTogglePagata} />
       }
-      case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => setScreen('dashboard')} />
-      case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('dashboard')} />
+      case 'aggiungi':
+        return (
+          <div className="space-y-6">
+            <h1 className="text-xl font-bold text-gray-900">Cosa vuoi aggiungere?</h1>
+            <Card className="p-5" onClick={() => setScreen('aggiungi-contratto')}>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center"><Repeat size={24} className="text-blue-600" /></div>
+                <div><p className="font-semibold text-gray-900">Nuovo contratto</p><p className="text-sm text-gray-500 mt-0.5">Luce, gas, telefono, internet, assicurazione...</p></div>
+                <ChevronRight size={20} className="text-gray-400 ml-auto" />
+              </div>
+            </Card>
+            <Card className="p-5" onClick={() => { setSelectedContrattoId(null); setScreen('aggiungi-bolletta') }}>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center"><CreditCard size={24} className="text-green-600" /></div>
+                <div><p className="font-semibold text-gray-900">Nuova bolletta / pagamento</p><p className="text-sm text-gray-500 mt-0.5">Aggiungi un importo a un contratto esistente</p></div>
+                <ChevronRight size={20} className="text-gray-400 ml-auto" />
+              </div>
+            </Card>
+          </div>
+        )
+      case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => setScreen('aggiungi')} />
+      case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} />
       case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} />
       default: return null
     }
@@ -735,7 +770,7 @@ export default function App() {
           <button onClick={() => setScreen('dashboard')} className={`flex flex-col items-center gap-1 py-2 px-3 ${screen === 'dashboard' ? 'text-blue-600' : 'text-gray-400'}`}>
             <Home size={22} /><span className="text-xs font-medium">Home</span>
           </button>
-          <button onClick={() => { setSelectedContrattoId(null); setScreen('aggiungi-bolletta') }} className="flex flex-col items-center gap-1 py-2 px-3">
+          <button onClick={() => setScreen('aggiungi')} className="flex flex-col items-center gap-1 py-2 px-3">
             <div className="w-11 h-11 bg-blue-600 rounded-full flex items-center justify-center -mt-5 shadow-lg"><Plus size={24} className="text-white" /></div>
             <span className="text-xs font-medium text-blue-600">Aggiungi</span>
           </button>

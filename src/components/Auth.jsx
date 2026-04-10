@@ -39,10 +39,10 @@ export default function Auth() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <span className="text-white text-2xl font-bold">BW</span>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg" style={{ background: 'linear-gradient(145deg, #00897B, #00695C)' }}>
+            <span className="text-white font-pacifico" style={{ fontSize: '30px', transform: 'translateX(-2px)', display: 'block', lineHeight: 1 }}>B</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Bill Wallet</h1>
+          <h1 className="text-2xl font-pacifico text-bolly-500">Bolly</h1>
           <p className="text-gray-500 mt-1">Il tuo portafoglio contratti</p>
         </div>
 
@@ -62,7 +62,7 @@ export default function Auth() {
                   onChange={e => setNome(e.target.value)}
                   placeholder="Il tuo nome"
                   required={!isLogin}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none"
                 />
               </div>
             )}
@@ -74,7 +74,7 @@ export default function Auth() {
                 onChange={e => setEmail(e.target.value)}
                 placeholder="tu@email.com"
                 required
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none"
               />
             </div>
             <div>
@@ -86,7 +86,7 @@ export default function Auth() {
                 placeholder="Minimo 6 caratteri"
                 required
                 minLength={6}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none"
               />
             </div>
 
@@ -104,7 +104,7 @@ export default function Auth() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-blue-600 text-white font-semibold rounded-xl disabled:opacity-50 hover:bg-blue-700 transition-colors"
+              className="w-full py-3 bg-bolly-500 text-white font-semibold rounded-xl disabled:opacity-50 hover:bg-bolly-600 transition-colors"
             >
               {loading ? 'Attendere...' : isLogin ? 'Accedi' : 'Registrati'}
             </button>
@@ -113,7 +113,7 @@ export default function Auth() {
           <div className="mt-4 text-center">
             <button
               onClick={() => { setIsLogin(!isLogin); setError(null); setSuccess(null) }}
-              className="text-sm text-blue-600 font-medium"
+              className="text-sm text-bolly-500 font-medium"
             >
               {isLogin ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}
             </button>

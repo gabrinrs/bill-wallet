@@ -49,7 +49,7 @@ function Card({ children, className = '', onClick }) {
 function Loading() {
   return (
     <div className="flex items-center justify-center py-12">
-      <Loader2 size={28} className="animate-spin text-blue-500" />
+      <Loader2 size={28} className="animate-spin text-bolly-500" />
     </div>
   )
 }
@@ -236,14 +236,14 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
 
       {!contratto.domiciliazione && portaleUrl && (
         <a href={portaleUrl} target="_blank" rel="noopener noreferrer" className="block">
-          <Card className="p-4 bg-blue-50 border-blue-200">
+          <Card className="p-4 bg-bolly-50 border-bolly-200">
             <div className="flex items-center gap-3">
-              <ExternalLink size={20} className="text-blue-600" />
+              <ExternalLink size={20} className="text-bolly-500" />
               <div className="flex-1">
-                <p className="font-medium text-blue-800">Vai al portale per pagare</p>
-                <p className="text-xs text-blue-600 mt-0.5">Apri l'area clienti di {contratto.fornitore}</p>
+                <p className="font-medium text-bolly-700">Vai al portale per pagare</p>
+                <p className="text-xs text-bolly-500 mt-0.5">Apri l'area clienti di {contratto.fornitore}</p>
               </div>
-              <ChevronRight size={18} className="text-blue-400" />
+              <ChevronRight size={18} className="text-bolly-300" />
             </div>
           </Card>
         </a>
@@ -287,7 +287,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-gray-900">Storico bollette</h3>
-          <button onClick={onAggiungiBolletta} className="flex items-center gap-1 text-sm font-medium text-blue-600"><Plus size={16} /> Aggiungi</button>
+          <button onClick={onAggiungiBolletta} className="flex items-center gap-1 text-sm font-medium text-bolly-500"><Plus size={16} /> Aggiungi</button>
         </div>
         <div className="space-y-2">
           {bolletteOrdinate.map(b => {
@@ -398,9 +398,9 @@ function FormContratto({ onSave, onBack }) {
           <div className="space-y-3">
             <p className="text-sm text-gray-500">Descrivi il pagamento</p>
             <input type="text" value={customText} onChange={e => setCustomText(e.target.value)} placeholder={catInfo?.placeholder || 'Nome fornitore o descrizione...'} autoFocus
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-base" />
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none text-base" />
             <button onClick={() => { update('fornitore', customText); setStep(2) }} disabled={!customText.trim()}
-              className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold disabled:opacity-40">Continua</button>
+              className="w-full py-3 bg-bolly-500 text-white rounded-xl font-semibold disabled:opacity-40">Continua</button>
           </div>
         </div>
       )
@@ -437,19 +437,19 @@ function FormContratto({ onSave, onBack }) {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Intestatario</label>
           <input type="text" value={form.intestatario} onChange={e => update('intestatario', e.target.value)} placeholder="Nome e cognome"
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Codice cliente / N° contratto</label>
           <input type="text" value={form.codice} onChange={e => update('codice', e.target.value)} placeholder="Opzionale"
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Ricezione bollette</label>
           <div className="flex gap-2">
             {['email', 'portale', 'cartaceo'].map(m => (
               <button key={m} onClick={() => update('metodo_ricezione', m)}
-                className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${form.metodo_ricezione === m ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-200 text-gray-600'}`}>
+                className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${form.metodo_ricezione === m ? 'bg-bolly-50 border-bolly-300 text-bolly-600' : 'border-gray-200 text-gray-600'}`}>
                 {m.charAt(0).toUpperCase() + m.slice(1)}
               </button>
             ))}
@@ -457,14 +457,14 @@ function FormContratto({ onSave, onBack }) {
         </div>
         <div className="flex items-center justify-between">
           <label className="text-sm font-medium text-gray-700">Domiciliazione bancaria</label>
-          <button onClick={() => update('domiciliazione', !form.domiciliazione)} className={`w-12 h-7 rounded-full transition-colors ${form.domiciliazione ? 'bg-blue-500' : 'bg-gray-300'}`}>
+          <button onClick={() => update('domiciliazione', !form.domiciliazione)} className={`w-12 h-7 rounded-full transition-colors ${form.domiciliazione ? 'bg-bolly-500' : 'bg-gray-300'}`}>
             <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${form.domiciliazione ? 'translate-x-6' : 'translate-x-1'}`} />
           </button>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Data inizio</label>
           <input type="date" value={form.data_inizio} onChange={e => update('data_inizio', e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none" />
         </div>
 
         {/* Ricorrente */}
@@ -500,11 +500,11 @@ function FormContratto({ onSave, onBack }) {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
           <textarea value={form.note} onChange={e => update('note', e.target.value)} rows={2} placeholder="Opzionale"
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none" />
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none resize-none" />
         </div>
       </div>
       <button onClick={handleSave} disabled={saving || !form.fornitore}
-        className="w-full py-3 bg-blue-600 text-white font-semibold rounded-xl disabled:opacity-40">{saving ? 'Salvataggio...' : 'Salva contratto'}</button>
+        className="w-full py-3 bg-bolly-500 text-white font-semibold rounded-xl disabled:opacity-40">{saving ? 'Salvataggio...' : 'Salva contratto'}</button>
     </div>
   )
 }
@@ -564,7 +564,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
           <Upload size={32} className="text-gray-400 mx-auto" />
           <p className="text-sm font-medium text-gray-700 mt-3">Carica il PDF della bolletta</p>
           <p className="text-xs text-gray-400 mt-1">L'AI riconosce automaticamente fornitore, importo e scadenza</p>
-          <p className="text-xs text-blue-500 font-medium mt-3">Disponibile nella prossima versione</p>
+          <p className="text-xs text-bolly-500 font-medium mt-3">Disponibile nella prossima versione</p>
         </Card>
       )}
 
@@ -599,12 +599,12 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
         return (
           <>
             {!contrattoId && (
-              <Card className="p-4 border-blue-200 bg-blue-50" onClick={() => update('contratto_id', '')}>
+              <Card className="p-4 border-bolly-200 bg-bolly-50" onClick={() => update('contratto_id', '')}>
                 <div className="flex items-center gap-3">
                   <CategoriaIcon categoriaId={selContratto?.categoria} />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900">{selContratto?.fornitore}</p>
-                    <p className="text-sm text-blue-600">Tocca per cambiare</p>
+                    <p className="text-sm text-bolly-500">Tocca per cambiare</p>
                   </div>
                 </div>
               </Card>
@@ -613,23 +613,23 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Importo (€)</label>
                 <input type="number" step="0.01" value={form.importo} onChange={e => update('importo', e.target.value)} placeholder="0.00"
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Periodo di competenza</label>
                 <input type="month" value={form.periodo} onChange={e => update('periodo', e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
                   style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Emissione</label>
                   <input type="date" value={form.emissione} onChange={e => update('emissione', e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900"
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
                     style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
                 </div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Scadenza</label>
                   <input type="date" value={form.scadenza} onChange={e => update('scadenza', e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900"
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
                     style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
                 </div>
               </div>
@@ -638,7 +638,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
                 <div className="flex gap-2">
                   {[{ id: 'rid', l: 'RID' }, { id: 'bollettino', l: 'Bollettino' }, { id: 'manuale', l: 'Manuale' }].map(m => (
                     <button key={m.id} onClick={() => update('metodo_pagamento', m.id)}
-                      className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${form.metodo_pagamento === m.id ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-200 text-gray-600'}`}>
+                      className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${form.metodo_pagamento === m.id ? 'bg-bolly-50 border-bolly-300 text-bolly-600' : 'border-gray-200 text-gray-600'}`}>
                       {m.l}
                     </button>
                   ))}
@@ -647,7 +647,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
             </div>
             <button onClick={handleSave}
               disabled={saving || !form.importo || !form.scadenza}
-              className="w-full py-3 bg-blue-600 text-white font-semibold rounded-xl disabled:opacity-40">{saving ? 'Salvataggio...' : 'Salva bolletta'}</button>
+              className="w-full py-3 bg-bolly-500 text-white font-semibold rounded-xl disabled:opacity-40">{saving ? 'Salvataggio...' : 'Salva bolletta'}</button>
           </>
         )
       })()}
@@ -659,28 +659,28 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
               <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione pagamento</label>
               <input type="text" value={form.descrizione_libera} onChange={e => update('descrizione_libera', e.target.value)}
                 placeholder="Scrivi cosa devi pagare, es. Rata frigorifero, Bollo auto..." autoFocus
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Importo (€)</label>
               <input type="number" step="0.01" value={form.importo} onChange={e => update('importo', e.target.value)} placeholder="0.00"
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Periodo di competenza</label>
               <input type="month" value={form.periodo} onChange={e => update('periodo', e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
                 style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Emissione</label>
                 <input type="date" value={form.emissione} onChange={e => update('emissione', e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
                   style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
               </div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Scadenza</label>
                 <input type="date" value={form.scadenza} onChange={e => update('scadenza', e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
                   style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
               </div>
             </div>
@@ -689,7 +689,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
               <div className="flex gap-2">
                 {[{ id: 'rid', l: 'RID' }, { id: 'bollettino', l: 'Bollettino' }, { id: 'manuale', l: 'Manuale' }].map(m => (
                   <button key={m.id} onClick={() => update('metodo_pagamento', m.id)}
-                    className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${form.metodo_pagamento === m.id ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-200 text-gray-600'}`}>
+                    className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${form.metodo_pagamento === m.id ? 'bg-bolly-50 border-bolly-300 text-bolly-600' : 'border-gray-200 text-gray-600'}`}>
                     {m.l}
                   </button>
                 ))}
@@ -698,7 +698,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
           </div>
           <button onClick={handleSave}
             disabled={saving || !form.importo || !form.scadenza || !form.descrizione_libera.trim()}
-            className="w-full py-3 bg-blue-600 text-white font-semibold rounded-xl disabled:opacity-40">{saving ? 'Salvataggio...' : 'Salva bolletta'}</button>
+            className="w-full py-3 bg-bolly-500 text-white font-semibold rounded-xl disabled:opacity-40">{saving ? 'Salvataggio...' : 'Salva bolletta'}</button>
         </>
       )}
     </div>
@@ -748,24 +748,24 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Fornitore</label>
           <input type="text" value={form.fornitore} onChange={e => update('fornitore', e.target.value)} placeholder="Nome fornitore"
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Intestatario</label>
           <input type="text" value={form.intestatario} onChange={e => update('intestatario', e.target.value)} placeholder="Nome e cognome"
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Codice cliente / N° contratto</label>
           <input type="text" value={form.codice} onChange={e => update('codice', e.target.value)} placeholder="Opzionale"
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Ricezione bollette</label>
           <div className="flex gap-2">
             {['email', 'portale', 'cartaceo'].map(m => (
               <button key={m} onClick={() => update('metodo_ricezione', m)}
-                className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${form.metodo_ricezione === m ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-200 text-gray-600'}`}>
+                className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${form.metodo_ricezione === m ? 'bg-bolly-50 border-bolly-300 text-bolly-600' : 'border-gray-200 text-gray-600'}`}>
                 {m.charAt(0).toUpperCase() + m.slice(1)}
               </button>
             ))}
@@ -773,14 +773,14 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
         </div>
         <div className="flex items-center justify-between">
           <label className="text-sm font-medium text-gray-700">Domiciliazione bancaria</label>
-          <button onClick={() => update('domiciliazione', !form.domiciliazione)} className={`w-12 h-7 rounded-full transition-colors ${form.domiciliazione ? 'bg-blue-500' : 'bg-gray-300'}`}>
+          <button onClick={() => update('domiciliazione', !form.domiciliazione)} className={`w-12 h-7 rounded-full transition-colors ${form.domiciliazione ? 'bg-bolly-500' : 'bg-gray-300'}`}>
             <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${form.domiciliazione ? 'translate-x-6' : 'translate-x-1'}`} />
           </button>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Data inizio</label>
           <input type="date" value={form.data_inizio} onChange={e => update('data_inizio', e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900"
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
             style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
         </div>
         <div className="pt-2 border-t border-gray-100">
@@ -815,11 +815,11 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
           <textarea value={form.note} onChange={e => update('note', e.target.value)} rows={2} placeholder="Opzionale"
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none" />
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none resize-none" />
         </div>
       </div>
       <button onClick={handleSave} disabled={saving || !form.fornitore}
-        className="w-full py-3 bg-blue-600 text-white font-semibold rounded-xl disabled:opacity-40">{saving ? 'Salvataggio...' : 'Salva modifiche'}</button>
+        className="w-full py-3 bg-bolly-500 text-white font-semibold rounded-xl disabled:opacity-40">{saving ? 'Salvataggio...' : 'Salva modifiche'}</button>
     </div>
   )
 }
@@ -844,7 +844,7 @@ function Notifiche({ contratti, bollette }) {
     return list.sort((a, b) => { const p = { scaduta: 0, urgente: 1, promemoria: 2 }; return (p[a.tipo] ?? 9) - (p[b.tipo] ?? 9) })
   }, [contratti, bollette])
 
-  const cfg = { urgente: 'bg-amber-50 border-amber-200 text-amber-600', scaduta: 'bg-red-50 border-red-200 text-red-600', promemoria: 'bg-blue-50 border-blue-200 text-blue-600' }
+  const cfg = { urgente: 'bg-amber-50 border-amber-200 text-amber-600', scaduta: 'bg-red-50 border-red-200 text-red-600', promemoria: 'bg-bolly-50 border-bolly-200 text-bolly-500' }
 
   return (
     <div className="space-y-6">
@@ -997,7 +997,7 @@ export default function App() {
             <h1 className="text-xl font-bold text-gray-900">Cosa vuoi aggiungere?</h1>
             <Card className="p-5" onClick={() => setScreen('aggiungi-contratto')}>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center"><Repeat size={24} className="text-blue-600" /></div>
+                <div className="w-12 h-12 bg-bolly-100 rounded-xl flex items-center justify-center"><Repeat size={24} className="text-bolly-500" /></div>
                 <div><p className="font-semibold text-gray-900">Nuovo contratto</p><p className="text-sm text-gray-500 mt-0.5">Luce, gas, telefono, internet, assicurazione...</p></div>
                 <ChevronRight size={20} className="text-gray-400 ml-auto" />
               </div>
@@ -1024,14 +1024,14 @@ export default function App() {
       <div className="flex-1 overflow-y-auto px-4 pt-6 pb-24 safe-top">{renderScreen()}</div>
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-bottom" style={{ maxWidth: 430, margin: '0 auto' }}>
         <div className="flex items-center justify-around px-6 py-2">
-          <button onClick={() => setScreen('dashboard')} className={`flex flex-col items-center gap-1 py-2 px-3 ${screen === 'dashboard' ? 'text-blue-600' : 'text-gray-400'}`}>
+          <button onClick={() => setScreen('dashboard')} className={`flex flex-col items-center gap-1 py-2 px-3 ${screen === 'dashboard' ? 'text-bolly-500' : 'text-gray-400'}`}>
             <Home size={22} /><span className="text-xs font-medium">Home</span>
           </button>
           <button onClick={() => setScreen('aggiungi')} className="flex flex-col items-center gap-1 py-2 px-3">
-            <div className="w-11 h-11 bg-blue-600 rounded-full flex items-center justify-center -mt-5 shadow-lg"><Plus size={24} className="text-white" /></div>
-            <span className="text-xs font-medium text-blue-600">Aggiungi</span>
+            <div className="w-11 h-11 bg-bolly-500 rounded-full flex items-center justify-center -mt-5 shadow-lg"><Plus size={24} className="text-white" /></div>
+            <span className="text-xs font-medium text-bolly-500">Aggiungi</span>
           </button>
-          <button onClick={() => setScreen('notifiche')} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'notifiche' ? 'text-blue-600' : 'text-gray-400'}`}>
+          <button onClick={() => setScreen('notifiche')} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'notifiche' ? 'text-bolly-500' : 'text-gray-400'}`}>
             <Bell size={22} />
             {notificheCount > 0 && <span className="absolute -top-0.5 right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{notificheCount}</span>}
             <span className="text-xs font-medium">Notifiche</span>

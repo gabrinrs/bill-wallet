@@ -73,6 +73,7 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
     return bollette
       .filter(b => !b.pagata)
       .map(b => ({ ...b, contratto: contratti.find(c => c.id === b.contratto_id), stato: getStatoBolletta(b) }))
+      .filter(b => b.contratto)
       .sort((a, b) => new Date(a.scadenza) - new Date(b.scadenza))
   }, [bollette, contratti])
 

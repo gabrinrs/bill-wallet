@@ -1,6 +1,23 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
+// Genera l'indirizzo email dedicato Bolly per il nuovo utente
+// Formato: primeletteredelnoome_altrelettere.primecharsuid@mail.getbolly.app
+// Esempio: gabri_re.5ff3@mail.getbolly.app
+function generateEmailDedicata(nome, userId) {
+  const cleanName = nome
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // rimuove accenti (è→e, à→a, ecc.)
+    .replace(/[^a-z]/g, '')          // tiene solo lettere
+
+  const paddedName = cleanName.padEnd(7, 'x') // padding se il nome è corto
+  const namePart = paddedName.substring(0, 5) + '_' + paddedName.substring(5, 7)
+  const uuidPart = userId.replace(/-/g, '').substring(0, 4)
+
+  return `${namePart}.${uuidPart}@mail.getbolly.app`
+}
+
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
@@ -20,7 +37,7 @@ export default function Auth() {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) setError(error.message)
     } else {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: { data: { nome } }
@@ -28,6 +45,14 @@ export default function Auth() {
       if (error) {
         setError(error.message)
       } else {
+        // Genera e salva l'email dedicata Bolly nel profilo utente
+        if (data.user) {
+          const emailDedicata = generateEmailDedicata(nome, data.user.id)
+          await supabase.from('profiles').upsert({
+            id: data.user.id,
+            email_dedicata: emailDedicata
+          })
+        }
         setSuccess('Registrazione completata! Controlla la tua email per confermare.')
       }
     }

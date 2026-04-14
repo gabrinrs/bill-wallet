@@ -73,7 +73,6 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
     return bollette
       .filter(b => !b.pagata)
       .map(b => ({ ...b, contratto: contratti.find(c => c.id === b.contratto_id), stato: getStatoBolletta(b) }))
-      .filter(b => b.contratto)
       .sort((a, b) => new Date(a.scadenza) - new Date(b.scadenza))
   }, [bollette, contratti])
 
@@ -140,21 +139,25 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
         <div className="space-y-2">
           {bolletteProssime.length === 0 && <p className="text-gray-400 text-sm text-center py-6">Nessuna bolletta in sospeso</p>}
           {bolletteProssime.slice(0, 5).map(b => (
-            <Card key={b.id} className="p-4" onClick={() => onSelectContratto(b.contratto.id)}>
+            <Card key={b.id} className="p-4" onClick={() => b.contratto && onSelectContratto(b.contratto.id)}>
               <div className="flex items-center gap-3">
-                <CategoriaIcon categoriaId={b.contratto.categoria} />
+                <CategoriaIcon categoriaId={b.contratto?.categoria || 'altro'} />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate">{b.contratto.fornitore}</p>
+                  <p className="font-medium text-gray-900 truncate">
+                    {b.contratto?.fornitore || b.descrizione_libera || 'Pagamento'}
+                  </p>
                   <p className="text-sm text-gray-500">Scade il {formatData(b.scadenza)}</p>
                   <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                    {b.contratto.domiciliazione ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full" /> Domiciliata
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" /> Da pagare manualmente
-                      </span>
+                    {b.contratto && (
+                      b.contratto.domiciliazione ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                          <span className="w-1.5 h-1.5 bg-green-500 rounded-full" /> Domiciliata
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                          <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" /> Da pagare manualmente
+                        </span>
+                      )
                     )}
                     <FonteBadge fonte={b.fonte} />
                   </div>
@@ -982,6 +985,8 @@ export default function App() {
   const [screen, setScreen] = useState('dashboard')
   const [selectedContrattoId, setSelectedContrattoId] = useState(null)
   const [editingContratto, setEditingContratto] = useState(null)
+  const [notificheViste, setNotificheViste] = useState(false)
+  const [prevNotificheCount, setPrevNotificheCount] = useState(0)
 
   // Se supabase non è configurato, mostra errore
   if (!supabase) {
@@ -1085,6 +1090,14 @@ export default function App() {
 
   const notificheCount = bollette.filter(b => !b.pagata && giorniDa(b.scadenza) <= 7).length
 
+  // Reset notifiche viste se arrivano nuove notifiche
+  useEffect(() => {
+    if (notificheCount > prevNotificheCount) setNotificheViste(false)
+    setPrevNotificheCount(notificheCount)
+  }, [notificheCount, prevNotificheCount])
+
+  const showBadgeNotifiche = notificheCount > 0 && !notificheViste
+
   const renderScreen = () => {
     switch (screen) {
       case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} />
@@ -1134,9 +1147,9 @@ export default function App() {
             <div className="w-11 h-11 bg-bolly-500 rounded-full flex items-center justify-center -mt-5 shadow-lg"><Plus size={24} className="text-white" /></div>
             <span className="text-xs font-medium text-bolly-500">Aggiungi</span>
           </button>
-          <button onClick={() => setScreen('notifiche')} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'notifiche' ? 'text-bolly-500' : 'text-gray-400'}`}>
+          <button onClick={() => { setScreen('notifiche'); setNotificheViste(true) }} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'notifiche' ? 'text-bolly-500' : 'text-gray-400'}`}>
             <Bell size={22} />
-            {notificheCount > 0 && <span className="absolute -top-0.5 right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{notificheCount}</span>}
+            {showBadgeNotifiche && <span className="absolute -top-0.5 right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{notificheCount}</span>}
             <span className="text-xs font-medium">Notifiche</span>
           </button>
         </div>

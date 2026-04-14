@@ -8,7 +8,7 @@ import {
   Home, Plus, Bell, ChevronLeft, ChevronRight, Upload, Check,
   AlertTriangle, Zap, Flame, Droplets, Phone, Wifi, Shield, Package,
   TrendingUp, Calendar, Repeat, Tv, CreditCard, Landmark, PenLine, LogOut, Loader2,
-  Trash2, ExternalLink, Pencil
+  Trash2, ExternalLink, Pencil, Mail, Copy, User
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -95,8 +95,8 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
           <h1 className="text-2xl font-bold text-gray-900">Ciao {profile?.nome || 'utente'}</h1>
           <p className="text-gray-500 mt-0.5 text-sm">Riepilogo delle tue spese</p>
         </div>
-        <button onClick={onLogout} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400">
-          <LogOut size={20} />
+        <button onClick={() => onNavigate('profilo')} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400">
+          <User size={20} />
         </button>
       </div>
 
@@ -871,6 +871,94 @@ function Notifiche({ contratti, bollette }) {
 // APP
 // ============================================================
 
+// ============================================================
+// PROFILO
+// ============================================================
+
+function Profilo({ profile, session, onBack, onLogout }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(profile?.email_dedicata || '')
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (e) {
+      console.error('Errore copia:', e)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header con back */}
+      <div className="flex items-center gap-2">
+        <button onClick={onBack} className="p-2 rounded-xl hover:bg-gray-100">
+          <ChevronLeft size={22} className="text-gray-700" />
+        </button>
+        <h1 className="text-xl font-bold text-gray-900">Il tuo profilo</h1>
+      </div>
+
+      {/* Avatar + nome + email */}
+      <div className="flex flex-col items-center py-2">
+        <div
+          className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg mb-3"
+          style={{ background: 'linear-gradient(145deg, #00897B, #00695C)' }}
+        >
+          <span className="text-white font-pacifico" style={{ fontSize: '36px', lineHeight: 1 }}>
+            {profile?.nome?.[0]?.toUpperCase() || 'U'}
+          </span>
+        </div>
+        <h2 className="text-lg font-semibold text-gray-900">{profile?.nome || 'Utente'}</h2>
+        <p className="text-sm text-gray-500">{session?.user?.email}</p>
+      </div>
+
+      {/* Card email dedicata */}
+      <Card className="p-5">
+        <div className="flex items-center gap-2 mb-2">
+          <Mail size={18} className="text-bolly-500" />
+          <h3 className="font-semibold text-gray-900">Il tuo indirizzo Bolly</h3>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          Usalo per ricevere le bollette direttamente nell'app.
+        </p>
+
+        <div className="bg-gray-50 rounded-xl p-3 flex items-center gap-2 mb-4 border border-gray-100">
+          <span className="font-mono text-sm text-gray-800 break-all flex-1">
+            {profile?.email_dedicata || 'Non ancora impostato'}
+          </span>
+          <button
+            onClick={handleCopy}
+            disabled={!profile?.email_dedicata}
+            className="p-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 flex-shrink-0 disabled:opacity-50"
+            title="Copia indirizzo"
+          >
+            {copied ? (
+              <Check size={16} className="text-green-600" />
+            ) : (
+              <Copy size={16} className="text-gray-600" />
+            )}
+          </button>
+        </div>
+
+        <div className="bg-bolly-50 rounded-xl p-3 border border-bolly-100">
+          <p className="text-xs text-gray-700 leading-relaxed">
+            <strong className="text-gray-900">Come usarlo:</strong> accedi al portale dei tuoi fornitori (Enel, NWG, Tim, ecc.) e aggiungi questo indirizzo come destinatario per le bollette digitali. Le bollette future verranno importate automaticamente.
+          </p>
+        </div>
+      </Card>
+
+      {/* Logout */}
+      <button
+        onClick={onLogout}
+        className="w-full py-3 bg-red-50 text-red-600 font-semibold rounded-xl border border-red-100 flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
+      >
+        <LogOut size={18} />
+        Esci dall'account
+      </button>
+    </div>
+  )
+}
+
 export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -1015,6 +1103,7 @@ export default function App() {
       case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} /> : null
       case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} />
       case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} />
+      case 'profilo': return <Profilo profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} />
       default: return null
     }
   }

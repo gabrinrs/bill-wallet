@@ -1027,6 +1027,15 @@ export default function App() {
 
   useEffect(() => { loadData() }, [loadData])
 
+  // Reset notifiche viste quando il count delle notifiche aumenta (nuove bollette urgenti)
+  const currentNotificheCount = bollette.filter(b => !b.pagata && giorniDa(b.scadenza) <= 7).length
+  useEffect(() => {
+    setPrevNotificheCount(prev => {
+      if (currentNotificheCount > prev) setNotificheViste(false)
+      return currentNotificheCount
+    })
+  }, [currentNotificheCount])
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loading /></div>
   if (!session) return <Auth />
 
@@ -1089,13 +1098,6 @@ export default function App() {
   }
 
   const notificheCount = bollette.filter(b => !b.pagata && giorniDa(b.scadenza) <= 7).length
-
-  // Reset notifiche viste se arrivano nuove notifiche
-  useEffect(() => {
-    if (notificheCount > prevNotificheCount) setNotificheViste(false)
-    setPrevNotificheCount(notificheCount)
-  }, [notificheCount, prevNotificheCount])
-
   const showBadgeNotifiche = notificheCount > 0 && !notificheViste
 
   const renderScreen = () => {

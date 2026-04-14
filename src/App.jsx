@@ -54,6 +54,16 @@ function Loading() {
   )
 }
 
+function FonteBadge({ fonte }) {
+  if (fonte !== 'email') return null
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-bolly-700 bg-bolly-50 px-2 py-0.5 rounded-full border border-bolly-100">
+      <Mail size={10} />
+      Via email
+    </span>
+  )
+}
+
 // ============================================================
 // DASHBOARD
 // ============================================================
@@ -136,15 +146,18 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-900 truncate">{b.contratto.fornitore}</p>
                   <p className="text-sm text-gray-500">Scade il {formatData(b.scadenza)}</p>
-                  {b.contratto.domiciliazione ? (
-                    <span className="inline-flex items-center gap-1 mt-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
-                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full" /> Domiciliata
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 mt-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-                      <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" /> Da pagare manualmente
-                    </span>
-                  )}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                    {b.contratto.domiciliazione ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full" /> Domiciliata
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                        <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" /> Da pagare manualmente
+                      </span>
+                    )}
+                    <FonteBadge fonte={b.fonte} />
+                  </div>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-gray-900">{formatEuro(b.importo)}</p>
@@ -298,6 +311,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
                   <div>
                     <p className="font-medium text-gray-900">{formatEuro(b.importo)}</p>
                     <p className="text-sm text-gray-500">{formatPeriodo(b.periodo)} · Scade {formatData(b.scadenza)}</p>
+                    <div className="mt-1"><FonteBadge fonte={b.fonte} /></div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge stato={stato} />

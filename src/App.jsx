@@ -338,6 +338,11 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge stato={stato} />
+                    {b.pdf_url && (
+                      <a href={b.pdf_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="p-1.5 rounded-lg hover:bg-bolly-50 text-bolly-500" title="Apri PDF">
+                        <ExternalLink size={16} />
+                      </a>
+                    )}
                     {!b.pagata && (
                       <button onClick={e => { e.stopPropagation(); onTogglePagata(b.id) }} className="p-1.5 rounded-lg hover:bg-green-50 text-green-600" title="Segna come pagata">
                         <Check size={18} />

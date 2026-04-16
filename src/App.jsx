@@ -180,6 +180,18 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
                       )
                     )}
                     <FonteBadge fonte={b.fonte} />
+                    {b.pdf_url && (
+                      <a
+                        href={b.pdf_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-bolly-700 bg-bolly-50 border border-bolly-200 px-2 py-0.5 rounded-full hover:bg-bolly-100"
+                        title="Apri PDF"
+                      >
+                        <ExternalLink size={10} /> PDF
+                      </a>
+                    )}
                   </div>
                 </div>
                 <div className="text-right">
@@ -244,6 +256,9 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
     [...bollette].sort((a, b) => new Date(a.periodo) - new Date(b.periodo)).map(b => ({ periodo: formatPeriodo(b.periodo), importo: Number(b.importo) }))
   , [bollette])
   const cat = getCategoria(contratto.categoria)
+  const categorieList = Array.isArray(contratto.categorie) && contratto.categorie.length > 0
+    ? contratto.categorie
+    : (contratto.categoria ? [contratto.categoria] : [])
   const portaleUrl = PORTALI_PAGAMENTO[contratto.fornitore]
 
   return (
@@ -253,7 +268,14 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
         <CategoriaIcon categoriaId={contratto.categoria} />
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold text-gray-900">{contratto.fornitore}</h1>
-          <p className="text-sm text-gray-500">{cat.label}{contratto.codice ? ` · ${contratto.codice}` : ''}</p>
+          <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+            {categorieList.map(catId => (
+              <span key={catId} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-bolly-50 text-bolly-700 border border-bolly-200">
+                {getCategoria(catId).label}
+              </span>
+            ))}
+            {contratto.codice && <span className="text-xs text-gray-500">· {contratto.codice}</span>}
+          </div>
         </div>
         <button onClick={() => onEditContratto(contratto)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400"><Pencil size={18} /></button>
         <button onClick={() => setShowDeleteConfirm(true)} className="p-2 rounded-xl hover:bg-red-50 text-gray-400"><Trash2 size={18} /></button>

@@ -1053,11 +1053,14 @@ function OrfanaCard({ bolletta, contratti, onUpdate, onDelete }) {
   }
 
   const canSave = form.contratto_id && form.importo && form.scadenza
-  const motivoLabel = {
-    errore_parsing: 'PDF non letto correttamente',
-    orfana: 'Nessun contratto collegato',
-    incompleta: 'Dati incompleti',
-  }[bolletta.stato_elaborazione] || 'Da sistemare'
+  const hasExtractedData = !!(bolletta.importo || bolletta.scadenza || bolletta.descrizione_libera || bolletta.contratto_id)
+  const motivoLabel = bolletta.stato_elaborazione === 'errore_parsing' && hasExtractedData
+    ? 'Dati incompleti — controlla e completa'
+    : ({
+        errore_parsing: 'PDF non letto correttamente',
+        orfana: 'Nessun contratto collegato',
+        incompleta: 'Dati incompleti',
+      }[bolletta.stato_elaborazione] || 'Da sistemare')
 
   return (
     <Card className="p-4 border-amber-200">

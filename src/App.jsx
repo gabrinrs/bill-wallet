@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
-const IconMap = { Zap, Flame, Droplets, Phone, Wifi, Shield, Package, Tv, CreditCard, Landmark }
+const IconMap = { Zap, Flame, Droplets, Phone, Wifi, Shield, Package, Tv, Repeat, CreditCard, Landmark }
 
 // ============================================================
 // SHARED COMPONENTS
@@ -253,7 +253,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
   const [deletingBollettaId, setDeletingBollettaId] = useState(null)
   const bolletteOrdinate = useMemo(() => [...bollette].sort((a, b) => new Date(b.periodo) - new Date(a.periodo)), [bollette])
   const chartData = useMemo(() =>
-    [...bollette].sort((a, b) => new Date(a.periodo) - new Date(b.periodo)).map(b => ({ periodo: formatPeriodo(b.periodo), importo: Number(b.importo) }))
+    [...bollette].filter(b => b.periodo).sort((a, b) => new Date(a.periodo) - new Date(b.periodo)).map(b => ({ periodo: formatPeriodo(b.periodo), importo: Number(b.importo) }))
   , [bollette])
   const cat = getCategoria(contratto.categoria)
   const categorieList = Array.isArray(contratto.categorie) && contratto.categorie.length > 0
@@ -355,7 +355,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-gray-900">{formatEuro(b.importo)}</p>
-                    <p className="text-sm text-gray-500">{formatPeriodo(b.periodo)} · Scade {formatData(b.scadenza)}</p>
+                    <p className="text-sm text-gray-500">{b.periodo ? `${formatPeriodo(b.periodo)} · ` : ''}Scade {b.scadenza ? formatData(b.scadenza) : '—'}</p>
                     <div className="mt-1"><FonteBadge fonte={b.fonte} /></div>
                   </div>
                   <div className="flex items-center gap-2">

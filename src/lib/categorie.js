@@ -5,7 +5,7 @@ export const CATEGORIE = [
   { id: 'telefono', label: 'Telefono', icon: 'Phone', color: '#8b5cf6' },
   { id: 'internet', label: 'Internet', icon: 'Wifi', color: '#06b6d4' },
   { id: 'assicurazione', label: 'Assicurazione', icon: 'Shield', color: '#10b981' },
-  { id: 'abbonamento', label: 'Abbonamento', icon: 'Tv', color: '#ec4899' },
+  { id: 'abbonamento', label: 'Abbonamento', icon: 'Repeat', color: '#ec4899' },
   { id: 'finanziamento', label: 'Finanziamento', icon: 'CreditCard', color: '#f97316', freeText: true, placeholder: 'es. Rata lavatrice, Prestito auto...' },
   { id: 'f24', label: 'F24', icon: 'Landmark', color: '#0d9488', freeText: true, placeholder: 'es. Acconto IRPEF, Saldo IVA...' },
   { id: 'pagopa', label: 'PagoPA', icon: 'Landmark', color: '#0891b2', freeText: true, placeholder: 'es. TARI 2026, Bollo auto...' },

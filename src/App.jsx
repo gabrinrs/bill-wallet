@@ -681,7 +681,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     contratto_id: contrattoId || (contratti[0]?.id || ''),
-    importo: '', periodo: '', emissione: '', scadenza: '', descrizione_libera: '', metodo_pagamento: 'rid',
+    importo: '', periodo: '', emissione: '', scadenza: '', descrizione_libera: '', metodo_pagamento: null,
   })
   const update = (f, v) => setForm(p => ({ ...p, [f]: v }))
 
@@ -809,7 +809,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
               </div>
             </div>
             <button onClick={handleSave}
-              disabled={saving || !form.importo || !form.scadenza}
+              disabled={saving || !form.importo || !form.scadenza || !form.metodo_pagamento}
               className="w-full py-3 bg-bolly-500 text-white font-semibold rounded-xl disabled:opacity-40">{saving ? 'Salvataggio...' : 'Salva bolletta'}</button>
           </>
         )
@@ -860,7 +860,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
             </div>
           </div>
           <button onClick={handleSave}
-            disabled={saving || !form.importo || !form.scadenza || !form.descrizione_libera.trim()}
+            disabled={saving || !form.importo || !form.scadenza || !form.descrizione_libera.trim() || !form.metodo_pagamento}
             className="w-full py-3 bg-bolly-500 text-white font-semibold rounded-xl disabled:opacity-40">{saving ? 'Salvataggio...' : 'Salva bolletta'}</button>
         </>
       )}

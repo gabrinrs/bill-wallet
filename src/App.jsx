@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
 import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta } from './lib/database'
 import { CATEGORIE, FORNITORI, getCategoria, PORTALI_PAGAMENTO } from './lib/categorie'
@@ -64,11 +64,80 @@ function FonteBadge({ fonte }) {
   )
 }
 
+function SwipeableContratto({ isOpen, onOpen, onClose, onClick, onEdit, onDelete, children }) {
+  const [dragOffset, setDragOffset] = useState(null)
+  const startX = useRef(0)
+  const moved = useRef(false)
+  const ACTIONS_WIDTH = 152
+  const OPEN_THRESHOLD = 50
+
+  const targetX = isOpen ? -ACTIONS_WIDTH : 0
+  const currentX = dragOffset !== null ? dragOffset : targetX
+
+  const handleTouchStart = (e) => {
+    startX.current = e.touches[0].clientX
+    moved.current = false
+  }
+  const handleTouchMove = (e) => {
+    const deltaX = e.touches[0].clientX - startX.current
+    if (Math.abs(deltaX) > 5) moved.current = true
+    const next = Math.max(-ACTIONS_WIDTH - 10, Math.min(10, targetX + deltaX))
+    setDragOffset(next)
+  }
+  const handleTouchEnd = () => {
+    if (!moved.current) { setDragOffset(null); return }
+    if (dragOffset !== null && dragOffset < -OPEN_THRESHOLD) onOpen()
+    else onClose()
+    setDragOffset(null)
+  }
+
+  const handleCardClick = (e) => {
+    if (moved.current) { e.preventDefault(); return }
+    if (isOpen) { onClose(); return }
+    onClick?.()
+  }
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl">
+      <div className="absolute inset-y-0 right-0 flex">
+        <button
+          onClick={(e) => { e.stopPropagation(); onEdit() }}
+          className="w-[76px] flex flex-col items-center justify-center bg-gray-200 text-gray-700 gap-1 active:bg-gray-300"
+          aria-label="Modifica contratto"
+        >
+          <Pencil size={18} />
+          <span className="text-xs font-medium">Modifica</span>
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete() }}
+          className="w-[76px] flex flex-col items-center justify-center bg-red-600 text-white gap-1 active:bg-red-700"
+          aria-label="Elimina contratto"
+        >
+          <Trash2 size={18} />
+          <span className="text-xs font-medium">Elimina</span>
+        </button>
+      </div>
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onClick={handleCardClick}
+        style={{ transform: `translateX(${currentX}px)`, transition: dragOffset !== null ? 'none' : 'transform 220ms ease-out' }}
+        className="relative bg-white rounded-2xl border border-gray-100 shadow-sm cursor-pointer active:scale-[0.98]"
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
 // ============================================================
 // DASHBOARD
 // ============================================================
 
-function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile, onLogout }) {
+function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto }) {
+  const [cardSwipedId, setCardSwipedId] = useState(null)
+  const [deletingContratto, setDeletingContratto] = useState(null)
   const bolletteProssime = useMemo(() => {
     return bollette
       .filter(b => !b.pagata && b.stato_elaborazione !== 'errore_parsing' && b.stato_elaborazione !== 'orfana' && b.stato_elaborazione !== 'incompleta')
@@ -212,9 +281,18 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
         <div className="space-y-2">
           {contratti.map(c => {
             const nonPagate = bollette.filter(b => b.contratto_id === c.id && !b.pagata).length
+            const totalBollette = bollette.filter(b => b.contratto_id === c.id).length
             return (
-              <Card key={c.id} className="p-4" onClick={() => onSelectContratto(c.id)}>
-                <div className="flex items-center gap-3">
+              <SwipeableContratto
+                key={c.id}
+                isOpen={cardSwipedId === c.id}
+                onOpen={() => setCardSwipedId(c.id)}
+                onClose={() => setCardSwipedId(null)}
+                onClick={() => onSelectContratto(c.id)}
+                onEdit={() => { setCardSwipedId(null); onEditContratto(c) }}
+                onDelete={() => { setCardSwipedId(null); setDeletingContratto({ contratto: c, numBollette: totalBollette }) }}
+              >
+                <div className="flex items-center gap-3 p-4">
                   <CategoriaIcon categoriaId={c.categoria} />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900">{c.fornitore}</p>
@@ -229,7 +307,7 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
                     <ChevronRight size={18} className="text-gray-400" />
                   </div>
                 </div>
-              </Card>
+              </SwipeableContratto>
             )
           })}
           {contratti.length === 0 && (
@@ -240,6 +318,23 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
           )}
         </div>
       </div>
+
+      {deletingContratto && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setDeletingContratto(null)}>
+          <div className="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3" onClick={e => e.stopPropagation()}>
+            <p className="font-semibold text-gray-900">Eliminare il contratto?</p>
+            <p className="text-sm text-gray-600">
+              {deletingContratto.numBollette > 0
+                ? `Verranno eliminate anche ${deletingContratto.numBollette === 1 ? 'la bolletta collegata' : `le ${deletingContratto.numBollette} bollette collegate`}. Questa azione non si può annullare.`
+                : 'Questa azione non si può annullare.'}
+            </p>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setDeletingContratto(null)} className="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700">Annulla</button>
+              <button onClick={() => { onDeleteContratto(deletingContratto.contratto.id); setDeletingContratto(null) }} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium">Elimina</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -284,7 +379,11 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
       {showDeleteConfirm && (
         <Card className="p-4 border-red-200 bg-red-50">
           <p className="font-medium text-red-800 mb-1">Eliminare questo contratto?</p>
-          <p className="text-sm text-red-600 mb-3">Verranno eliminate anche tutte le bollette collegate. Questa azione non si può annullare.</p>
+          <p className="text-sm text-red-600 mb-3">
+            {bollette.length > 0
+              ? `Verranno eliminate anche ${bollette.length === 1 ? 'la bolletta collegata' : `le ${bollette.length} bollette collegate`}. Questa azione non si può annullare.`
+              : 'Questa azione non si può annullare.'}
+          </p>
           <div className="flex gap-2">
             <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2 rounded-xl border border-gray-300 text-sm font-medium text-gray-700">Annulla</button>
             <button onClick={() => onDeleteContratto(contratto.id)} className="flex-1 py-2 rounded-xl bg-red-600 text-white text-sm font-medium">Elimina</button>
@@ -1314,7 +1413,7 @@ export default function App() {
 
   const renderScreen = () => {
     switch (screen) {
-      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} />
+      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} />
       case 'dettaglio': {
         const c = contratti.find(x => x.id === selectedContrattoId)
         if (!c) { setScreen('dashboard'); return null }

@@ -676,14 +676,51 @@ function FormContratto({ onSave, onBack }) {
 // FORM BOLLETTA
 // ============================================================
 
-function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
+function FormBolletta({ contratti, contrattoId, onSave, onBack, session }) {
   const [mode, setMode] = useState('contratto')
   const [saving, setSaving] = useState(false)
+  const [pdfFile, setPdfFile] = useState(null)
+  const [uploadStatus, setUploadStatus] = useState('idle') // idle, uploading, processing, success, error
+  const [uploadError, setUploadError] = useState(null)
+  const fileInputRef = useRef(null)
   const [form, setForm] = useState({
     contratto_id: contrattoId || (contratti[0]?.id || ''),
     importo: '', periodo: '', emissione: '', scadenza: '', descrizione_libera: '', metodo_pagamento: null,
   })
   const update = (f, v) => setForm(p => ({ ...p, [f]: v }))
+
+  const handlePdfUpload = async () => {
+    if (!pdfFile || !session?.user?.id) return
+    setUploadStatus('uploading')
+    setUploadError(null)
+    try {
+      const userId = session.user.id
+      const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 15)
+      const filePath = `${userId}/${timestamp}.pdf`
+
+      const { error: storageError } = await supabase.storage
+        .from('bollette-pdf')
+        .upload(filePath, pdfFile, { contentType: 'application/pdf' })
+      if (storageError) throw new Error('Errore nel caricamento del file: ' + storageError.message)
+
+      const pdfUrl = `https://iimzetvymamadclfblgy.supabase.co/storage/v1/object/public/bollette-pdf/${filePath}`
+
+      setUploadStatus('processing')
+      const webhookRes = await fetch('https://hook.eu1.make.com/5n4w2qn99uf830yktlyjw8o17ogcd1xt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, pdf_url: pdfUrl })
+      })
+      if (!webhookRes.ok) throw new Error('Errore nell\'invio al sistema di elaborazione')
+
+      setUploadStatus('success')
+      setTimeout(() => onBack(), 2500)
+    } catch (e) {
+      console.error('Upload PDF error:', e)
+      setUploadStatus('error')
+      setUploadError(e.message)
+    }
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -723,12 +760,67 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack }) {
       </div>
 
       {mode === 'pdf' && (
-        <Card className="p-6 border-dashed border-2 border-gray-300 text-center">
-          <Upload size={32} className="text-gray-400 mx-auto" />
-          <p className="text-sm font-medium text-gray-700 mt-3">Carica il PDF della bolletta</p>
-          <p className="text-xs text-gray-400 mt-1">L'AI riconosce automaticamente fornitore, importo e scadenza</p>
-          <p className="text-xs text-bolly-500 font-medium mt-3">Disponibile nella prossima versione</p>
-        </Card>
+        <div className="space-y-4">
+          {uploadStatus === 'success' ? (
+            <Card className="p-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+                <Check size={24} className="text-green-600" />
+              </div>
+              <p className="text-sm font-medium text-gray-900 mt-3">PDF caricato con successo!</p>
+              <p className="text-xs text-gray-500 mt-1">La bolletta verrà elaborata in pochi secondi.</p>
+            </Card>
+          ) : (
+            <>
+              <Card
+                className={`p-6 border-dashed border-2 text-center cursor-pointer transition-colors ${pdfFile ? 'border-bolly-500 bg-bolly-50' : 'border-gray-300 hover:border-gray-400'}`}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={e => { if (e.target.files?.[0]) setPdfFile(e.target.files[0]) }}
+                />
+                {pdfFile ? (
+                  <>
+                    <Check size={32} className="text-bolly-500 mx-auto" />
+                    <p className="text-sm font-medium text-gray-900 mt-3">{pdfFile.name}</p>
+                    <p className="text-xs text-gray-400 mt-1">Tocca per cambiare file</p>
+                  </>
+                ) : (
+                  <>
+                    <Upload size={32} className="text-gray-400 mx-auto" />
+                    <p className="text-sm font-medium text-gray-700 mt-3">Tocca per selezionare il PDF</p>
+                    <p className="text-xs text-gray-400 mt-1">L'AI riconosce automaticamente fornitore, importo e scadenza</p>
+                  </>
+                )}
+              </Card>
+
+              {uploadStatus === 'error' && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                  {uploadError || 'Si è verificato un errore. Riprova.'}
+                </div>
+              )}
+
+              {pdfFile && uploadStatus !== 'uploading' && uploadStatus !== 'processing' && (
+                <button
+                  onClick={handlePdfUpload}
+                  className="w-full py-3 bg-bolly-500 text-white font-semibold rounded-xl hover:bg-bolly-600 transition-colors"
+                >Analizza bolletta</button>
+              )}
+
+              {(uploadStatus === 'uploading' || uploadStatus === 'processing') && (
+                <div className="flex items-center justify-center gap-3 py-3">
+                  <Loader2 size={20} className="animate-spin text-bolly-500" />
+                  <p className="text-sm text-gray-600">
+                    {uploadStatus === 'uploading' ? 'Caricamento PDF...' : 'Analisi in corso...'}
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       )}
 
       {mode === 'contratto' && !contrattoId && !form.contratto_id && (
@@ -1441,7 +1533,7 @@ export default function App() {
         )
       case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => setScreen('aggiungi')} />
       case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} /> : null
-      case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} />
+      case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} session={session} />
       case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} />
       case 'profilo': return <Profilo profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} />
       case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} />

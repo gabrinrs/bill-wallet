@@ -55,13 +55,19 @@ function Loading() {
 }
 
 function FonteBadge({ fonte }) {
-  if (fonte !== 'email') return null
-  return (
+  if (fonte === 'email') return (
     <span className="inline-flex items-center gap-1 text-xs font-medium text-bolly-700 bg-bolly-50 px-2 py-0.5 rounded-full border border-bolly-100">
       <Mail size={10} />
       Via email
     </span>
   )
+  if (fonte === 'upload') return (
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-bolly-700 bg-bolly-50 px-2 py-0.5 rounded-full border border-bolly-100">
+      <Upload size={10} />
+      Da PDF
+    </span>
+  )
+  return null
 }
 
 function SwipeableContratto({ isOpen, onOpen, onClose, onClick, onEdit, onDelete, children }) {

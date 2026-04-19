@@ -676,7 +676,7 @@ function FormContratto({ onSave, onBack }) {
 // FORM BOLLETTA
 // ============================================================
 
-function FormBolletta({ contratti, contrattoId, onSave, onBack, session }) {
+function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefresh }) {
   const [mode, setMode] = useState('contratto')
   const [saving, setSaving] = useState(false)
   const [pdfFile, setPdfFile] = useState(null)
@@ -714,7 +714,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session }) {
       if (!webhookRes.ok) throw new Error('Errore nell\'invio al sistema di elaborazione')
 
       setUploadStatus('success')
-      setTimeout(() => onBack(), 2500)
+      setTimeout(async () => { if (onRefresh) await onRefresh(); onBack() }, 3000)
     } catch (e) {
       console.error('Upload PDF error:', e)
       setUploadStatus('error')
@@ -1533,7 +1533,7 @@ export default function App() {
         )
       case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => setScreen('aggiungi')} />
       case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} /> : null
-      case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} session={session} />
+      case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} session={session} onRefresh={loadData} />
       case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} />
       case 'profilo': return <Profilo profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} />
       case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} />

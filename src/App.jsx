@@ -149,6 +149,7 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
       .filter(b => !b.pagata && b.stato_elaborazione !== 'errore_parsing' && b.stato_elaborazione !== 'orfana' && b.stato_elaborazione !== 'incompleta')
       .map(b => ({ ...b, contratto: contratti.find(c => c.id === b.contratto_id), stato: getStatoBolletta(b) }))
       .filter(b => b.contratto)
+      .filter(b => b.scadenza)
       .sort((a, b) => new Date(a.scadenza) - new Date(b.scadenza))
   }, [bollette, contratti])
 
@@ -241,7 +242,7 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
                   <p className="font-medium text-gray-900 truncate">
                     {b.contratto?.fornitore || b.descrizione_libera || 'Pagamento'}
                   </p>
-                  <p className="text-sm text-gray-500">Scade il {formatData(b.scadenza)}</p>
+                  <p className="text-sm text-gray-500">{b.scadenza ? `Scade il ${formatData(b.scadenza)}` : 'Scadenza non disponibile'}</p>
                   <div className="flex flex-wrap items-center gap-1.5 mt-1">
                     {b.contratto && (
                       b.contratto.domiciliazione ? (
@@ -415,7 +416,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
       <Card className="p-4 space-y-3">
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div><p className="text-gray-500">Intestatario</p><p className="font-medium">{contratto.intestatario}</p></div>
-          <div><p className="text-gray-500">Ricezione</p><p className="font-medium capitalize">{contratto.metodo_ricezione}</p></div>
+          <div><p className="text-gray-500">Ricezione</p><p className="font-medium capitalize">{contratto.metodo_ricezione || '—'}</p></div>
           <div><p className="text-gray-500">Domiciliazione</p><p className="font-medium">{contratto.domiciliazione ? 'Attiva' : 'No'}</p></div>
           <div><p className="text-gray-500">Attivo dal</p><p className="font-medium">{contratto.data_inizio ? formatData(contratto.data_inizio) : '—'}</p></div>
         </div>
@@ -1431,7 +1432,7 @@ export default function App() {
   useEffect(() => { loadData() }, [loadData])
 
   // Reset notifiche viste quando il count delle notifiche aumenta (nuove bollette urgenti)
-  const currentNotificheCount = bollette.filter(b => !b.pagata && giorniDa(b.scadenza) <= 7).length
+  const currentNotificheCount = bollette.filter(b => !b.pagata && b.scadenza && giorniDa(b.scadenza) <= 7).length
   useEffect(() => {
     setPrevNotificheCount(prev => {
       if (currentNotificheCount > prev) setNotificheViste(false)
@@ -1506,7 +1507,7 @@ export default function App() {
     await loadData()
   }
 
-  const notificheCount = bollette.filter(b => !b.pagata && giorniDa(b.scadenza) <= 7).length
+  const notificheCount = bollette.filter(b => !b.pagata && b.scadenza && giorniDa(b.scadenza) <= 7).length
   const showBadgeNotifiche = notificheCount > 0 && !notificheViste
 
   const renderScreen = () => {

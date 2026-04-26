@@ -7,7 +7,7 @@ import Auth from './components/Auth'
 import {
   Home, Plus, Bell, ChevronLeft, ChevronRight, Upload, Check,
   AlertTriangle, Zap, Flame, Droplets, Phone, Wifi, Shield, Package,
-  TrendingUp, Calendar, Repeat, Tv, CreditCard, Landmark, PenLine, LogOut, Loader2,
+  TrendingUp, CalendarDays, Repeat, Tv, CreditCard, Landmark, PenLine, LogOut, Loader2,
   Trash2, ExternalLink, Pencil, Mail, Copy, User
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
@@ -1130,6 +1130,145 @@ function Notifiche({ contratti, bollette }) {
 }
 
 // ============================================================
+// CALENDARIO
+// ============================================================
+
+const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre']
+const GIORNI_SETT = ['L','M','M','G','V','S','D']
+
+function Calendario({ bollette, contratti, onSelectContratto }) {
+  const oggi = new Date()
+  const [meseCorrente, setMeseCorrente] = useState(oggi.getMonth())
+  const [annoCorrente, setAnnoCorrente] = useState(oggi.getFullYear())
+  const [giornoSelezionato, setGiornoSelezionato] = useState(null)
+
+  const mesePrecedente = () => {
+    if (meseCorrente === 0) { setMeseCorrente(11); setAnnoCorrente(a => a - 1) }
+    else setMeseCorrente(m => m - 1)
+    setGiornoSelezionato(null)
+  }
+  const meseSuccessivo = () => {
+    if (meseCorrente === 11) { setMeseCorrente(0); setAnnoCorrente(a => a + 1) }
+    else setMeseCorrente(m => m + 1)
+    setGiornoSelezionato(null)
+  }
+
+  const giorniNelMese = new Date(annoCorrente, meseCorrente + 1, 0).getDate()
+  let primoGiorno = new Date(annoCorrente, meseCorrente, 1).getDay()
+  primoGiorno = primoGiorno === 0 ? 6 : primoGiorno - 1
+
+  const bollettePerGiorno = useMemo(() => {
+    const mappa = {}
+    bollette.forEach(b => {
+      if (!b.scadenza || b.stato_elaborazione === 'errore_parsing') return
+      const d = new Date(b.scadenza)
+      if (d.getMonth() === meseCorrente && d.getFullYear() === annoCorrente) {
+        const g = d.getDate()
+        if (!mappa[g]) mappa[g] = []
+        const contratto = contratti.find(c => c.id === b.contratto_id)
+        mappa[g].push({ ...b, contratto })
+      }
+    })
+    return mappa
+  }, [bollette, contratti, meseCorrente, annoCorrente])
+
+  const isOggi = (g) => g === oggi.getDate() && meseCorrente === oggi.getMonth() && annoCorrente === oggi.getFullYear()
+  const isDomiciliata = (b) => b.contratto?.metodo_pagamento === 'rid' || b.contratto?.domiciliazione
+
+  const celle = []
+  const giorniMesePrecedente = new Date(annoCorrente, meseCorrente, 0).getDate()
+  for (let i = primoGiorno - 1; i >= 0; i--) celle.push({ giorno: giorniMesePrecedente - i, corrente: false })
+  for (let g = 1; g <= giorniNelMese; g++) celle.push({ giorno: g, corrente: true })
+  const restanti = 7 - (celle.length % 7)
+  if (restanti < 7) for (let i = 1; i <= restanti; i++) celle.push({ giorno: i, corrente: false })
+
+  const bolletteGiornoSelezionato = giornoSelezionato ? (bollettePerGiorno[giornoSelezionato] || []) : []
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <button onClick={mesePrecedente} className="p-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={20} className="text-gray-500" /></button>
+        <h1 className="text-lg font-bold text-gray-900">{MESI[meseCorrente]} {annoCorrente}</h1>
+        <button onClick={meseSuccessivo} className="p-2 rounded-xl hover:bg-gray-100"><ChevronRight size={20} className="text-gray-500" /></button>
+      </div>
+
+      <Card className="p-3">
+        <div className="grid grid-cols-7 mb-2">
+          {GIORNI_SETT.map((g, i) => (
+            <div key={i} className="text-center text-xs font-medium text-gray-400 py-1">{g}</div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7">
+          {celle.map((c, i) => {
+            const dots = c.corrente ? bollettePerGiorno[c.giorno] : null
+            const hasDomiciliata = dots?.some(b => isDomiciliata(b))
+            const hasManuale = dots?.some(b => !isDomiciliata(b))
+            const selezionato = c.corrente && giornoSelezionato === c.giorno
+            return (
+              <button key={i}
+                onClick={() => c.corrente && setGiornoSelezionato(c.giorno === giornoSelezionato ? null : c.giorno)}
+                className={`flex flex-col items-center py-1.5 rounded-lg transition-colors ${selezionato ? 'bg-bolly-50' : ''} ${c.corrente ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'}`}
+              >
+                <span className={`text-sm w-7 h-7 flex items-center justify-center rounded-full ${
+                  !c.corrente ? 'text-gray-300' :
+                  isOggi(c.giorno) ? 'bg-bolly-500 text-white font-medium' :
+                  'text-gray-700'
+                }`}>{c.giorno}</span>
+                <div className="flex gap-0.5 mt-1 h-1.5">
+                  {hasDomiciliata && <span className="w-1.5 h-1.5 rounded-full bg-bolly-500" />}
+                  {hasManuale && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </Card>
+
+      <div className="flex gap-4 px-1">
+        <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-bolly-500" /><span className="text-xs text-gray-500">Domiciliata (RID)</span></div>
+        <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" /><span className="text-xs text-gray-500">Da pagare</span></div>
+      </div>
+
+      {giornoSelezionato && (
+        <Card className="p-4">
+          <p className="text-sm font-medium text-gray-500 mb-3">{giornoSelezionato} {MESI[meseCorrente].toLowerCase()} {annoCorrente}</p>
+          {bolletteGiornoSelezionato.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-4">Nessuna scadenza in questo giorno</p>
+          ) : (
+            <div className="space-y-3">
+              {bolletteGiornoSelezionato.map(b => {
+                const domiciliata = isDomiciliata(b)
+                const IconComp = b.contratto ? (IconMap[getCategoria(b.contratto.categoria)?.icon] || Package) : Package
+                return (
+                  <div key={b.id}
+                    className="flex items-center gap-3 cursor-pointer"
+                    onClick={() => { if (b.contratto_id && onSelectContratto) onSelectContratto(b.contratto_id) }}
+                  >
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${domiciliata ? 'bg-bolly-50 text-bolly-600' : 'bg-amber-50 text-amber-600'}`}>
+                      <IconComp size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{b.contratto?.fornitore || b.descrizione_libera || 'Bolletta'}</p>
+                      <p className="text-xs text-gray-500">{b.contratto ? getCategoria(b.contratto.categoria)?.label : ''}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-gray-900">{b.importo ? formatEuro(b.importo) : '—'}</p>
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${domiciliata ? 'bg-bolly-50 text-bolly-700' : 'bg-amber-50 text-amber-700'}`}>
+                        {b.contratto?.metodo_pagamento === 'rid' ? 'RID' : b.contratto?.metodo_pagamento === 'bollettino' ? 'Bollettino' : 'Manuale'}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </Card>
+      )}
+    </div>
+  )
+}
+
+// ============================================================
 // APP
 // ============================================================
 
@@ -1391,6 +1530,9 @@ export default function App() {
   const [editingContratto, setEditingContratto] = useState(null)
   const [notificheViste, setNotificheViste] = useState(false)
   const [prevNotificheCount, setPrevNotificheCount] = useState(0)
+  const scrollRef = useRef(null)
+
+  useEffect(() => { scrollRef.current?.scrollTo(0, 0) }, [screen])
 
   // Se supabase non è configurato, mostra errore
   if (!supabase) {
@@ -1541,6 +1683,7 @@ export default function App() {
       case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => setScreen('aggiungi')} />
       case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} /> : null
       case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} />
+      case 'calendario': return <Calendario bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />
       case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} />
       case 'profilo': return <Profilo profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} />
       case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} />
@@ -1550,11 +1693,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col" style={{ maxWidth: 430, margin: '0 auto' }}>
-      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-24 safe-top">{renderScreen()}</div>
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pt-6 pb-24 safe-top">{renderScreen()}</div>
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-bottom" style={{ maxWidth: 430, margin: '0 auto' }}>
         <div className="flex items-center justify-around px-6 py-2">
           <button onClick={() => setScreen('dashboard')} className={`flex flex-col items-center gap-1 py-2 px-3 ${screen === 'dashboard' ? 'text-bolly-500' : 'text-gray-400'}`}>
             <Home size={22} /><span className="text-xs font-medium">Home</span>
+          </button>
+          <button onClick={() => setScreen('calendario')} className={`flex flex-col items-center gap-1 py-2 px-3 ${screen === 'calendario' ? 'text-bolly-500' : 'text-gray-400'}`}>
+            <CalendarDays size={22} /><span className="text-xs font-medium">Calendario</span>
           </button>
           <button onClick={() => setScreen('aggiungi')} className="flex flex-col items-center gap-1 py-2 px-3">
             <div className="w-11 h-11 bg-bolly-500 rounded-full flex items-center justify-center -mt-5 shadow-lg"><Plus size={24} className="text-white" /></div>

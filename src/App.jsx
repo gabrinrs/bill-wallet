@@ -8,7 +8,7 @@ import {
   Home, Plus, Bell, ChevronLeft, ChevronRight, Upload, Check,
   AlertTriangle, Zap, Flame, Droplets, Phone, Wifi, Shield, Package,
   TrendingUp, CalendarDays, Repeat, Tv, CreditCard, Landmark, PenLine, LogOut, Loader2,
-  Trash2, ExternalLink, Pencil, Mail, Copy, User
+  Trash2, ExternalLink, Pencil, Mail, Copy, User, Inbox
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -1269,6 +1269,77 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
 }
 
 // ============================================================
+// STORICO BOLLETTE
+// ============================================================
+
+function StoricoBollette({ bollette, contratti, onSelectContratto }) {
+  const bolletteFull = useMemo(() => {
+    return bollette
+      .filter(b => b.stato_elaborazione !== 'errore_parsing')
+      .map(b => ({
+        ...b,
+        contratto: contratti.find(c => c.id === b.contratto_id) || null
+      }))
+      .sort((a, b) => {
+        const da = a.created_at || a.scadenza || '1970-01-01'
+        const db = b.created_at || b.scadenza || '1970-01-01'
+        return new Date(db) - new Date(da)
+      })
+  }, [bollette, contratti])
+
+  const formatDataRicezione = (b) => {
+    const d = b.created_at ? new Date(b.created_at) : null
+    if (!d || isNaN(d)) return null
+    return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
+
+  return (
+    <div className="space-y-4">
+      <h1 className="text-xl font-bold text-gray-900">Bollette</h1>
+
+      {bolletteFull.length === 0 ? (
+        <Card className="p-6">
+          <div className="text-center">
+            <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+              <Inbox size={24} className="text-gray-400" />
+            </div>
+            <p className="text-sm text-gray-500">Nessuna bolletta ricevuta</p>
+          </div>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {bolletteFull.map(b => {
+            const cat = b.contratto ? getCategoria(b.contratto.categoria) : null
+            const IconComp = cat ? (IconMap[cat.icon] || Package) : Package
+            const iconColor = cat?.color || '#6B7280'
+            return (
+              <Card key={b.id} className="p-3" onClick={() => { if (b.contratto_id && onSelectContratto) onSelectContratto(b.contratto_id) }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: iconColor + '18' }}>
+                    <IconComp size={20} style={{ color: iconColor }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{b.contratto?.fornitore || b.descrizione_libera || 'Bolletta'}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {b.scadenza && <p className="text-xs text-gray-500">Scade il {formatData(b.scadenza)}</p>}
+                      <FonteBadge fonte={b.fonte} />
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-gray-900">{b.importo ? formatEuro(b.importo) : '—'}</p>
+                    {formatDataRicezione(b) && <p className="text-xs text-gray-400 mt-0.5">{formatDataRicezione(b)}</p>}
+                  </div>
+                </div>
+              </Card>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================================
 // APP
 // ============================================================
 
@@ -1684,6 +1755,7 @@ export default function App() {
       case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} /> : null
       case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} />
       case 'calendario': return <Calendario bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />
+      case 'bollette': return <StoricoBollette bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />
       case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} />
       case 'profilo': return <Profilo profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} />
       case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} />
@@ -1705,6 +1777,9 @@ export default function App() {
           <button onClick={() => setScreen('aggiungi')} className="flex flex-col items-center gap-1 py-2 px-3">
             <div className="w-11 h-11 bg-bolly-500 rounded-full flex items-center justify-center -mt-5 shadow-lg"><Plus size={24} className="text-white" /></div>
             <span className="text-xs font-medium text-bolly-500">Aggiungi</span>
+          </button>
+          <button onClick={() => setScreen('bollette')} className={`flex flex-col items-center gap-1 py-2 px-3 ${screen === 'bollette' ? 'text-bolly-500' : 'text-gray-400'}`}>
+            <Inbox size={22} /><span className="text-xs font-medium">Bollette</span>
           </button>
           <button onClick={() => { setScreen('notifiche'); setNotificheViste(true) }} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'notifiche' ? 'text-bolly-500' : 'text-gray-400'}`}>
             <Bell size={22} />

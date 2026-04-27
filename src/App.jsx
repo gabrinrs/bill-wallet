@@ -54,6 +54,21 @@ function Loading() {
   )
 }
 
+function SplashScreen() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
+      <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg" style={{ background: 'linear-gradient(145deg, #00897B, #00695C)' }}>
+        <span className="text-white font-pacifico" style={{ fontSize: '38px', transform: 'translateX(-3px)', display: 'block', lineHeight: 1 }}>B</span>
+      </div>
+      <h1 className="text-3xl font-pacifico text-bolly-500 mb-2">Bolly</h1>
+      <p className="text-gray-500 text-sm">Mai più scadenze dimenticate.</p>
+      <div className="mt-8">
+        <Loader2 size={24} className="animate-spin text-bolly-400" />
+      </div>
+    </div>
+  )
+}
+
 function FonteBadge({ fonte }) {
   if (fonte === 'email') return (
     <span className="inline-flex items-center gap-1 text-xs font-medium text-bolly-700 bg-bolly-50 px-2 py-0.5 rounded-full border border-bolly-100">
@@ -1653,7 +1668,7 @@ export default function App() {
     })
   }, [currentNotificheCount])
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loading /></div>
+  if (loading) return <SplashScreen />
   if (!session) return <Auth />
 
   const handleLogout = async () => {

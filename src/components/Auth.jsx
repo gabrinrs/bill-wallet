@@ -68,7 +68,7 @@ export default function Auth() {
             <span className="text-white font-pacifico" style={{ fontSize: '30px', transform: 'translateX(-2px)', display: 'block', lineHeight: 1 }}>B</span>
           </div>
           <h1 className="text-2xl font-pacifico text-bolly-500">Bolly</h1>
-          <p className="text-gray-500 mt-1">Il tuo portafoglio contratti</p>
+          <p className="text-gray-500 mt-1">Mai più scadenze dimenticate.</p>
         </div>
 
         {/* Form */}

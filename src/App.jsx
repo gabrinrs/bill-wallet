@@ -4,6 +4,7 @@ import { getContratti, getBollette, createContratto, createBolletta, togglePagat
 import { CATEGORIE, FORNITORI, getCategoria, PORTALI_PAGAMENTO } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import Auth from './components/Auth'
+import Onboarding from './components/Onboarding'
 import {
   Home, Plus, Bell, ChevronLeft, ChevronRight, Upload, Check,
   AlertTriangle, Zap, Flame, Droplets, Phone, Wifi, Shield, Package,
@@ -1616,6 +1617,7 @@ export default function App() {
   const [editingContratto, setEditingContratto] = useState(null)
   const [notificheViste, setNotificheViste] = useState(false)
   const [prevNotificheCount, setPrevNotificheCount] = useState(0)
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const scrollRef = useRef(null)
 
   useEffect(() => { scrollRef.current?.scrollTo(0, 0) }, [screen])
@@ -1659,6 +1661,13 @@ export default function App() {
 
   useEffect(() => { loadData() }, [loadData])
 
+  // Mostra onboarding al primo accesso
+  useEffect(() => {
+    if (session && !localStorage.getItem('bolly_onboarding_done')) {
+      setShowOnboarding(true)
+    }
+  }, [session])
+
   // Reset notifiche viste quando il count delle notifiche aumenta (nuove bollette urgenti)
   const currentNotificheCount = bollette.filter(b => !b.pagata && b.scadenza && giorniDa(b.scadenza) <= 7).length
   useEffect(() => {
@@ -1670,6 +1679,13 @@ export default function App() {
 
   if (loading) return <SplashScreen />
   if (!session) return <Auth />
+  if (showOnboarding) return (
+    <Onboarding
+      emailDedicata={profile?.email_dedicata}
+      userId={session.user.id}
+      onComplete={() => setShowOnboarding(false)}
+    />
+  )
 
   const handleLogout = async () => {
     await supabase.auth.signOut()

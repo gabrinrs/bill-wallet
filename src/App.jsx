@@ -394,8 +394,8 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
             {contratto.codice && <span className="text-xs text-gray-500">· {contratto.codice}</span>}
           </div>
         </div>
-        <button onClick={() => onEditContratto(contratto)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400"><Pencil size={18} /></button>
-        <button onClick={() => setShowDeleteConfirm(true)} className="p-2 rounded-xl hover:bg-red-50 text-gray-400"><Trash2 size={18} /></button>
+        <button onClick={() => onEditContratto(contratto)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400"><Pencil size={20} /></button>
+        <button onClick={() => setShowDeleteConfirm(true)} className="p-2 rounded-xl hover:bg-red-50 text-gray-400"><Trash2 size={20} /></button>
       </div>
 
       {showDeleteConfirm && (
@@ -483,7 +483,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
                     <Badge stato={stato} />
                     {b.pdf_url && (
                       <a href={b.pdf_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="p-1.5 rounded-lg hover:bg-bolly-50 text-bolly-500" title="Apri PDF">
-                        <ExternalLink size={16} />
+                        <ExternalLink size={18} />
                       </a>
                     )}
                     {!b.pagata && (
@@ -498,7 +498,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
                       </div>
                     ) : (
                       <button onClick={e => { e.stopPropagation(); setDeletingBollettaId(b.id) }} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300" title="Elimina bolletta">
-                        <Trash2 size={15} />
+                        <Trash2 size={18} />
                       </button>
                     )}
                   </div>

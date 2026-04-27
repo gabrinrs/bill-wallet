@@ -103,10 +103,25 @@ export default function Onboarding({ emailDedicata, userId, onComplete }) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Skip in alto a destra */}
+      {!isLastSlide && (
+        <div className="flex justify-end px-6 pt-6">
+          <button
+            onClick={handleFinish}
+            className="text-gray-400 text-sm font-medium px-3 py-1"
+          >
+            Salta
+          </button>
+        </div>
+      )}
+      {isLastSlide && <div className="pt-12" />}
+
+      {/* Content */}
       <div className="flex-1 flex items-center justify-center">
         {slides[step]}
       </div>
 
+      {/* Footer: dots + button */}
       <div className="px-8 pb-10 pt-4">
         <div className="flex items-center justify-center gap-2 mb-6">
           {slides.map((_, i) => (
@@ -135,15 +150,6 @@ export default function Onboarding({ emailDedicata, userId, onComplete }) {
           >
             Avanti
             <ChevronRight size={18} />
-          </button>
-        )}
-
-        {!isLastSlide && (
-          <button
-            onClick={handleFinish}
-            className="w-full mt-3 py-2 text-gray-400 text-sm font-medium"
-          >
-            Salta
           </button>
         )}
       </div>

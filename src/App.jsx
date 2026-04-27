@@ -1289,9 +1289,12 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
 // ============================================================
 
 function StoricoBollette({ bollette, contratti, onSelectContratto }) {
+  const [tab, setTab] = useState('bollette')
+  const [expandedComm, setExpandedComm] = useState(null)
+
   const bolletteFull = useMemo(() => {
     return bollette
-      .filter(b => b.stato_elaborazione !== 'errore_parsing')
+      .filter(b => b.stato_elaborazione !== 'errore_parsing' && b.stato_elaborazione !== 'comunicazione')
       .map(b => ({
         ...b,
         contratto: contratti.find(c => c.id === b.contratto_id) || null
@@ -1303,53 +1306,152 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
       })
   }, [bollette, contratti])
 
+  const comunicazioni = useMemo(() => {
+    return bollette
+      .filter(b => b.stato_elaborazione === 'comunicazione')
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  }, [bollette])
+
   const formatDataRicezione = (b) => {
     const d = b.created_at ? new Date(b.created_at) : null
     if (!d || isNaN(d)) return null
     return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
+  // Estrae i link dal testo dell'email
+  const extractLinks = (text) => {
+    if (!text) return []
+    const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/g
+    return [...new Set(text.match(urlRegex) || [])]
+  }
+
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-900">Bollette</h1>
+      <h1 className="text-xl font-bold text-gray-900">Inbox</h1>
 
-      {bolletteFull.length === 0 ? (
-        <Card className="p-6">
-          <div className="text-center">
-            <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <Inbox size={24} className="text-gray-400" />
-            </div>
-            <p className="text-sm text-gray-500">Nessuna bolletta ricevuta</p>
-          </div>
-        </Card>
-      ) : (
-        <div className="space-y-2">
-          {bolletteFull.map(b => {
-            const cat = b.contratto ? getCategoria(b.contratto.categoria) : null
-            const IconComp = cat ? (IconMap[cat.icon] || Package) : Package
-            const iconColor = cat?.color || '#6B7280'
-            return (
-              <Card key={b.id} className="p-3" onClick={() => { if (b.contratto_id && onSelectContratto) onSelectContratto(b.contratto_id) }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: iconColor + '18' }}>
-                    <IconComp size={20} style={{ color: iconColor }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{b.contratto?.fornitore || b.descrizione_libera || 'Bolletta'}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {b.scadenza && <p className="text-xs text-gray-500">Scade il {formatData(b.scadenza)}</p>}
-                      <FonteBadge fonte={b.fonte} />
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-bold text-gray-900">{b.importo ? formatEuro(b.importo) : '—'}</p>
-                    {formatDataRicezione(b) && <p className="text-xs text-gray-400 mt-0.5">{formatDataRicezione(b)}</p>}
-                  </div>
+      {/* Tab bollette / comunicazioni */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setTab('bollette')}
+          className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
+            tab === 'bollette' ? 'bg-bolly-500 text-white' : 'bg-gray-100 text-gray-500'
+          }`}
+        >
+          Bollette ({bolletteFull.length})
+        </button>
+        <button
+          onClick={() => setTab('comunicazioni')}
+          className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all relative ${
+            tab === 'comunicazioni' ? 'bg-bolly-500 text-white' : 'bg-gray-100 text-gray-500'
+          }`}
+        >
+          Comunicazioni ({comunicazioni.length})
+        </button>
+      </div>
+
+      {tab === 'bollette' && (
+        <>
+          {bolletteFull.length === 0 ? (
+            <Card className="p-6">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Inbox size={24} className="text-gray-400" />
                 </div>
-              </Card>
-            )
-          })}
-        </div>
+                <p className="text-sm text-gray-500">Nessuna bolletta ricevuta</p>
+              </div>
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {bolletteFull.map(b => {
+                const cat = b.contratto ? getCategoria(b.contratto.categoria) : null
+                const IconComp = cat ? (IconMap[cat.icon] || Package) : Package
+                const iconColor = cat?.color || '#6B7280'
+                return (
+                  <Card key={b.id} className="p-3" onClick={() => { if (b.contratto_id && onSelectContratto) onSelectContratto(b.contratto_id) }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: iconColor + '18' }}>
+                        <IconComp size={20} style={{ color: iconColor }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{b.contratto?.fornitore || b.descrizione_libera || 'Bolletta'}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {b.scadenza && <p className="text-xs text-gray-500">Scade il {formatData(b.scadenza)}</p>}
+                          <FonteBadge fonte={b.fonte} />
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-bold text-gray-900">{b.importo ? formatEuro(b.importo) : '—'}</p>
+                        {formatDataRicezione(b) && <p className="text-xs text-gray-400 mt-0.5">{formatDataRicezione(b)}</p>}
+                      </div>
+                    </div>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === 'comunicazioni' && (
+        <>
+          {comunicazioni.length === 0 ? (
+            <Card className="p-6">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Mail size={24} className="text-gray-400" />
+                </div>
+                <p className="text-sm text-gray-500">Nessuna comunicazione ricevuta</p>
+              </div>
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {comunicazioni.map(c => {
+                const isExpanded = expandedComm === c.id
+                const links = extractLinks(c.email_riassunto)
+                return (
+                  <Card key={c.id} className="p-4" onClick={() => setExpandedComm(isExpanded ? null : c.id)}>
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50 shrink-0">
+                        <Mail size={20} className="text-blue-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900">{c.email_oggetto || 'Comunicazione'}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{formatDataRicezione(c)}</p>
+                        {isExpanded && (
+                          <div className="mt-3 space-y-3">
+                            <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{c.email_riassunto || 'Nessun contenuto disponibile'}</p>
+                            {links.length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-xs font-semibold text-gray-500 uppercase">Link trovati</p>
+                                {links.map((link, i) => (
+                                  <a
+                                    key={i}
+                                    href={link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="flex items-center gap-2 text-sm text-bolly-600 bg-bolly-50 px-3 py-2 rounded-lg border border-bolly-100 hover:bg-bolly-100 transition-colors break-all"
+                                  >
+                                    <ExternalLink size={14} className="shrink-0" />
+                                    <span className="truncate">{link.length > 50 ? link.substring(0, 50) + '...' : link}</span>
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {!isExpanded && (
+                          <p className="text-xs text-gray-400 mt-1 truncate">{c.email_riassunto?.substring(0, 80) || ''}</p>
+                        )}
+                      </div>
+                      <ChevronRight size={16} className={`text-gray-300 shrink-0 mt-1 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                    </div>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   )
@@ -1810,7 +1912,7 @@ export default function App() {
             <span className="text-xs font-medium text-bolly-500">Aggiungi</span>
           </button>
           <button onClick={() => setScreen('bollette')} className={`flex flex-col items-center gap-1 py-2 px-3 ${screen === 'bollette' ? 'text-bolly-500' : 'text-gray-400'}`}>
-            <Inbox size={22} /><span className="text-xs font-medium">Bollette</span>
+            <Inbox size={22} /><span className="text-xs font-medium">Inbox</span>
           </button>
           <button onClick={() => { setScreen('notifiche'); setNotificheViste(true) }} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'notifiche' ? 'text-bolly-500' : 'text-gray-400'}`}>
             <Bell size={22} />

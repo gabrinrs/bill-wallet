@@ -1318,21 +1318,34 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
     return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
-  // Pulisce il testo delle email: link duplicati, entità HTML, caratteri invisibili, righe vuote
+  // Pulisce il testo delle email: HTML grezzo, link duplicati, entità, caratteri invisibili, righe vuote
   const cleanEmailText = (text) => {
     if (!text) return text
     let clean = text
-    // 1. Rimuove link duplicati tipo "www.example.it<http://www.example.it/>"
+    // 1. Se il testo contiene tag HTML, estrae solo il contenuto testuale
+    if (/<[a-z][\s\S]*>/i.test(clean)) {
+      // Preserva i link: converte <a href="url">testo</a> in "testo (url)"
+      clean = clean.replace(/<a\s+[^>]*href=["']([^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi, (m, url, label) => {
+        const cleanLabel = label.replace(/<[^>]+>/g, '').trim()
+        return cleanLabel && cleanLabel !== url ? cleanLabel + ' ' + url : url
+      })
+      // Aggiunge newline dopo tag blocco (p, div, br, tr, li, h1-h6)
+      clean = clean.replace(/<\/(p|div|tr|li|h[1-6])>/gi, '\n')
+      clean = clean.replace(/<br\s*\/?>/gi, '\n')
+      // Rimuove tutti i tag HTML rimanenti
+      clean = clean.replace(/<[^>]+>/g, '')
+    }
+    // 2. Rimuove link duplicati tipo "www.example.it<http://www.example.it/>"
     clean = clean.replace(/((?:https?:\/\/|www\.)[^\s<>"{}|\\^`[\]()]+)<(https?:\/\/[^>]+)>/g, (match, visibleUrl) => visibleUrl)
-    // 2. Rimuove entità HTML invisibili (&zwnj; &nbsp; &shy; &#8204; &#160; ecc.)
+    // 3. Rimuove entità HTML invisibili (&zwnj; &nbsp; &shy; &#8204; &#160; ecc.)
     clean = clean.replace(/&(zwnj|nbsp|shy|#8204|#8203|#160|#173|ZeroWidthSpace);?/gi, '')
-    // 3. Decodifica entità HTML comuni rimaste (&amp; &lt; &gt; &quot; &apos;)
+    // 4. Decodifica entità HTML comuni rimaste (&amp; &lt; &gt; &quot; &apos;)
     clean = clean.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
-    // 4. Rimuove righe che contengono solo spazi/tab (risultato della pulizia)
+    // 5. Rimuove righe che contengono solo spazi/tab (risultato della pulizia)
     clean = clean.replace(/^[ \t]+$/gm, '')
-    // 5. Collassa 3+ righe vuote consecutive in massimo 2
+    // 6. Collassa 3+ righe vuote consecutive in massimo 2
     clean = clean.replace(/\n{3,}/g, '\n\n')
-    // 6. Rimuove spazi bianchi a inizio e fine
+    // 7. Rimuove spazi bianchi a inizio e fine
     clean = clean.trim()
     return clean
   }

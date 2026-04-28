@@ -1318,6 +1318,25 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
     return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
+  // Pulisce il testo delle email: link duplicati, entità HTML, caratteri invisibili, righe vuote
+  const cleanEmailText = (text) => {
+    if (!text) return text
+    let clean = text
+    // 1. Rimuove link duplicati tipo "www.example.it<http://www.example.it/>"
+    clean = clean.replace(/((?:https?:\/\/|www\.)[^\s<>"{}|\\^`[\]()]+)<(https?:\/\/[^>]+)>/g, (match, visibleUrl) => visibleUrl)
+    // 2. Rimuove entità HTML invisibili (&zwnj; &nbsp; &shy; &#8204; &#160; ecc.)
+    clean = clean.replace(/&(zwnj|nbsp|shy|#8204|#8203|#160|#173|ZeroWidthSpace);?/gi, '')
+    // 3. Decodifica entità HTML comuni rimaste (&amp; &lt; &gt; &quot; &apos;)
+    clean = clean.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    // 4. Rimuove righe che contengono solo spazi/tab (risultato della pulizia)
+    clean = clean.replace(/^[ \t]+$/gm, '')
+    // 5. Collassa 3+ righe vuote consecutive in massimo 2
+    clean = clean.replace(/\n{3,}/g, '\n\n')
+    // 6. Rimuove spazi bianchi a inizio e fine
+    clean = clean.trim()
+    return clean
+  }
+
   // Estrae i link dal testo dell'email (supporta markdown [testo](url), URL raw, e www.)
   const extractLinks = (text) => {
     if (!text) return []
@@ -1447,7 +1466,8 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
             <div className="space-y-2">
               {comunicazioni.map(c => {
                 const isExpanded = expandedComm === c.id
-                const links = extractLinks(c.email_riassunto)
+                const cleanedText = cleanEmailText(c.email_riassunto)
+                const links = extractLinks(cleanedText)
                 return (
                   <Card key={c.id} className="p-4" onClick={() => setExpandedComm(isExpanded ? null : c.id)}>
                     <div className="flex items-start gap-3">
@@ -1459,7 +1479,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
                         <p className="text-xs text-gray-400 mt-0.5">{formatDataRicezione(c)}</p>
                         {isExpanded && (
                           <div className="mt-3 space-y-3">
-                            <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{renderTextWithLinks(c.email_riassunto)}</p>
+                            <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{renderTextWithLinks(cleanedText)}</p>
                             {links.length > 0 && (
                               <div className="space-y-2">
                                 <p className="text-xs font-semibold text-gray-500 uppercase">Link presenti</p>
@@ -1481,7 +1501,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
                           </div>
                         )}
                         {!isExpanded && (
-                          <p className="text-xs text-gray-400 mt-1 truncate">{c.email_riassunto?.substring(0, 80) || ''}</p>
+                          <p className="text-xs text-gray-400 mt-1 truncate">{cleanEmailText(c.email_riassunto)?.substring(0, 80) || ''}</p>
                         )}
                       </div>
                       <ChevronRight size={16} className={`text-gray-300 shrink-0 mt-1 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
@@ -1828,13 +1848,17 @@ export default function App() {
     })
   }, [currentNotificheCount])
 
-  // Badge Inbox: mostra pallino quando arrivano nuove bollette o comunicazioni
-  const currentInboxCount = bollette.filter(b => b.stato_elaborazione === 'ok' || b.stato_elaborazione === 'comunicazione').length
+  // Badge Inbox: mostra pallino quando ci sono bollette non pagate o comunicazioni
+  const bolletteNonPagate = bollette.filter(b => b.stato_elaborazione === 'ok' && !b.pagata).length
+  const comunicazioniCount = bollette.filter(b => b.stato_elaborazione === 'comunicazione').length
+  const inboxHaItems = bolletteNonPagate > 0 || comunicazioniCount > 0
+  const currentInboxCount = bolletteNonPagate + comunicazioniCount
   useEffect(() => {
-    setPrevInboxCount(prev => {
-      if (currentInboxCount > prev && prev > 0) setInboxVisto(false)
-      return currentInboxCount
-    })
+    // Se arrivano nuovi elementi, resetta il "visto"
+    if (currentInboxCount > prevInboxCount && prevInboxCount >= 0) {
+      setInboxVisto(false)
+    }
+    setPrevInboxCount(currentInboxCount)
   }, [currentInboxCount])
 
   if (loading) return <SplashScreen />
@@ -1913,7 +1937,7 @@ export default function App() {
 
   const notificheCount = bollette.filter(b => !b.pagata && b.scadenza && b.stato_elaborazione === 'ok' && giorniDa(b.scadenza) <= 7).length
   const showBadgeNotifiche = notificheCount > 0 && !notificheViste
-  const showBadgeInbox = !inboxVisto && currentInboxCount > prevInboxCount
+  const showBadgeInbox = inboxHaItems && !inboxVisto
 
   const renderScreen = () => {
     switch (screen) {

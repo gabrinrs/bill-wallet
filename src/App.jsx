@@ -1318,11 +1318,51 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
     return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })
   }
 
-  // Estrae i link dal testo dell'email
+  // Estrae i link dal testo dell'email (supporta markdown [testo](url), URL raw, e www.)
   const extractLinks = (text) => {
     if (!text) return []
-    const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/g
-    return [...new Set(text.match(urlRegex) || [])]
+    const links = []
+    // Link markdown: [testo](url)
+    const mdRegex = /\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g
+    let m
+    while ((m = mdRegex.exec(text)) !== null) links.push(m[2])
+    // URL raw: http:// o https://
+    const rawRegex = /(?<!\()(https?:\/\/[^\s<>"{}|\\^`[\]()]+)/g
+    while ((m = rawRegex.exec(text)) !== null) {
+      if (!links.includes(m[1])) links.push(m[1])
+    }
+    // www. senza protocollo
+    const wwwRegex = /(?<!\/)(?<!\w)(www\.[^\s<>"{}|\\^`[\]()]+)/g
+    while ((m = wwwRegex.exec(text)) !== null) {
+      const url = 'http://' + m[1]
+      if (!links.includes(url)) links.push(url)
+    }
+    return links
+  }
+
+  // Renderizza testo con link cliccabili inline
+  const renderTextWithLinks = (text) => {
+    if (!text) return 'Nessun contenuto disponibile'
+    // Sostituisce [testo](url) e URL raw con elementi cliccabili
+    const parts = []
+    let lastIndex = 0
+    const combinedRegex = /\[([^\]]*)\]\((https?:\/\/[^)]+)\)|(https?:\/\/[^\s<>"{}|\\^`[\]()]+)|((?<!\/)(?<!\w)www\.[^\s<>"{}|\\^`[\]()]+)/g
+    let match
+    while ((match = combinedRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index))
+      }
+      const url = match[2] || match[3] || ('http://' + match[4])
+      const label = match[1] || match[3] || match[4]
+      parts.push(
+        <a key={match.index} href={url} target="_blank" rel="noopener noreferrer"
+           onClick={(e) => e.stopPropagation()}
+           className="text-bolly-600 underline break-all">{label}</a>
+      )
+      lastIndex = match.index + match[0].length
+    }
+    if (lastIndex < text.length) parts.push(text.substring(lastIndex))
+    return parts
   }
 
   return (
@@ -1419,10 +1459,10 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
                         <p className="text-xs text-gray-400 mt-0.5">{formatDataRicezione(c)}</p>
                         {isExpanded && (
                           <div className="mt-3 space-y-3">
-                            <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{c.email_riassunto || 'Nessun contenuto disponibile'}</p>
+                            <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{renderTextWithLinks(c.email_riassunto)}</p>
                             {links.length > 0 && (
                               <div className="space-y-2">
-                                <p className="text-xs font-semibold text-gray-500 uppercase">Link trovati</p>
+                                <p className="text-xs font-semibold text-gray-500 uppercase">Link presenti</p>
                                 {links.map((link, i) => (
                                   <a
                                     key={i}
@@ -1433,7 +1473,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
                                     className="flex items-center gap-2 text-sm text-bolly-600 bg-bolly-50 px-3 py-2 rounded-lg border border-bolly-100 hover:bg-bolly-100 transition-colors break-all"
                                   >
                                     <ExternalLink size={14} className="shrink-0" />
-                                    <span className="truncate">{link.length > 50 ? link.substring(0, 50) + '...' : link}</span>
+                                    <span>{link.length > 50 ? link.substring(0, 50) + '...' : link}</span>
                                   </a>
                                 ))}
                               </div>
@@ -1720,6 +1760,8 @@ export default function App() {
   const [notificheViste, setNotificheViste] = useState(false)
   const [prevNotificheCount, setPrevNotificheCount] = useState(0)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [inboxVisto, setInboxVisto] = useState(false)
+  const [prevInboxCount, setPrevInboxCount] = useState(0)
   const scrollRef = useRef(null)
 
   useEffect(() => { scrollRef.current?.scrollTo(0, 0) }, [screen])
@@ -1778,6 +1820,15 @@ export default function App() {
       return currentNotificheCount
     })
   }, [currentNotificheCount])
+
+  // Badge Inbox: mostra pallino quando arrivano nuove bollette o comunicazioni
+  const currentInboxCount = bollette.filter(b => b.stato_elaborazione === 'ok' || b.stato_elaborazione === 'comunicazione').length
+  useEffect(() => {
+    setPrevInboxCount(prev => {
+      if (currentInboxCount > prev && prev > 0) setInboxVisto(false)
+      return currentInboxCount
+    })
+  }, [currentInboxCount])
 
   if (loading) return <SplashScreen />
   if (!session) return <Auth />
@@ -1855,6 +1906,7 @@ export default function App() {
 
   const notificheCount = bollette.filter(b => !b.pagata && b.scadenza && giorniDa(b.scadenza) <= 7).length
   const showBadgeNotifiche = notificheCount > 0 && !notificheViste
+  const showBadgeInbox = !inboxVisto && currentInboxCount > prevInboxCount
 
   const renderScreen = () => {
     switch (screen) {
@@ -1911,8 +1963,10 @@ export default function App() {
             <div className="w-11 h-11 bg-bolly-500 rounded-full flex items-center justify-center -mt-5 shadow-lg"><Plus size={24} className="text-white" /></div>
             <span className="text-xs font-medium text-bolly-500">Aggiungi</span>
           </button>
-          <button onClick={() => setScreen('bollette')} className={`flex flex-col items-center gap-1 py-2 px-3 ${screen === 'bollette' ? 'text-bolly-500' : 'text-gray-400'}`}>
-            <Inbox size={22} /><span className="text-xs font-medium">Inbox</span>
+          <button onClick={() => { setScreen('bollette'); setInboxVisto(true) }} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'bollette' ? 'text-bolly-500' : 'text-gray-400'}`}>
+            <Inbox size={22} />
+            {showBadgeInbox && <span className="absolute -top-0.5 right-1 w-2.5 h-2.5 bg-bolly-500 rounded-full" />}
+            <span className="text-xs font-medium">Inbox</span>
           </button>
           <button onClick={() => { setScreen('notifiche'); setNotificheViste(true) }} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'notifiche' ? 'text-bolly-500' : 'text-gray-400'}`}>
             <Bell size={22} />

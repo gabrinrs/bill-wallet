@@ -1805,6 +1805,13 @@ export default function App() {
 
   useEffect(() => { loadData() }, [loadData])
 
+  // Registra il Service Worker per le push notifications
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW registration failed:', err))
+    }
+  }, [])
+
   // Mostra onboarding al primo accesso
   useEffect(() => {
     if (session && !localStorage.getItem('bolly_onboarding_done')) {

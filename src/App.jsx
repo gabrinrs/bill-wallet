@@ -162,7 +162,7 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
   const [deletingContratto, setDeletingContratto] = useState(null)
   const bolletteProssime = useMemo(() => {
     return bollette
-      .filter(b => !b.pagata && b.stato_elaborazione !== 'errore_parsing' && b.stato_elaborazione !== 'orfana' && b.stato_elaborazione !== 'incompleta')
+      .filter(b => !b.pagata && b.stato_elaborazione !== 'errore_parsing' && b.stato_elaborazione !== 'orfana' && b.stato_elaborazione !== 'incompleta' && b.stato_elaborazione !== 'comunicazione')
       .map(b => ({ ...b, contratto: contratti.find(c => c.id === b.contratto_id), stato: getStatoBolletta(b) }))
       .filter(b => b.contratto)
       .filter(b => b.scadenza)
@@ -1109,7 +1109,7 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
 function Notifiche({ contratti, bollette }) {
   const notifiche = useMemo(() => {
     const list = []
-    bollette.filter(b => !b.pagata).forEach(b => {
+    bollette.filter(b => !b.pagata && b.scadenza && b.stato_elaborazione !== 'comunicazione' && b.stato_elaborazione !== 'errore_parsing').forEach(b => {
       const c = contratti.find(ct => ct.id === b.contratto_id)
       const label = c?.fornitore || b.descrizione_libera || 'Pagamento'
       const giorni = giorniDa(b.scadenza)
@@ -1176,7 +1176,7 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
   const bollettePerGiorno = useMemo(() => {
     const mappa = {}
     bollette.forEach(b => {
-      if (!b.scadenza || b.stato_elaborazione === 'errore_parsing') return
+      if (!b.scadenza || b.stato_elaborazione === 'errore_parsing' || b.stato_elaborazione === 'comunicazione') return
       const d = new Date(b.scadenza)
       if (d.getMonth() === meseCorrente && d.getFullYear() === annoCorrente) {
         const g = d.getDate()
@@ -1813,7 +1813,7 @@ export default function App() {
   }, [session])
 
   // Reset notifiche viste quando il count delle notifiche aumenta (nuove bollette urgenti)
-  const currentNotificheCount = bollette.filter(b => !b.pagata && b.scadenza && giorniDa(b.scadenza) <= 7).length
+  const currentNotificheCount = bollette.filter(b => !b.pagata && b.scadenza && b.stato_elaborazione === 'ok' && giorniDa(b.scadenza) <= 7).length
   useEffect(() => {
     setPrevNotificheCount(prev => {
       if (currentNotificheCount > prev) setNotificheViste(false)
@@ -1904,7 +1904,7 @@ export default function App() {
     await loadData()
   }
 
-  const notificheCount = bollette.filter(b => !b.pagata && b.scadenza && giorniDa(b.scadenza) <= 7).length
+  const notificheCount = bollette.filter(b => !b.pagata && b.scadenza && b.stato_elaborazione === 'ok' && giorniDa(b.scadenza) <= 7).length
   const showBadgeNotifiche = notificheCount > 0 && !notificheViste
   const showBadgeInbox = !inboxVisto && currentInboxCount > prevInboxCount
 

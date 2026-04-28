@@ -1,5 +1,7 @@
 // sw.js — Bolly Service Worker per Push Notifications
+// Questo file viene compilato da VitePWA (injectManifest)
 
+// Evento push: riceve la notifica dal server
 self.addEventListener('push', (event) => {
   let data = { title: 'Bolly', body: 'Hai bollette in scadenza!' }
 
@@ -18,7 +20,9 @@ self.addEventListener('push', (event) => {
     vibrate: [200, 100, 200],
     tag: data.tag || 'bolly-scadenza',
     renotify: true,
-    data: { url: data.url || '/' }
+    data: {
+      url: data.url || '/'
+    }
   }
 
   event.waitUntil(
@@ -26,22 +30,27 @@ self.addEventListener('push', (event) => {
   )
 })
 
+// Evento click sulla notifica: apre l'app
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
+
   const url = event.notification.data?.url || '/'
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // Se l'app è già aperta, portala in primo piano
       for (const client of windowClients) {
         if (client.url.includes('getbolly') && 'focus' in client) {
           return client.focus()
         }
       }
+      // Altrimenti apri una nuova finestra
       return clients.openWindow(url)
     })
   )
 })
 
+// Attivazione: prende il controllo immediatamente
 self.addEventListener('activate', (event) => {
   event.waitUntil(clients.claim())
 })

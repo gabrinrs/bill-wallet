@@ -9,7 +9,7 @@ import {
   Home, Plus, Bell, ChevronLeft, ChevronRight, Upload, Check,
   AlertTriangle, Zap, Flame, Droplets, Phone, Wifi, Shield, Package,
   TrendingUp, CalendarDays, Repeat, Tv, CreditCard, Landmark, PenLine, LogOut, Loader2,
-  Trash2, ExternalLink, Pencil, Mail, Copy, User, Inbox
+  Trash2, ExternalLink, Pencil, Mail, Copy, User, Inbox, FileText, HelpCircle, MessageCircle
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -1539,7 +1539,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
 // PROFILO
 // ============================================================
 
-function Profilo({ profile, session, onBack, onLogout }) {
+function Profilo({ profile, session, onBack, onLogout, onNavigate }) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -1611,6 +1611,33 @@ function Profilo({ profile, session, onBack, onLogout }) {
         </div>
       </Card>
 
+      {/* Informazioni e supporto */}
+      <Card className="p-4">
+        <h3 className="font-semibold text-gray-900 mb-3">Informazioni e supporto</h3>
+        <div className="space-y-1">
+          <button onClick={() => onNavigate('termini')} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+            <FileText size={18} className="text-bolly-500" />
+            <span className="text-sm text-gray-700">Termini e Condizioni</span>
+            <ChevronRight size={16} className="text-gray-400 ml-auto" />
+          </button>
+          <a href="https://www.iubenda.com/privacy-policy/40178798" target="_blank" rel="noopener noreferrer" className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+            <Shield size={18} className="text-bolly-500" />
+            <span className="text-sm text-gray-700">Privacy Policy</span>
+            <ExternalLink size={14} className="text-gray-400 ml-auto" />
+          </a>
+          <a href="https://www.iubenda.com/privacy-policy/40178798/cookie-policy" target="_blank" rel="noopener noreferrer" className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+            <FileText size={18} className="text-bolly-500" />
+            <span className="text-sm text-gray-700">Cookie Policy</span>
+            <ExternalLink size={14} className="text-gray-400 ml-auto" />
+          </a>
+          <a href="mailto:support@getbolly.app" className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+            <MessageCircle size={18} className="text-bolly-500" />
+            <span className="text-sm text-gray-700">Contattaci</span>
+            <ExternalLink size={14} className="text-gray-400 ml-auto" />
+          </a>
+        </div>
+      </Card>
+
       {/* Logout */}
       <button
         onClick={onLogout}
@@ -1619,6 +1646,88 @@ function Profilo({ profile, session, onBack, onLogout }) {
         <LogOut size={18} />
         Esci dall'account
       </button>
+    </div>
+  )
+}
+
+// ============================================================
+// TERMINI E CONDIZIONI
+// ============================================================
+
+function TerminiCondizioni({ onBack }) {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <button onClick={onBack} className="p-2 rounded-xl hover:bg-gray-100">
+          <ChevronLeft size={22} className="text-gray-700" />
+        </button>
+        <h1 className="text-xl font-bold text-gray-900">Termini e Condizioni</h1>
+      </div>
+
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-5 text-sm text-gray-700 leading-relaxed">
+        <p className="text-xs text-gray-400">Ultimo aggiornamento: 29 aprile 2026</p>
+
+        <div>
+          <h3 className="font-semibold text-gray-900 mb-2">Descrizione del servizio</h3>
+          <p>Bolly è un servizio di gestione personale dei contratti ricorrenti e delle bollette. Permette agli utenti di aggregare in un unico luogo i propri contratti (utenze domestiche, abbonamenti, assicurazioni, finanziamenti, bollettini PA, tasse), ricevere e archiviare le bollette, e visualizzare le scadenze imminenti.</p>
+          <p className="mt-2">Bolly NON è un comparatore di offerte, NON effettua pagamenti per conto dell'utente e NON ha accesso ai conti correnti o strumenti di pagamento dell'utente.</p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-gray-900 mb-2">Piano Free</h3>
+          <p>Il servizio è attualmente offerto in versione gratuita con le seguenti limitazioni: massimo 3 contratti attivi contemporaneamente, 1 solo intestatario per account, storico bollette limitato a 12 mesi.</p>
+          <p className="mt-2">Il Titolare si riserva il diritto di introdurre piani a pagamento con funzionalità aggiuntive. In tal caso, le funzionalità del piano gratuito potranno essere modificate con preavviso di almeno 30 giorni.</p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-gray-900 mb-2">Analisi automatizzata delle bollette</h3>
+          <p>Bolly utilizza sistemi di intelligenza artificiale (Claude, fornito da Anthropic) per estrarre automaticamente i dati dalle bollette caricate o inoltrate dall'utente (importo, scadenza, fornitore, categoria).</p>
+          <p className="mt-2">L'utente riconosce e accetta che: l'estrazione automatica potrebbe contenere errori o imprecisioni; l'utente è responsabile della verifica dei dati estratti prima di fare affidamento su di essi; Bolly mette a disposizione strumenti per la correzione manuale dei dati estratti erroneamente; il Titolare non è responsabile per eventuali danni derivanti da errori nell'estrazione automatica dei dati.</p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-gray-900 mb-2">Notifiche di scadenza</h3>
+          <p>Bolly fornisce promemoria sulle scadenze delle bollette a scopo puramente informativo. Il Titolare NON garantisce la tempestività o la ricezione delle notifiche, la correttezza delle date di scadenza, né l'assenza di malfunzionamenti tecnici che possano impedire l'invio delle notifiche.</p>
+          <p className="mt-2">L'utente rimane l'unico responsabile del pagamento delle proprie bollette nei termini previsti. Bolly non si assume alcuna responsabilità per ritardi nei pagamenti, more, interessi o altri danni derivanti dal mancato o ritardato invio di notifiche.</p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-gray-900 mb-2">Indirizzo email dedicato</h3>
+          <p>Al momento della registrazione, Bolly assegna all'utente un indirizzo email dedicato (es. nome.xxxx@mail.getbolly.app) per la ricezione automatica delle bollette.</p>
+          <p className="mt-2">L'utente si impegna a utilizzare l'indirizzo dedicato esclusivamente per l'inoltro di bollette e fatture personali, a non divulgare l'indirizzo a terzi non autorizzati e a non utilizzare il servizio per ricevere contenuti illegali o non pertinenti. Il Titolare si riserva il diritto di disattivare l'indirizzo dedicato in caso di utilizzo improprio.</p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-gray-900 mb-2">Contenuti caricati</h3>
+          <p>L'utente è l'unico responsabile dei contenuti (PDF, dati, informazioni) caricati o inoltrati al servizio. L'utente garantisce di avere il diritto di caricare tali contenuti e che questi non violano diritti di terzi.</p>
+          <p className="mt-2">Bolly non accede ai contenuti delle bollette per finalità diverse dall'erogazione del servizio e non condivide i dati degli utenti con terze parti per finalità commerciali.</p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-gray-900 mb-2">Cancellazione account</h3>
+          <p>L'utente può cancellare il proprio account in qualsiasi momento. La cancellazione comporta l'eliminazione di tutti i contratti e bollette salvati, l'eliminazione di tutti i file PDF archiviati, la disattivazione dell'indirizzo email dedicato e l'eliminazione completa dei dati personali entro 30 giorni. La cancellazione è irreversibile.</p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-gray-900 mb-2">Limitazione di responsabilità</h3>
+          <p>Il servizio è fornito "così com'è" (as is). Il Titolare non garantisce che il servizio sia privo di errori, interruzioni o malfunzionamenti. Il Titolare non è responsabile per perdita di dati dovuta a cause tecniche, indisponibilità temporanea del servizio o danni indiretti derivanti dall'utilizzo del servizio.</p>
+          <p className="mt-2">La responsabilità massima del Titolare è in ogni caso limitata all'importo eventualmente pagato dall'utente per il servizio nei 12 mesi precedenti l'evento dannoso.</p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-gray-900 mb-2">Modifiche ai termini</h3>
+          <p>Il Titolare si riserva il diritto di modificare i presenti Termini e Condizioni in qualsiasi momento. Le modifiche saranno comunicate all'utente con almeno 15 giorni di preavviso tramite l'applicazione. L'utilizzo continuato del servizio dopo la comunicazione delle modifiche costituisce accettazione delle stesse.</p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-gray-900 mb-2">Legge applicabile e foro competente</h3>
+          <p>I presenti Termini sono regolati dalla legge italiana. Per qualsiasi controversia sarà competente il Foro di Reggio Emilia.</p>
+        </div>
+
+        <div className="pt-3 border-t border-gray-100">
+          <p className="text-xs text-gray-500">Per domande o chiarimenti: <a href="mailto:support@getbolly.app" className="text-bolly-500 underline">support@getbolly.app</a></p>
+        </div>
+      </div>
     </div>
   )
 }
@@ -1987,7 +2096,8 @@ export default function App() {
       case 'calendario': return <Calendario bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />
       case 'bollette': return <StoricoBollette bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />
       case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} />
-      case 'profilo': return <Profilo profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} />
+      case 'profilo': return <Profilo profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} />
+      case 'termini': return <TerminiCondizioni onBack={() => setScreen('profilo')} />
       case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} />
       default: return null
     }

@@ -23,6 +23,7 @@ export default function Auth() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [nome, setNome] = useState('')
+  const [accettaTermini, setAccettaTermini] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
@@ -115,6 +116,23 @@ export default function Auth() {
               />
             </div>
 
+            {!isLogin && (
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={accettaTermini}
+                  onChange={e => setAccettaTermini(e.target.checked)}
+                  className="mt-1 w-4 h-4 rounded border-gray-300 text-bolly-500 focus:ring-bolly-500"
+                />
+                <span className="text-xs text-gray-600 leading-relaxed">
+                  Registrandomi, accetto i{' '}
+                  <a href="https://getbolly.app" onClick={(e) => { e.preventDefault(); window.open('https://getbolly.app/#termini', '_blank') }} className="text-bolly-500 underline">Termini e Condizioni</a>
+                  {' '}e la{' '}
+                  <a href="https://www.iubenda.com/privacy-policy/40178798" target="_blank" rel="noopener noreferrer" className="text-bolly-500 underline">Privacy Policy</a>
+                </span>
+              </label>
+            )}
+
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
                 {error}
@@ -128,7 +146,7 @@ export default function Auth() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (!isLogin && !accettaTermini)}
               className="w-full py-3 bg-bolly-500 text-white font-semibold rounded-xl disabled:opacity-50 hover:bg-bolly-600 transition-colors"
             >
               {loading ? 'Attendere...' : isLogin ? 'Accedi' : 'Registrati'}

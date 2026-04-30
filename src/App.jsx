@@ -1208,9 +1208,11 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
 
   const bollettePerGiorno = useMemo(() => {
     const mappa = {}
+    console.log('[CAL DEBUG] totale bollette:', bollette.length, 'meseCorrente:', meseCorrente, 'annoCorrente:', annoCorrente)
     bollette.forEach(b => {
       if (!b.scadenza || b.stato_elaborazione === 'errore_parsing' || b.stato_elaborazione === 'comunicazione') return
       const d = new Date(b.scadenza)
+      console.log('[CAL DEBUG] bolletta', b.id, 'scadenza raw:', b.scadenza, 'parsed month:', d.getMonth(), 'year:', d.getFullYear(), 'stato:', b.stato_elaborazione)
       if (d.getMonth() === meseCorrente && d.getFullYear() === annoCorrente) {
         const g = d.getDate()
         if (!mappa[g]) mappa[g] = []

@@ -2122,10 +2122,16 @@ export default function App() {
   const [selectedContrattoId, setSelectedContrattoId] = useState(null)
   const [editingContratto, setEditingContratto] = useState(null)
   const [notificheViste, setNotificheViste] = useState(false)
-  const [prevNotificheCount, setPrevNotificheCount] = useState(0)
+  const [prevNotificheCount, setPrevNotificheCount] = useState(() => {
+    const saved = localStorage.getItem('bolly_prev_notifiche_count')
+    return saved ? parseInt(saved, 10) : 0
+  })
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [inboxVisto, setInboxVisto] = useState(false)
-  const [prevInboxCount, setPrevInboxCount] = useState(0)
+  const [prevInboxCount, setPrevInboxCount] = useState(() => {
+    const saved = localStorage.getItem('bolly_prev_inbox_count')
+    return saved ? parseInt(saved, 10) : 0
+  })
   const scrollRef = useRef(null)
 
   useEffect(() => { scrollRef.current?.scrollTo(0, 0) }, [screen])
@@ -2192,6 +2198,14 @@ export default function App() {
     })
   }, [currentNotificheCount])
 
+  // Persiste il conteggio notifiche viste quando l'utente le apre
+  useEffect(() => {
+    if (notificheViste) {
+      localStorage.setItem('bolly_prev_notifiche_count', String(currentNotificheCount))
+      setPrevNotificheCount(currentNotificheCount)
+    }
+  }, [notificheViste])
+
   // Badge Inbox: mostra pallino quando ci sono bollette non pagate o comunicazioni
   const bolletteNonPagate = bollette.filter(b => b.stato_elaborazione === 'ok' && !b.pagata).length
   const comunicazioniCount = bollette.filter(b => b.stato_elaborazione === 'comunicazione').length
@@ -2204,6 +2218,14 @@ export default function App() {
     }
     setPrevInboxCount(currentInboxCount)
   }, [currentInboxCount])
+
+  // Persiste il conteggio inbox visto quando l'utente lo apre
+  useEffect(() => {
+    if (inboxVisto) {
+      localStorage.setItem('bolly_prev_inbox_count', String(currentInboxCount))
+      setPrevInboxCount(currentInboxCount)
+    }
+  }, [inboxVisto])
 
   if (loading) return <SplashScreen />
   if (!session) return <Auth />

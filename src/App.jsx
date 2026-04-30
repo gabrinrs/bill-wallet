@@ -775,6 +775,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
         emissione: form.emissione || null,
         scadenza: form.scadenza,
         metodo_pagamento: form.metodo_pagamento,
+        stato_elaborazione: 'ok',
       }
       if (mode === 'libero') {
         data.descrizione_libera = form.descrizione_libera

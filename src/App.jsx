@@ -1725,6 +1725,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
 
 function MenuPanel({ profile, session, onBack, onLogout, onNavigate }) {
   const [copied, setCopied] = useState(false)
+  const [faqSectionOpen, setFaqSectionOpen] = useState(false)
   const [faqOpen, setFaqOpen] = useState(null)
 
   const handleCopy = async () => {
@@ -1806,19 +1807,19 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate }) {
           {/* FAQ compatta */}
           <div>
             <button
-              onClick={() => setFaqOpen(faqOpen === 'faq' ? null : 'faq')}
+              onClick={() => { setFaqSectionOpen(!faqSectionOpen); setFaqOpen(null) }}
               className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors"
             >
               <HelpCircle size={18} className="text-bolly-500" />
               <span className="text-sm text-gray-700">Domande frequenti</span>
-              <ChevronDown size={16} className={`text-gray-400 ml-auto transition-transform ${faqOpen === 'faq' ? 'rotate-180' : ''}`} />
+              <ChevronDown size={16} className={`text-gray-400 ml-auto transition-transform ${faqSectionOpen ? 'rotate-180' : ''}`} />
             </button>
-            {faqOpen === 'faq' && (
+            {faqSectionOpen && (
               <div className="ml-3 mr-1 mb-2 border-l-2 border-bolly-100 pl-3">
                 {faqItems.map((item, i) => (
                   <div key={i}>
                     <button
-                      onClick={() => setFaqOpen(faqOpen === i ? 'faq' : i)}
+                      onClick={() => setFaqOpen(faqOpen === i ? null : i)}
                       className="w-full flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-gray-50 transition-colors text-left"
                     >
                       <span className="text-sm text-gray-700 pr-2">{item.q}</span>
@@ -1865,6 +1866,7 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate }) {
         <LogOut size={18} />
         Esci dall'account
       </button>
+      <div className="h-4" />
     </div>
   )
 }

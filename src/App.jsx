@@ -9,7 +9,8 @@ import {
   Home, Plus, Bell, ChevronLeft, ChevronRight, Upload, Check,
   AlertTriangle, Zap, Flame, Droplets, Phone, Wifi, Shield, Package,
   TrendingUp, CalendarDays, Repeat, Tv, CreditCard, Landmark, PenLine, LogOut, Loader2,
-  Trash2, ExternalLink, Pencil, Mail, Copy, User, Inbox, FileText, HelpCircle, MessageCircle
+  Trash2, ExternalLink, Pencil, Mail, Copy, User, Inbox, FileText, HelpCircle, MessageCircle,
+  Menu, X, ChevronDown
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -201,8 +202,8 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
           <h1 className="text-2xl font-bold text-gray-900">Ciao {profile?.nome || 'utente'}</h1>
           <p className="text-gray-500 mt-0.5 text-sm">Riepilogo delle tue spese</p>
         </div>
-        <button onClick={() => onNavigate('profilo')} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400">
-          <User size={20} />
+        <button onClick={() => onNavigate('menu')} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500">
+          <Menu size={22} />
         </button>
       </div>
 
@@ -435,6 +436,9 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
           <div><p className="text-gray-500">Ricezione</p><p className="font-medium capitalize">{contratto.metodo_ricezione || '—'}</p></div>
           <div><p className="text-gray-500">Domiciliazione</p><p className="font-medium">{contratto.domiciliazione ? 'Attiva' : 'No'}</p></div>
           <div><p className="text-gray-500">Attivo dal</p><p className="font-medium">{contratto.data_inizio ? formatData(contratto.data_inizio) : '—'}</p></div>
+          {contratto.categoria === 'finanziamento' && contratto.data_fine && (
+            <div><p className="text-gray-500">Fine finanziamento</p><p className="font-medium text-orange-600">{formatData(contratto.data_fine)}</p></div>
+          )}
         </div>
         {contratto.ricorrente && (
           <div className="pt-2 border-t border-gray-100">
@@ -525,7 +529,7 @@ function FormContratto({ onSave, onBack }) {
   const [customText, setCustomText] = useState('')
   const [form, setForm] = useState({
     categoria: '', fornitore: '', intestatario: '', codice: '',
-    metodo_ricezione: 'email', domiciliazione: false, data_inizio: '', note: '',
+    metodo_ricezione: 'email', domiciliazione: false, data_inizio: '', data_fine: '', note: '',
     ricorrente: false, importo_ricorrente: '', frequenza: 'mensile', prossimo_addebito: '',
   })
   const update = (f, v) => setForm(p => ({ ...p, [f]: v }))
@@ -536,6 +540,7 @@ function FormContratto({ onSave, onBack }) {
       const data = { ...form }
       if (data.ricorrente) data.importo_ricorrente = parseFloat(data.importo_ricorrente)
       else { delete data.importo_ricorrente; delete data.frequenza; delete data.prossimo_addebito }
+      if (data.categoria !== 'finanziamento') delete data.data_fine
       await onSave(data)
     } catch (e) { console.error(e) }
     setSaving(false)
@@ -653,6 +658,16 @@ function FormContratto({ onSave, onBack }) {
             className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
             style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
         </div>
+
+        {form.categoria === 'finanziamento' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Data fine finanziamento</label>
+            <input type="date" value={form.data_fine} onChange={e => update('data_fine', e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
+              style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+            <p className="text-xs text-gray-400 mt-1">Quando termina il piano di rimborso</p>
+          </div>
+        )}
 
         {/* Ricorrente */}
         <div className="pt-2 border-t border-gray-100">
@@ -998,6 +1013,7 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
     metodo_ricezione: contratto.metodo_ricezione || 'email',
     domiciliazione: contratto.domiciliazione || false,
     data_inizio: contratto.data_inizio || '',
+    data_fine: contratto.data_fine || '',
     note: contratto.note || '',
     ricorrente: contratto.ricorrente || false,
     importo_ricorrente: contratto.importo_ricorrente || '',
@@ -1012,6 +1028,7 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
       const data = { ...form }
       if (data.ricorrente) data.importo_ricorrente = parseFloat(data.importo_ricorrente)
       else { delete data.importo_ricorrente; delete data.frequenza; delete data.prossimo_addebito }
+      if (data.categoria !== 'finanziamento') delete data.data_fine
       await onSave(data)
     } catch (e) { console.error(e) }
     setSaving(false)
@@ -1062,6 +1079,15 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
             className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
             style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
         </div>
+        {form.categoria === 'finanziamento' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Data fine finanziamento</label>
+            <input type="date" value={form.data_fine} onChange={e => update('data_fine', e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
+              style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+            <p className="text-xs text-gray-400 mt-1">Quando termina il piano di rimborso</p>
+          </div>
+        )}
         <div className="pt-2 border-t border-gray-100">
           <div className="flex items-center justify-between">
             <div><label className="text-sm font-medium text-gray-700">Importo fisso ricorrente</label><p className="text-xs text-gray-400 mt-0.5">Per abbonamenti e spese a importo fisso</p></div>
@@ -1201,6 +1227,42 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
 
   const bolletteGiornoSelezionato = giornoSelezionato ? (bollettePerGiorno[giornoSelezionato] || []) : []
 
+  // Statistiche del mese corrente
+  const statsMese = useMemo(() => {
+    const bolMese = bollette.filter(b => {
+      if (!b.scadenza || b.stato_elaborazione === 'errore_parsing' || b.stato_elaborazione === 'comunicazione') return false
+      const d = new Date(b.scadenza)
+      return d.getMonth() === meseCorrente && d.getFullYear() === annoCorrente
+    })
+    const totaleMese = bolMese.reduce((s, b) => s + Number(b.importo || 0), 0)
+
+    // Mese precedente per confronto
+    const mesePrev = meseCorrente === 0 ? 11 : meseCorrente - 1
+    const annoPrev = meseCorrente === 0 ? annoCorrente - 1 : annoCorrente
+    const bolMesePrev = bollette.filter(b => {
+      if (!b.scadenza || b.stato_elaborazione === 'errore_parsing' || b.stato_elaborazione === 'comunicazione') return false
+      const d = new Date(b.scadenza)
+      return d.getMonth() === mesePrev && d.getFullYear() === annoPrev
+    })
+    const totalePrecedente = bolMesePrev.reduce((s, b) => s + Number(b.importo || 0), 0)
+
+    const variazione = totalePrecedente > 0 ? ((totaleMese - totalePrecedente) / totalePrecedente) * 100 : null
+
+    // Ripartizione per categoria
+    const perCategoria = {}
+    bolMese.forEach(b => {
+      const c = contratti.find(ct => ct.id === b.contratto_id)
+      const catId = c?.categoria || 'altro'
+      if (!perCategoria[catId]) perCategoria[catId] = 0
+      perCategoria[catId] += Number(b.importo || 0)
+    })
+    const categorieSorted = Object.entries(perCategoria)
+      .map(([catId, tot]) => ({ catId, tot, cat: getCategoria(catId) }))
+      .sort((a, b) => b.tot - a.tot)
+
+    return { totaleMese, totalePrecedente, variazione, categorieSorted, numBollette: bolMese.length }
+  }, [bollette, contratti, meseCorrente, annoCorrente])
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -1245,6 +1307,50 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
         <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-bolly-500" /><span className="text-xs text-gray-500">Domiciliata (RID)</span></div>
         <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" /><span className="text-xs text-gray-500">Da pagare</span></div>
       </div>
+
+      {/* Statistiche del mese */}
+      <Card className="p-4">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">Riepilogo {MESI[meseCorrente].toLowerCase()}</h3>
+        <div className="flex items-end justify-between mb-3">
+          <div>
+            <p className="text-2xl font-bold text-gray-900">{formatEuro(statsMese.totaleMese)}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{statsMese.numBollette} {statsMese.numBollette === 1 ? 'bolletta' : 'bollette'}</p>
+          </div>
+          {statsMese.variazione !== null && (
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${statsMese.variazione > 0 ? 'bg-red-50 text-red-600' : statsMese.variazione < 0 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'}`}>
+              <TrendingUp size={12} className={statsMese.variazione < 0 ? 'rotate-180' : ''} />
+              {statsMese.variazione > 0 ? '+' : ''}{statsMese.variazione.toFixed(0)}% vs mese prec.
+            </div>
+          )}
+        </div>
+        {statsMese.categorieSorted.length > 0 && (
+          <div className="space-y-2 pt-3 border-t border-gray-100">
+            {statsMese.categorieSorted.map(({ catId, tot, cat }) => {
+              const perc = statsMese.totaleMese > 0 ? (tot / statsMese.totaleMese) * 100 : 0
+              const IconComp = IconMap[cat.icon] || Package
+              return (
+                <div key={catId} className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
+                    <IconComp size={14} style={{ color: cat.color }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs font-medium text-gray-700 truncate">{cat.label}</span>
+                      <span className="text-xs font-semibold text-gray-900">{formatEuro(tot)}</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                      <div className="h-1.5 rounded-full" style={{ width: `${perc}%`, backgroundColor: cat.color }} />
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {statsMese.numBollette === 0 && (
+          <p className="text-xs text-gray-400 text-center py-2">Nessuna bolletta in questo mese</p>
+        )}
+      </Card>
 
       {giornoSelezionato && (
         <Card className="p-4">
@@ -1539,8 +1645,9 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
 // PROFILO
 // ============================================================
 
-function Profilo({ profile, session, onBack, onLogout, onNavigate }) {
+function MenuPanel({ profile, session, onBack, onLogout, onNavigate }) {
   const [copied, setCopied] = useState(false)
+  const [faqOpen, setFaqOpen] = useState(null)
 
   const handleCopy = async () => {
     try {
@@ -1552,41 +1659,50 @@ function Profilo({ profile, session, onBack, onLogout, onNavigate }) {
     }
   }
 
+  const faqItems = [
+    { q: 'Cos\'è Bolly?', a: 'Bolly è un portafoglio contratti che ti permette di aggregare tutti i tuoi contratti ricorrenti (utenze, abbonamenti, assicurazioni, finanziamenti) in un unico posto. Ricevi le bollette, visualizzi le scadenze e non dimentichi più un pagamento.' },
+    { q: 'Come funziona l\'email dedicata?', a: 'Al momento della registrazione ti viene assegnato un indirizzo email unico (es. nome.xxxx@mail.getbolly.app). Vai sul portale dei tuoi fornitori e aggiungilo come destinatario per le bollette digitali: le bollette future verranno importate automaticamente nell\'app.' },
+    { q: 'Quanti contratti posso aggiungere?', a: 'Con il piano gratuito puoi gestire fino a 3 contratti attivi. In futuro saranno disponibili piani premium con contratti illimitati e funzionalità aggiuntive.' },
+    { q: 'I miei dati sono al sicuro?', a: 'Sì. Bolly non accede ai contenuti delle tue bollette per finalità diverse dall\'erogazione del servizio e non condivide i tuoi dati con terze parti per finalità commerciali. I dati sono protetti e archiviati in modo sicuro.' },
+    { q: 'Bolly effettua pagamenti per me?', a: 'No. Bolly è uno strumento di gestione e promemoria. Non ha accesso ai tuoi conti correnti e non effettua pagamenti. Ti aiuta a ricordare le scadenze e a tenere tutto organizzato.' },
+    { q: 'Come cancello il mio account?', a: 'Puoi richiedere la cancellazione scrivendo a support@getbolly.app. Tutti i tuoi dati (contratti, bollette, PDF) verranno eliminati definitivamente entro 30 giorni.' },
+  ]
+
   return (
     <div className="space-y-6">
-      {/* Header con back */}
-      <div className="flex items-center gap-2">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold text-gray-900">Menu</h1>
         <button onClick={onBack} className="p-2 rounded-xl hover:bg-gray-100">
-          <ChevronLeft size={22} className="text-gray-700" />
+          <X size={22} className="text-gray-500" />
         </button>
-        <h1 className="text-xl font-bold text-gray-900">Il tuo profilo</h1>
       </div>
 
-      {/* Avatar + nome + email */}
-      <div className="flex flex-col items-center py-2">
-        <div
-          className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg mb-3"
-          style={{ background: 'linear-gradient(145deg, #00897B, #00695C)' }}
-        >
-          <span className="text-white font-pacifico" style={{ fontSize: '36px', lineHeight: 1 }}>
-            {profile?.nome?.[0]?.toUpperCase() || 'U'}
-          </span>
+      {/* Profilo utente */}
+      <Card className="p-4">
+        <div className="flex items-center gap-3">
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center shadow-md flex-shrink-0"
+            style={{ background: 'linear-gradient(145deg, #00897B, #00695C)' }}
+          >
+            <span className="text-white font-pacifico" style={{ fontSize: '28px', lineHeight: 1 }}>
+              {profile?.nome?.[0]?.toUpperCase() || 'U'}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-semibold text-gray-900">{profile?.nome || 'Utente'}</h2>
+            <p className="text-sm text-gray-500 truncate">{session?.user?.email}</p>
+          </div>
         </div>
-        <h2 className="text-lg font-semibold text-gray-900">{profile?.nome || 'Utente'}</h2>
-        <p className="text-sm text-gray-500">{session?.user?.email}</p>
-      </div>
+      </Card>
 
-      {/* Card email dedicata */}
-      <Card className="p-5">
+      {/* Email dedicata */}
+      <Card className="p-4">
         <div className="flex items-center gap-2 mb-2">
           <Mail size={18} className="text-bolly-500" />
-          <h3 className="font-semibold text-gray-900">Il tuo indirizzo Bolly</h3>
+          <h3 className="font-semibold text-gray-900 text-sm">Il tuo indirizzo Bolly</h3>
         </div>
-        <p className="text-sm text-gray-500 mb-4">
-          Usalo per ricevere le bollette direttamente nell'app.
-        </p>
-
-        <div className="bg-gray-50 rounded-xl p-3 flex items-center gap-2 mb-4 border border-gray-100">
+        <div className="bg-gray-50 rounded-xl p-3 flex items-center gap-2 border border-gray-100">
           <span className="font-mono text-sm text-gray-800 break-all flex-1">
             {profile?.email_dedicata || 'Non ancora impostato'}
           </span>
@@ -1603,17 +1719,37 @@ function Profilo({ profile, session, onBack, onLogout, onNavigate }) {
             )}
           </button>
         </div>
+      </Card>
 
-        <div className="bg-bolly-50 rounded-xl p-3 border border-bolly-100">
-          <p className="text-xs text-gray-700 leading-relaxed">
-            <strong className="text-gray-900">Come usarlo:</strong> accedi al portale dei tuoi fornitori (Enel, NWG, Tim, ecc.) e aggiungi questo indirizzo come destinatario per le bollette digitali. Le bollette future verranno importate automaticamente.
-          </p>
+      {/* FAQ */}
+      <Card className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <HelpCircle size={18} className="text-bolly-500" />
+          <h3 className="font-semibold text-gray-900 text-sm">Domande frequenti</h3>
+        </div>
+        <div className="space-y-1">
+          {faqItems.map((item, i) => (
+            <div key={i}>
+              <button
+                onClick={() => setFaqOpen(faqOpen === i ? null : i)}
+                className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+              >
+                <span className="text-sm text-gray-700 pr-2">{item.q}</span>
+                <ChevronDown size={16} className={`text-gray-400 flex-shrink-0 transition-transform ${faqOpen === i ? 'rotate-180' : ''}`} />
+              </button>
+              {faqOpen === i && (
+                <div className="px-3 pb-3">
+                  <p className="text-sm text-gray-500 leading-relaxed">{item.a}</p>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </Card>
 
       {/* Informazioni e supporto */}
       <Card className="p-4">
-        <h3 className="font-semibold text-gray-900 mb-3">Informazioni e supporto</h3>
+        <h3 className="font-semibold text-gray-900 text-sm mb-3">Informazioni e supporto</h3>
         <div className="space-y-1">
           <button onClick={() => onNavigate('termini')} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
             <FileText size={18} className="text-bolly-500" />
@@ -2096,8 +2232,8 @@ export default function App() {
       case 'calendario': return <Calendario bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />
       case 'bollette': return <StoricoBollette bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />
       case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} />
-      case 'profilo': return <Profilo profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} />
-      case 'termini': return <TerminiCondizioni onBack={() => setScreen('profilo')} />
+      case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} />
+      case 'termini': return <TerminiCondizioni onBack={() => setScreen('menu')} />
       case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} />
       default: return null
     }

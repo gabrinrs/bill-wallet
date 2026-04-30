@@ -779,7 +779,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
       }
       if (mode === 'libero') {
         data.descrizione_libera = form.descrizione_libera
-        data.fonte = 'manuale_libero'
+        data.fonte = 'manuale'
         data.contratto_id = null
       } else {
         data.contratto_id = Number(form.contratto_id)

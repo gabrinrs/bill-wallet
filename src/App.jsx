@@ -486,6 +486,11 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge stato={stato} />
+                    {!b.pagata && portaleUrl && (
+                      <a href={portaleUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600" title={`Paga su ${contratto.fornitore}`}>
+                        <CreditCard size={18} />
+                      </a>
+                    )}
                     {b.pdf_url && (
                       <a href={b.pdf_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="p-1.5 rounded-lg hover:bg-bolly-50 text-bolly-500" title="Apri PDF">
                         <ExternalLink size={18} />
@@ -2132,7 +2137,7 @@ export default function App() {
   })
   const scrollRef = useRef(null)
 
-  useEffect(() => { scrollRef.current?.scrollTo(0, 0) }, [screen])
+  useEffect(() => { requestAnimationFrame(() => scrollRef.current?.scrollTo(0, 0)) }, [screen])
 
   // Se supabase non è configurato, mostra errore
   if (!supabase) {

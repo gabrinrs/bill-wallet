@@ -54,6 +54,17 @@ export const PORTALI_PAGAMENTO = {
   'DAZN': 'https://www.dazn.com/account',
   'YouTube Premium': 'https://www.youtube.com/paid_memberships',
   'Apple One': 'https://appleid.apple.com/account/manage',
+  'NWG': 'https://www.nwgenergia.it/area-clienti',
+  'NWG Energia': 'https://www.nwgenergia.it/area-clienti',
+  'American Express': 'https://www.americanexpress.com/it/account',
+  'Amex': 'https://www.americanexpress.com/it/account',
+  'VIVI Energia': 'https://www.vivienergia.it/area-clienti',
+  'Azienda Reggiana Acqua': 'https://www.reggianagasacqua.it/area-clienti',
+  'Sky': 'https://www.sky.it/mysky',
+  'Mooney': 'https://www.mooney.it/area-riservata',
+  'iCloud': 'https://appleid.apple.com/account/manage',
+  'Apple iCloud': 'https://appleid.apple.com/account/manage',
+  'Claude': 'https://console.anthropic.com/settings/billing',
 }
 
 export const getCategoria = (id) => CATEGORIE.find(c => c.id === id) || CATEGORIE[CATEGORIE.length - 1]

@@ -1208,11 +1208,9 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
 
   const bollettePerGiorno = useMemo(() => {
     const mappa = {}
-    console.log('[CAL DEBUG] totale bollette:', bollette.length, 'meseCorrente:', meseCorrente, 'annoCorrente:', annoCorrente)
     bollette.forEach(b => {
       if (!b.scadenza || b.stato_elaborazione === 'errore_parsing' || b.stato_elaborazione === 'comunicazione') return
       const d = new Date(b.scadenza)
-      console.log('[CAL DEBUG] bolletta', b.id, 'scadenza raw:', b.scadenza, 'parsed month:', d.getMonth(), 'year:', d.getFullYear(), 'stato:', b.stato_elaborazione)
       if (d.getMonth() === meseCorrente && d.getFullYear() === annoCorrente) {
         const g = d.getDate()
         if (!mappa[g]) mappa[g] = []
@@ -2235,7 +2233,10 @@ export default function App() {
       })
       form.contratto_id = nuovoContratto.id
     }
-    await createBolletta(form)
+    // Rimuovi campi che non esistono nella tabella bollette
+    const bollettaData = { ...form }
+    delete bollettaData.descrizione_libera
+    await createBolletta(bollettaData)
     await loadData()
     setScreen(selectedContrattoId ? 'dettaglio' : 'dashboard')
   }

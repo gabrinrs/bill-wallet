@@ -2121,15 +2121,13 @@ export default function App() {
   const [screen, setScreen] = useState('dashboard')
   const [selectedContrattoId, setSelectedContrattoId] = useState(null)
   const [editingContratto, setEditingContratto] = useState(null)
-  const [notificheViste, setNotificheViste] = useState(false)
-  const [prevNotificheCount, setPrevNotificheCount] = useState(() => {
-    const saved = localStorage.getItem('bolly_prev_notifiche_count')
+  const [lastSeenNotificheCount, setLastSeenNotificheCount] = useState(() => {
+    const saved = localStorage.getItem('bolly_seen_notifiche_count')
     return saved ? parseInt(saved, 10) : 0
   })
   const [showOnboarding, setShowOnboarding] = useState(false)
-  const [inboxVisto, setInboxVisto] = useState(false)
-  const [prevInboxCount, setPrevInboxCount] = useState(() => {
-    const saved = localStorage.getItem('bolly_prev_inbox_count')
+  const [lastSeenInboxCount, setLastSeenInboxCount] = useState(() => {
+    const saved = localStorage.getItem('bolly_seen_inbox_count')
     return saved ? parseInt(saved, 10) : 0
   })
   const scrollRef = useRef(null)
@@ -2189,43 +2187,23 @@ export default function App() {
     }
   }, [session])
 
-  // Reset notifiche viste quando il count delle notifiche aumenta (nuove bollette urgenti)
+  // Badge Notifiche: mostra solo se ci sono più notifiche di quante ne ha viste l'ultima volta
   const currentNotificheCount = bollette.filter(b => !b.pagata && b.scadenza && b.stato_elaborazione === 'ok' && giorniDa(b.scadenza) <= 7).length
-  useEffect(() => {
-    setPrevNotificheCount(prev => {
-      if (currentNotificheCount > prev) setNotificheViste(false)
-      return currentNotificheCount
-    })
-  }, [currentNotificheCount])
 
-  // Persiste il conteggio notifiche viste quando l'utente le apre
-  useEffect(() => {
-    if (notificheViste) {
-      localStorage.setItem('bolly_prev_notifiche_count', String(currentNotificheCount))
-      setPrevNotificheCount(currentNotificheCount)
-    }
-  }, [notificheViste])
-
-  // Badge Inbox: mostra pallino quando ci sono bollette non pagate o comunicazioni
+  // Badge Inbox: mostra solo se ci sono più elementi di quanti ne ha visti l'ultima volta
   const bolletteNonPagate = bollette.filter(b => b.stato_elaborazione === 'ok' && !b.pagata).length
   const comunicazioniCount = bollette.filter(b => b.stato_elaborazione === 'comunicazione').length
-  const inboxHaItems = bolletteNonPagate > 0 || comunicazioniCount > 0
   const currentInboxCount = bolletteNonPagate + comunicazioniCount
-  useEffect(() => {
-    // Se arrivano nuovi elementi, resetta il "visto"
-    if (currentInboxCount > prevInboxCount && prevInboxCount >= 0) {
-      setInboxVisto(false)
-    }
-    setPrevInboxCount(currentInboxCount)
-  }, [currentInboxCount])
 
-  // Persiste il conteggio inbox visto quando l'utente lo apre
-  useEffect(() => {
-    if (inboxVisto) {
-      localStorage.setItem('bolly_prev_inbox_count', String(currentInboxCount))
-      setPrevInboxCount(currentInboxCount)
-    }
-  }, [inboxVisto])
+  const markNotificheSeen = useCallback(() => {
+    setLastSeenNotificheCount(currentNotificheCount)
+    localStorage.setItem('bolly_seen_notifiche_count', String(currentNotificheCount))
+  }, [currentNotificheCount])
+
+  const markInboxSeen = useCallback(() => {
+    setLastSeenInboxCount(currentInboxCount)
+    localStorage.setItem('bolly_seen_inbox_count', String(currentInboxCount))
+  }, [currentInboxCount])
 
   if (loading) return <SplashScreen />
   if (!session) return <Auth />
@@ -2301,9 +2279,9 @@ export default function App() {
     await loadData()
   }
 
-  const notificheCount = bollette.filter(b => !b.pagata && b.scadenza && b.stato_elaborazione === 'ok' && giorniDa(b.scadenza) <= 7).length
-  const showBadgeNotifiche = notificheCount > 0 && !notificheViste
-  const showBadgeInbox = inboxHaItems && !inboxVisto
+  const notificheCount = currentNotificheCount
+  const showBadgeNotifiche = currentNotificheCount > 0 && currentNotificheCount > lastSeenNotificheCount
+  const showBadgeInbox = currentInboxCount > 0 && currentInboxCount > lastSeenInboxCount
 
   const renderScreen = () => {
     switch (screen) {
@@ -2361,12 +2339,12 @@ export default function App() {
             <div className="w-11 h-11 bg-bolly-500 rounded-full flex items-center justify-center -mt-5 shadow-lg"><Plus size={24} className="text-white" /></div>
             <span className="text-xs font-medium text-bolly-500">Aggiungi</span>
           </button>
-          <button onClick={() => { setScreen('bollette'); setInboxVisto(true) }} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'bollette' ? 'text-bolly-500' : 'text-gray-400'}`}>
+          <button onClick={() => { setScreen('bollette'); markInboxSeen() }} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'bollette' ? 'text-bolly-500' : 'text-gray-400'}`}>
             <Inbox size={22} />
             {showBadgeInbox && <span className="absolute -top-0.5 right-1 w-2.5 h-2.5 bg-bolly-500 rounded-full" />}
             <span className="text-xs font-medium">Inbox</span>
           </button>
-          <button onClick={() => { setScreen('notifiche'); setNotificheViste(true) }} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'notifiche' ? 'text-bolly-500' : 'text-gray-400'}`}>
+          <button onClick={() => { setScreen('notifiche'); markNotificheSeen() }} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'notifiche' ? 'text-bolly-500' : 'text-gray-400'}`}>
             <Bell size={22} />
             {showBadgeNotifiche && <span className="absolute -top-0.5 right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{notificheCount}</span>}
             <span className="text-xs font-medium">Notifiche</span>

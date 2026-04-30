@@ -58,7 +58,7 @@ function Loading() {
 
 function SplashScreen() {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-[#f0f7f6] flex flex-col items-center justify-center px-6">
       <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg" style={{ background: 'linear-gradient(145deg, #00897B, #00695C)' }}>
         <span className="text-white font-pacifico" style={{ fontSize: '38px', transform: 'translateX(-3px)', display: 'block', lineHeight: 1 }}>B</span>
       </div>
@@ -2139,7 +2139,7 @@ export default function App() {
   // Se supabase non è configurato, mostra errore
   if (!supabase) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
+      <div className="min-h-screen bg-[#f0f7f6] flex flex-col items-center justify-center px-6">
         <div className="bg-white rounded-2xl shadow-sm border border-red-200 p-6 max-w-sm text-center">
           <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <AlertTriangle className="text-red-600" size={32} />
@@ -2347,7 +2347,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col" style={{ maxWidth: 430, margin: '0 auto' }}>
+    <div className="min-h-screen bg-[#f0f7f6] flex flex-col" style={{ maxWidth: 430, margin: '0 auto' }}>
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pt-6 pb-24 safe-top">{renderScreen()}</div>
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-bottom" style={{ maxWidth: 430, margin: '0 auto' }}>
         <div className="flex items-center justify-around px-6 py-2">

@@ -1218,6 +1218,35 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
         mappa[g].push({ ...b, contratto })
       }
     })
+    // Proiezioni da contratti ricorrenti
+    contratti.forEach(c => {
+      if (!c.ricorrente || !c.prossimo_addebito || !c.frequenza) return
+      const freqMesi = c.frequenza === 'mensile' ? 1 : c.frequenza === 'trimestrale' ? 3 : c.frequenza === 'annuale' ? 12 : 0
+      if (freqMesi === 0) return
+      const dataFine = c.data_fine ? new Date(c.data_fine + 'T00:00:00') : null
+      let cur = new Date(c.prossimo_addebito + 'T00:00:00')
+      // Avanza fino al mese visualizzato
+      while (cur < new Date(annoCorrente, meseCorrente, 1)) {
+        cur.setMonth(cur.getMonth() + freqMesi)
+      }
+      // Genera date nel mese visualizzato
+      while (cur.getMonth() === meseCorrente && cur.getFullYear() === annoCorrente) {
+        if (dataFine && cur > dataFine) break
+        const g = cur.getDate()
+        const hasReal = mappa[g]?.some(b => b.contratto_id === c.id && !b.proiezione)
+        if (!hasReal) {
+          if (!mappa[g]) mappa[g] = []
+          mappa[g].push({
+            proiezione: true,
+            contratto: c,
+            contratto_id: c.id,
+            importo: c.importo_ricorrente,
+            scadenza: cur.toISOString().split('T')[0],
+          })
+        }
+        cur.setMonth(cur.getMonth() + freqMesi)
+      }
+    })
     return mappa
   }, [bollette, contratti, meseCorrente, annoCorrente])
 
@@ -1286,8 +1315,9 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
         <div className="grid grid-cols-7">
           {celle.map((c, i) => {
             const dots = c.corrente ? bollettePerGiorno[c.giorno] : null
-            const hasDomiciliata = dots?.some(b => isDomiciliata(b))
-            const hasManuale = dots?.some(b => !isDomiciliata(b))
+            const hasDomiciliata = dots?.some(b => !b.proiezione && isDomiciliata(b))
+            const hasManuale = dots?.some(b => !b.proiezione && !isDomiciliata(b))
+            const hasProiezione = dots?.some(b => b.proiezione)
             const selezionato = c.corrente && giornoSelezionato === c.giorno
             return (
               <button key={i}
@@ -1302,6 +1332,7 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
                 <div className="flex gap-0.5 mt-1 h-1.5">
                   {hasDomiciliata && <span className="w-1.5 h-1.5 rounded-full bg-bolly-500" />}
                   {hasManuale && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+                  {hasProiezione && <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />}
                 </div>
               </button>
             )
@@ -1309,9 +1340,10 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
         </div>
       </Card>
 
-      <div className="flex gap-4 px-1">
+      <div className="flex flex-wrap gap-3 px-1">
         <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-bolly-500" /><span className="text-xs text-gray-500">Domiciliata (RID)</span></div>
         <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" /><span className="text-xs text-gray-500">Da pagare</span></div>
+        <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-purple-400" /><span className="text-xs text-gray-500">Previsto</span></div>
       </div>
 
       {/* Scadenze giorno selezionato (sopra le statistiche) */}
@@ -1322,15 +1354,16 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
             <p className="text-sm text-gray-400 text-center py-4">Nessuna scadenza in questo giorno</p>
           ) : (
             <div className="space-y-3">
-              {bolletteGiornoSelezionato.map(b => {
+              {bolletteGiornoSelezionato.map((b, idx) => {
                 const domiciliata = isDomiciliata(b)
+                const isProiezione = b.proiezione
                 const IconComp = b.contratto ? (IconMap[getCategoria(b.contratto.categoria)?.icon] || Package) : Package
                 return (
-                  <div key={b.id}
+                  <div key={b.id || `proj-${b.contratto_id}-${idx}`}
                     className="flex items-center gap-3 cursor-pointer"
                     onClick={() => { if (b.contratto_id && onSelectContratto) onSelectContratto(b.contratto_id) }}
                   >
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${domiciliata ? 'bg-bolly-50 text-bolly-600' : 'bg-amber-50 text-amber-600'}`}>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isProiezione ? 'bg-purple-50 text-purple-600' : domiciliata ? 'bg-bolly-50 text-bolly-600' : 'bg-amber-50 text-amber-600'}`}>
                       <IconComp size={18} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -1339,8 +1372,8 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-gray-900">{b.importo ? formatEuro(b.importo) : '—'}</p>
-                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${domiciliata ? 'bg-bolly-50 text-bolly-700' : 'bg-amber-50 text-amber-700'}`}>
-                        {b.contratto?.metodo_pagamento === 'rid' ? 'RID' : b.contratto?.metodo_pagamento === 'bollettino' ? 'Bollettino' : 'Manuale'}
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${isProiezione ? 'bg-purple-50 text-purple-700' : domiciliata ? 'bg-bolly-50 text-bolly-700' : 'bg-amber-50 text-amber-700'}`}>
+                        {isProiezione ? 'Previsto' : b.contratto?.metodo_pagamento === 'rid' ? 'RID' : b.contratto?.metodo_pagamento === 'bollettino' ? 'Bollettino' : 'Manuale'}
                       </span>
                     </div>
                   </div>

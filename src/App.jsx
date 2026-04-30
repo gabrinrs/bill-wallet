@@ -1308,7 +1308,44 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
         <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" /><span className="text-xs text-gray-500">Da pagare</span></div>
       </div>
 
-      {/* Statistiche del mese */}
+      {/* Scadenze giorno selezionato (sopra le statistiche) */}
+      {giornoSelezionato && (
+        <Card className="p-4">
+          <p className="text-sm font-medium text-gray-500 mb-3">{giornoSelezionato} {MESI[meseCorrente].toLowerCase()} {annoCorrente}</p>
+          {bolletteGiornoSelezionato.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-4">Nessuna scadenza in questo giorno</p>
+          ) : (
+            <div className="space-y-3">
+              {bolletteGiornoSelezionato.map(b => {
+                const domiciliata = isDomiciliata(b)
+                const IconComp = b.contratto ? (IconMap[getCategoria(b.contratto.categoria)?.icon] || Package) : Package
+                return (
+                  <div key={b.id}
+                    className="flex items-center gap-3 cursor-pointer"
+                    onClick={() => { if (b.contratto_id && onSelectContratto) onSelectContratto(b.contratto_id) }}
+                  >
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${domiciliata ? 'bg-bolly-50 text-bolly-600' : 'bg-amber-50 text-amber-600'}`}>
+                      <IconComp size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{b.contratto?.fornitore || b.descrizione_libera || 'Bolletta'}</p>
+                      <p className="text-xs text-gray-500">{b.contratto ? getCategoria(b.contratto.categoria)?.label : ''}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-gray-900">{b.importo ? formatEuro(b.importo) : '—'}</p>
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${domiciliata ? 'bg-bolly-50 text-bolly-700' : 'bg-amber-50 text-amber-700'}`}>
+                        {b.contratto?.metodo_pagamento === 'rid' ? 'RID' : b.contratto?.metodo_pagamento === 'bollettino' ? 'Bollettino' : 'Manuale'}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Riepilogo mensile */}
       <Card className="p-4">
         <h3 className="text-sm font-semibold text-gray-900 mb-3">Riepilogo {MESI[meseCorrente].toLowerCase()}</h3>
         <div className="flex items-end justify-between mb-3">
@@ -1352,41 +1389,82 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
         )}
       </Card>
 
-      {giornoSelezionato && (
-        <Card className="p-4">
-          <p className="text-sm font-medium text-gray-500 mb-3">{giornoSelezionato} {MESI[meseCorrente].toLowerCase()} {annoCorrente}</p>
-          {bolletteGiornoSelezionato.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">Nessuna scadenza in questo giorno</p>
-          ) : (
-            <div className="space-y-3">
-              {bolletteGiornoSelezionato.map(b => {
-                const domiciliata = isDomiciliata(b)
-                const IconComp = b.contratto ? (IconMap[getCategoria(b.contratto.categoria)?.icon] || Package) : Package
-                return (
-                  <div key={b.id}
-                    className="flex items-center gap-3 cursor-pointer"
-                    onClick={() => { if (b.contratto_id && onSelectContratto) onSelectContratto(b.contratto_id) }}
-                  >
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${domiciliata ? 'bg-bolly-50 text-bolly-600' : 'bg-amber-50 text-amber-600'}`}>
-                      <IconComp size={18} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{b.contratto?.fornitore || b.descrizione_libera || 'Bolletta'}</p>
-                      <p className="text-xs text-gray-500">{b.contratto ? getCategoria(b.contratto.categoria)?.label : ''}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-gray-900">{b.importo ? formatEuro(b.importo) : '—'}</p>
-                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${domiciliata ? 'bg-bolly-50 text-bolly-700' : 'bg-amber-50 text-amber-700'}`}>
-                        {b.contratto?.metodo_pagamento === 'rid' ? 'RID' : b.contratto?.metodo_pagamento === 'bollettino' ? 'Bollettino' : 'Manuale'}
-                      </span>
-                    </div>
+      {/* Riepilogo annuale */}
+      <Card className="p-4">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">Riepilogo {annoCorrente}</h3>
+        {(() => {
+          const bolAnno = bollette.filter(b => {
+            if (!b.scadenza || b.stato_elaborazione === 'errore_parsing' || b.stato_elaborazione === 'comunicazione') return false
+            return new Date(b.scadenza).getFullYear() === annoCorrente
+          })
+          const totaleAnno = bolAnno.reduce((s, b) => s + Number(b.importo || 0), 0)
+          const numBolletteAnno = bolAnno.length
+
+          const bolAnnoPrev = bollette.filter(b => {
+            if (!b.scadenza || b.stato_elaborazione === 'errore_parsing' || b.stato_elaborazione === 'comunicazione') return false
+            return new Date(b.scadenza).getFullYear() === annoCorrente - 1
+          })
+          const totaleAnnoPrev = bolAnnoPrev.reduce((s, b) => s + Number(b.importo || 0), 0)
+          const varAnno = totaleAnnoPrev > 0 ? ((totaleAnno - totaleAnnoPrev) / totaleAnnoPrev) * 100 : null
+
+          const mediaMensile = numBolletteAnno > 0 ? totaleAnno / (meseCorrente + 1) : 0
+
+          const perCatAnno = {}
+          bolAnno.forEach(b => {
+            const c = contratti.find(ct => ct.id === b.contratto_id)
+            const catId = c?.categoria || 'altro'
+            if (!perCatAnno[catId]) perCatAnno[catId] = 0
+            perCatAnno[catId] += Number(b.importo || 0)
+          })
+          const catAnnoSorted = Object.entries(perCatAnno)
+            .map(([catId, tot]) => ({ catId, tot, cat: getCategoria(catId) }))
+            .sort((a, b) => b.tot - a.tot)
+
+          return (
+            <>
+              <div className="flex items-end justify-between mb-3">
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{formatEuro(totaleAnno)}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{numBolletteAnno} {numBolletteAnno === 1 ? 'bolletta' : 'bollette'} · media {formatEuro(mediaMensile)}/mese</p>
+                </div>
+                {varAnno !== null && (
+                  <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${varAnno > 0 ? 'bg-red-50 text-red-600' : varAnno < 0 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'}`}>
+                    <TrendingUp size={12} className={varAnno < 0 ? 'rotate-180' : ''} />
+                    {varAnno > 0 ? '+' : ''}{varAnno.toFixed(0)}% vs {annoCorrente - 1}
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </Card>
-      )}
+                )}
+              </div>
+              {catAnnoSorted.length > 0 && (
+                <div className="space-y-2 pt-3 border-t border-gray-100">
+                  {catAnnoSorted.map(({ catId, tot, cat }) => {
+                    const perc = totaleAnno > 0 ? (tot / totaleAnno) * 100 : 0
+                    const IconComp = IconMap[cat.icon] || Package
+                    return (
+                      <div key={catId} className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
+                          <IconComp size={14} style={{ color: cat.color }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-xs font-medium text-gray-700 truncate">{cat.label}</span>
+                            <span className="text-xs font-semibold text-gray-900">{formatEuro(tot)}</span>
+                          </div>
+                          <div className="w-full bg-gray-100 rounded-full h-1.5">
+                            <div className="h-1.5 rounded-full" style={{ width: `${perc}%`, backgroundColor: cat.color }} />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {numBolletteAnno === 0 && (
+                <p className="text-xs text-gray-400 text-center py-2">Nessuna bolletta in questo anno</p>
+              )}
+            </>
+          )
+        })()}
+      </Card>
     </div>
   )
 }
@@ -1721,36 +1799,41 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate }) {
         </div>
       </Card>
 
-      {/* FAQ */}
-      <Card className="p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <HelpCircle size={18} className="text-bolly-500" />
-          <h3 className="font-semibold text-gray-900 text-sm">Domande frequenti</h3>
-        </div>
-        <div className="space-y-1">
-          {faqItems.map((item, i) => (
-            <div key={i}>
-              <button
-                onClick={() => setFaqOpen(faqOpen === i ? null : i)}
-                className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
-              >
-                <span className="text-sm text-gray-700 pr-2">{item.q}</span>
-                <ChevronDown size={16} className={`text-gray-400 flex-shrink-0 transition-transform ${faqOpen === i ? 'rotate-180' : ''}`} />
-              </button>
-              {faqOpen === i && (
-                <div className="px-3 pb-3">
-                  <p className="text-sm text-gray-500 leading-relaxed">{item.a}</p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </Card>
-
       {/* Informazioni e supporto */}
       <Card className="p-4">
         <h3 className="font-semibold text-gray-900 text-sm mb-3">Informazioni e supporto</h3>
         <div className="space-y-1">
+          {/* FAQ compatta */}
+          <div>
+            <button
+              onClick={() => setFaqOpen(faqOpen === 'faq' ? null : 'faq')}
+              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              <HelpCircle size={18} className="text-bolly-500" />
+              <span className="text-sm text-gray-700">Domande frequenti</span>
+              <ChevronDown size={16} className={`text-gray-400 ml-auto transition-transform ${faqOpen === 'faq' ? 'rotate-180' : ''}`} />
+            </button>
+            {faqOpen === 'faq' && (
+              <div className="ml-3 mr-1 mb-2 border-l-2 border-bolly-100 pl-3">
+                {faqItems.map((item, i) => (
+                  <div key={i}>
+                    <button
+                      onClick={() => setFaqOpen(faqOpen === i ? 'faq' : i)}
+                      className="w-full flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <span className="text-sm text-gray-700 pr-2">{item.q}</span>
+                      <ChevronDown size={14} className={`text-gray-300 flex-shrink-0 transition-transform ${faqOpen === i ? 'rotate-180' : ''}`} />
+                    </button>
+                    {faqOpen === i && (
+                      <div className="px-2 pb-2.5">
+                        <p className="text-sm text-gray-500 leading-relaxed">{item.a}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <button onClick={() => onNavigate('termini')} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
             <FileText size={18} className="text-bolly-500" />
             <span className="text-sm text-gray-700">Termini e Condizioni</span>

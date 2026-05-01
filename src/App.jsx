@@ -698,7 +698,8 @@ function FormContratto({ onSave, onBack }) {
               </div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Prossimo addebito</label>
                 <input type="date" value={form.prossimo_addebito} onChange={e => update('prossimo_addebito', e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none" />
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none bg-white text-gray-900"
+                  style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
               </div>
             </div>
           )}

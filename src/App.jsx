@@ -436,8 +436,8 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
           <div><p className="text-gray-500">Ricezione</p><p className="font-medium capitalize">{contratto.metodo_ricezione || '—'}</p></div>
           <div><p className="text-gray-500">Domiciliazione</p><p className="font-medium">{contratto.domiciliazione ? 'Attiva' : 'No'}</p></div>
           <div><p className="text-gray-500">Attivo dal</p><p className="font-medium">{contratto.data_inizio ? formatData(contratto.data_inizio) : '—'}</p></div>
-          {contratto.categoria === 'finanziamento' && contratto.data_fine && (
-            <div><p className="text-gray-500">Fine finanziamento</p><p className="font-medium text-orange-600">{formatData(contratto.data_fine)}</p></div>
+          {contratto.data_fine && (
+            <div><p className="text-gray-500">{contratto.categoria === 'finanziamento' ? 'Fine finanziamento' : 'Scadenza contratto'}</p><p className="font-medium text-orange-600">{formatData(contratto.data_fine)}</p></div>
           )}
         </div>
         {contratto.ricorrente && (
@@ -544,8 +544,7 @@ function FormContratto({ onSave, onBack }) {
     try {
       const data = { ...form }
       if (data.ricorrente) data.importo_ricorrente = parseFloat(data.importo_ricorrente)
-      else { delete data.importo_ricorrente; delete data.frequenza; delete data.prossimo_addebito }
-      if (data.categoria !== 'finanziamento') delete data.data_fine
+      else { delete data.importo_ricorrente; delete data.frequenza; delete data.prossimo_addebito; delete data.data_fine }
       await onSave(data)
     } catch (e) { console.error(e) }
     setSaving(false)
@@ -664,16 +663,6 @@ function FormContratto({ onSave, onBack }) {
             style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
         </div>
 
-        {form.categoria === 'finanziamento' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data fine finanziamento</label>
-            <input type="date" value={form.data_fine} onChange={e => update('data_fine', e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
-              style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
-            <p className="text-xs text-gray-400 mt-1">Quando termina il piano di rimborso</p>
-          </div>
-        )}
-
         {/* Ricorrente */}
         <div className="pt-2 border-t border-gray-100">
           <div className="flex items-center justify-between">
@@ -700,6 +689,12 @@ function FormContratto({ onSave, onBack }) {
                 <input type="date" value={form.prossimo_addebito} onChange={e => update('prossimo_addebito', e.target.value)}
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none bg-white text-gray-900"
                   style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+              </div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Data fine (opzionale)</label>
+                <input type="date" value={form.data_fine} onChange={e => update('data_fine', e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none bg-white text-gray-900"
+                  style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+                <p className="text-xs text-gray-400 mt-1">{form.categoria === 'finanziamento' ? 'Quando termina il piano di rimborso' : 'Quando scade il contratto'}</p>
               </div>
             </div>
           )}
@@ -1034,8 +1029,7 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
     try {
       const data = { ...form }
       if (data.ricorrente) data.importo_ricorrente = parseFloat(data.importo_ricorrente)
-      else { delete data.importo_ricorrente; delete data.frequenza; delete data.prossimo_addebito }
-      if (data.categoria !== 'finanziamento') delete data.data_fine
+      else { delete data.importo_ricorrente; delete data.frequenza; delete data.prossimo_addebito; delete data.data_fine }
       await onSave(data)
     } catch (e) { console.error(e) }
     setSaving(false)
@@ -1086,15 +1080,6 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
             className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
             style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
         </div>
-        {form.categoria === 'finanziamento' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data fine finanziamento</label>
-            <input type="date" value={form.data_fine} onChange={e => update('data_fine', e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
-              style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
-            <p className="text-xs text-gray-400 mt-1">Quando termina il piano di rimborso</p>
-          </div>
-        )}
         <div className="pt-2 border-t border-gray-100">
           <div className="flex items-center justify-between">
             <div><label className="text-sm font-medium text-gray-700">Importo fisso ricorrente</label><p className="text-xs text-gray-400 mt-0.5">Per abbonamenti e spese a importo fisso</p></div>
@@ -1120,6 +1105,12 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
                 <input type="date" value={form.prossimo_addebito} onChange={e => update('prossimo_addebito', e.target.value)}
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none bg-white text-gray-900"
                   style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+              </div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Data fine (opzionale)</label>
+                <input type="date" value={form.data_fine} onChange={e => update('data_fine', e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none bg-white text-gray-900"
+                  style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+                <p className="text-xs text-gray-400 mt-1">{form.categoria === 'finanziamento' ? 'Quando termina il piano di rimborso' : 'Quando scade il contratto'}</p>
               </div>
             </div>
           )}

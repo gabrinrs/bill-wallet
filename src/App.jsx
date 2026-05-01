@@ -1519,7 +1519,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
 
   const bolletteFull = useMemo(() => {
     return bollette
-      .filter(b => b.stato_elaborazione !== 'errore_parsing' && b.stato_elaborazione !== 'comunicazione')
+      .filter(b => b.stato_elaborazione !== 'errore_parsing' && b.stato_elaborazione !== 'comunicazione' && b.fonte !== 'manuale')
       .map(b => ({
         ...b,
         contratto: contratti.find(c => c.id === b.contratto_id) || null

@@ -71,6 +71,115 @@ function SplashScreen() {
   )
 }
 
+function ResetPassword({ onDone }) {
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(false)
+
+  const handleReset = async (e) => {
+    e.preventDefault()
+    if (newPassword !== confirmPassword) {
+      setError('Le password non coincidono.')
+      return
+    }
+    if (newPassword.length < 6) {
+      setError('La password deve avere almeno 6 caratteri.')
+      return
+    }
+    setLoading(true)
+    setError(null)
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) {
+      setError(error.message)
+    } else {
+      setSuccess(true)
+      setTimeout(() => onDone(), 2000)
+    }
+    setLoading(false)
+  }
+
+  const EyeIcon = ({ show }) => show ? (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/></svg>
+  ) : (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+  )
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg" style={{ background: 'linear-gradient(145deg, #00897B, #00695C)' }}>
+            <span className="text-white font-pacifico" style={{ fontSize: '30px', transform: 'translateX(-2px)', display: 'block', lineHeight: 1 }}>B</span>
+          </div>
+          <h1 className="text-2xl font-pacifico text-bolly-500">Bolly</h1>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Nuova password</h2>
+          <p className="text-sm text-gray-500 mb-4">Scegli una nuova password per il tuo account.</p>
+
+          <form onSubmit={handleReset} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nuova password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="Minimo 6 caratteri"
+                  required
+                  minLength={6}
+                  className="w-full px-3 py-2.5 pr-11 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none"
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" tabIndex={-1}>
+                  <EyeIcon show={showPassword} />
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Conferma password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Ripeti la password"
+                  required
+                  minLength={6}
+                  className="w-full px-3 py-2.5 pr-11 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none"
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" tabIndex={-1}>
+                  <EyeIcon show={showPassword} />
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">{error}</div>
+            )}
+            {success && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">
+                Password aggiornata! Stai per essere reindirizzato...
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || success}
+              className="w-full py-3 bg-bolly-500 text-white font-semibold rounded-xl disabled:opacity-50 hover:bg-bolly-600 transition-colors"
+            >
+              {loading ? 'Attendere...' : 'Salva nuova password'}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function FonteBadge({ fonte }) {
   if (fonte === 'email') return (
     <span className="inline-flex items-center gap-1 text-xs font-medium text-bolly-700 bg-bolly-50 px-2 py-0.5 rounded-full border border-bolly-100">
@@ -2145,6 +2254,7 @@ function BolletteOrfane({ bollette, contratti, onBack, onUpdateBolletta, onDelet
 
 export default function App() {
   const [session, setSession] = useState(null)
+  const [isRecovery, setIsRecovery] = useState(false)
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState(null)
   const [contratti, setContratti] = useState([])
@@ -2186,7 +2296,12 @@ export default function App() {
       setSession(session)
       setLoading(false)
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setSession(session))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session)
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecovery(true)
+      }
+    })
     return () => subscription.unsubscribe()
   }, [])
 
@@ -2225,6 +2340,7 @@ export default function App() {
   const currentInboxCount = bolletteNonPagate + comunicazioniCount
 
   if (loading) return <SplashScreen />
+  if (isRecovery) return <ResetPassword onDone={() => setIsRecovery(false)} />
   if (!session) return <Auth />
   if (showOnboarding) return (
     <Onboarding

@@ -2346,7 +2346,14 @@ export default function App() {
     <Onboarding
       emailDedicata={profile?.email_dedicata}
       userId={session.user.id}
-      onComplete={() => setShowOnboarding(false)}
+      onComplete={async () => { setShowOnboarding(false); await loadData() }}
+      onCreateContratto={async (form) => {
+        const result = await createContratto(form)
+        return result
+      }}
+      onCreateBolletta={async (form) => {
+        await createBolletta(form)
+      }}
     />
   )
 

@@ -2328,10 +2328,10 @@ export default function App() {
 
   // Mostra onboarding al primo accesso
   useEffect(() => {
-    if (session && !localStorage.getItem('bolly_onboarding_done')) {
+    if (session && profile && !profile.onboarding_done) {
       setShowOnboarding(true)
     }
-  }, [session])
+  }, [session, profile])
 
   // Badge Notifiche e Inbox: conteggi attuali
   const currentNotificheCount = bollette.filter(b => !b.pagata && b.scadenza && b.stato_elaborazione === 'ok' && giorniDa(b.scadenza) <= 7).length
@@ -2346,7 +2346,11 @@ export default function App() {
     <Onboarding
       emailDedicata={profile?.email_dedicata}
       userId={session.user.id}
-      onComplete={async () => { setShowOnboarding(false); await loadData() }}
+      onComplete={async () => {
+        await supabase.from('profiles').update({ onboarding_done: true }).eq('id', session.user.id)
+        setShowOnboarding(false)
+        await loadData()
+      }}
       onCreateContratto={async (form) => {
         const result = await createContratto(form)
         return result

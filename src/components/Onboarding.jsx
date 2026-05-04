@@ -54,7 +54,6 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
   const handleSkipPush = () => setPushResult('denied')
 
   const handleFinish = () => {
-    localStorage.setItem('bolly_onboarding_done', 'true')
     onComplete()
   }
 

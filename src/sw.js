@@ -85,6 +85,11 @@ self.addEventListener('fetch', (event) => {
   }
 })
 
+// Installazione: forza l'attivazione immediata senza attendere la chiusura delle tab
+self.addEventListener('install', (event) => {
+  self.skipWaiting()
+})
+
 // Attivazione: prende il controllo immediatamente
 self.addEventListener('activate', (event) => {
   event.waitUntil(clients.claim())

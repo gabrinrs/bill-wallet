@@ -2402,9 +2402,9 @@ export default function App() {
     return saved ? parseInt(saved, 10) : 0
   })
   const [showOnboarding, setShowOnboarding] = useState(false)
-  const [lastSeenInboxCount, setLastSeenInboxCount] = useState(() => {
-    const saved = localStorage.getItem('bolly_seen_inbox_count')
-    return saved ? parseInt(saved, 10) : 0
+  const [lastSeenInboxTime, setLastSeenInboxTime] = useState(() => {
+    const saved = localStorage.getItem('bolly_seen_inbox_time')
+    return saved || new Date().toISOString()
   })
   const scrollRef = useRef(null)
 
@@ -2470,10 +2470,8 @@ export default function App() {
 
   // Badge Notifiche e Inbox: conteggi attuali
   const currentNotificheCount = bollette.filter(b => !b.pagata && b.scadenza && b.stato_elaborazione === 'ok' && giorniDa(b.scadenza) <= 7).length
-  // Inbox conta solo bollette ricevute via email/upload (non manuali) — allineato alla schermata Inbox
-  const bolletteInbox = bollette.filter(b => b.fonte !== 'manuale' && b.stato_elaborazione === 'ok').length
-  const comunicazioniCount = bollette.filter(b => b.stato_elaborazione === 'comunicazione').length
-  const currentInboxCount = bolletteInbox + comunicazioniCount
+  // Inbox badge: mostra pallino solo se ci sono bollette arrivate DOPO l'ultima apertura di Inbox
+  const nuoveBolletteInbox = bollette.filter(b => b.fonte !== 'manuale' && b.created_at && new Date(b.created_at) > new Date(lastSeenInboxTime)).length
 
   if (loading) return <SplashScreen />
   if (isRecovery) return <ResetPassword onDone={() => setIsRecovery(false)} />
@@ -2566,7 +2564,7 @@ export default function App() {
 
   const notificheCount = currentNotificheCount
   const showBadgeNotifiche = currentNotificheCount > 0 && currentNotificheCount > lastSeenNotificheCount
-  const showBadgeInbox = currentInboxCount > 0 && currentInboxCount > lastSeenInboxCount
+  const showBadgeInbox = nuoveBolletteInbox > 0
 
   const renderScreen = () => {
     switch (screen) {
@@ -2624,7 +2622,7 @@ export default function App() {
             <div className="w-11 h-11 bg-bolly-500 rounded-full flex items-center justify-center -mt-5 shadow-lg"><Plus size={24} className="text-white" /></div>
             <span className="text-xs font-medium text-bolly-500">Aggiungi</span>
           </button>
-          <button onClick={() => { setScreen('bollette'); setLastSeenInboxCount(currentInboxCount); try { localStorage.setItem('bolly_seen_inbox_count', String(currentInboxCount)) } catch(e) {} }} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'bollette' ? 'text-bolly-500' : 'text-gray-400'}`}>
+          <button onClick={() => { setScreen('bollette'); const now = new Date().toISOString(); setLastSeenInboxTime(now); try { localStorage.setItem('bolly_seen_inbox_time', now) } catch(e) {} }} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'bollette' ? 'text-bolly-500' : 'text-gray-400'}`}>
             <Inbox size={22} />
             {showBadgeInbox && <span className="absolute -top-0.5 right-1 w-2.5 h-2.5 bg-bolly-500 rounded-full" />}
             <span className="text-xs font-medium">Inbox</span>

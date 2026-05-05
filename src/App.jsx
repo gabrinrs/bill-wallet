@@ -2407,8 +2407,60 @@ export default function App() {
     return saved || new Date().toISOString()
   })
   const scrollRef = useRef(null)
+  const [sharedPdfStatus, setSharedPdfStatus] = useState(null) // null, 'uploading', 'processing', 'success', 'error'
+  const [sharedPdfError, setSharedPdfError] = useState(null)
 
   useEffect(() => { requestAnimationFrame(() => scrollRef.current?.scrollTo(0, 0)) }, [screen])
+
+  // Web Share Target: gestisce PDF condiviso da altre app
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (!params.has('shared') || !session?.user?.id) return
+    // Pulisci URL
+    window.history.replaceState({}, '', '/')
+
+    const handleSharedPdf = async () => {
+      try {
+        const cache = await caches.open('bolly-shared-files')
+        const response = await cache.match('/shared-pdf')
+        if (!response) return
+        const blob = await response.blob()
+        const filename = response.headers.get('X-Filename') || 'condiviso.pdf'
+        await cache.delete('/shared-pdf')
+
+        setScreen('dashboard')
+        setSharedPdfStatus('uploading')
+
+        const userId = session.user.id
+        const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 15)
+        const filePath = `${userId}/${timestamp}.pdf`
+
+        const { error: storageError } = await supabase.storage
+          .from('bollette-pdf')
+          .upload(filePath, blob, { contentType: 'application/pdf' })
+        if (storageError) throw new Error('Errore nel caricamento: ' + storageError.message)
+
+        const pdfUrl = `https://iimzetvymamadclfblgy.supabase.co/storage/v1/object/public/bollette-pdf/${filePath}`
+
+        setSharedPdfStatus('processing')
+        const webhookRes = await fetch('https://hook.eu1.make.com/5n4w2qn99uf830yktlyjw8o17ogcd1xt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId, pdf_url: pdfUrl })
+        })
+        if (!webhookRes.ok) throw new Error('Errore nell\'elaborazione')
+
+        setSharedPdfStatus('success')
+        setTimeout(async () => { setSharedPdfStatus(null); await loadData() }, 4000)
+      } catch (e) {
+        console.error('Shared PDF error:', e)
+        setSharedPdfStatus('error')
+        setSharedPdfError(e.message)
+        setTimeout(() => { setSharedPdfStatus(null); setSharedPdfError(null) }, 5000)
+      }
+    }
+    handleSharedPdf()
+  }, [session])
 
   // Se supabase non è configurato, mostra errore
   if (!supabase) {
@@ -2610,6 +2662,18 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#f0f7f6] flex flex-col" style={{ maxWidth: 430, margin: '0 auto', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='260' viewBox='0 0 220 260'%3E%3Cg fill='none' stroke='%23b8d5cf' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg transform='translate(15,12) rotate(15,5,7)'%3E%3Cpolyline points='7,0 3,7 7,7 4,15'/%3E%3C/g%3E%3Cg transform='translate(55,5) rotate(-20,6,6)'%3E%3Crect x='0' y='1' width='13' height='10' rx='1.5'/%3E%3Cpolyline points='0,1 6.5,7 13,1'/%3E%3C/g%3E%3Cg transform='translate(110,18) rotate(25,5,8)'%3E%3Cpath d='M5 1 C5 1 0 7 0 10 C0 13 2.5 15 5 15 C7.5 15 10 13 10 10 C10 7 5 1 5 1 Z'/%3E%3C/g%3E%3Cg transform='translate(165,8) rotate(-10,6,7)'%3E%3Ccircle cx='6' cy='7' r='6.5'/%3E%3Cline x1='6' y1='7' x2='6' y2='3'/%3E%3Cline x1='6' y1='7' x2='9' y2='9'/%3E%3C/g%3E%3Cg transform='translate(200,50) rotate(30,5,7)'%3E%3Cpath d='M5 0 L0 2.5 L0 7 C0 10.5 5 13 5 13 C5 13 10 10.5 10 7 L10 2.5 Z'/%3E%3Cpolyline points='3,7 4.5,9 7,5'/%3E%3C/g%3E%3Cg transform='translate(30,52) rotate(-15,5,7)'%3E%3Cpath d='M0 7 L5 2 L10 7'/%3E%3Crect x='1.5' y='7' width='7' height='6' rx='0.5'/%3E%3Crect x='3.5' y='9' width='3' height='4'/%3E%3C/g%3E%3Cg transform='translate(82,42) rotate(40,6,7)'%3E%3Cpath d='M11 2 C9 0 6 0 4 2 C2 4 2 8 4 10 C6 12 9 12 11 10'/%3E%3Cline x1='1' y1='5' x2='8' y2='5'/%3E%3Cline x1='1' y1='8' x2='8' y2='8'/%3E%3C/g%3E%3Cg transform='translate(140,45) rotate(-35,5,7)'%3E%3Cpath d='M2 10 C2 10 1 6 1 4 C1 1.5 3 0 5 0 C7 0 9 1.5 9 4 C9 6 8 10 8 10'/%3E%3Cline x1='1.5' y1='10' x2='8.5' y2='10'/%3E%3Cpath d='M4 11 C4 12 4.5 13 5 13 C5.5 13 6 12 6 11'/%3E%3C/g%3E%3Cg transform='translate(8,100) rotate(10,5,7)'%3E%3Cpath d='M5 14 C1.5 11 0.5 8 2.5 4 C3.5 2 5 1 5 0 C5 1 7 2 7.5 4 C9.5 8 8.5 11 5 14 Z'/%3E%3Cpath d='M5 14 C3.5 12 3 10 4.5 8 C5 7.5 5.5 8 5.5 8 C6.5 10 6.5 12 5 14 Z'/%3E%3C/g%3E%3Cg transform='translate(55,95) rotate(-25,7,5)'%3E%3Crect x='0' y='0' width='14' height='10' rx='1.5'/%3E%3Cline x1='0' y1='3.5' x2='14' y2='3.5'/%3E%3Crect x='2' y='6' width='4' height='2' rx='0.5' fill='%23b8d5cf'/%3E%3C/g%3E%3Cg transform='translate(115,88) rotate(20,6,7)'%3E%3Crect x='0' y='2' width='12' height='11' rx='1.5'/%3E%3Cline x1='0' y1='5.5' x2='12' y2='5.5'/%3E%3Cline x1='3' y1='0' x2='3' y2='3.5'/%3E%3Cline x1='9' y1='0' x2='9' y2='3.5'/%3E%3Ccircle cx='4' cy='9' r='0.8' fill='%23b8d5cf'/%3E%3Ccircle cx='8' cy='9' r='0.8' fill='%23b8d5cf'/%3E%3C/g%3E%3Cg transform='translate(170,90) rotate(-40,5,8)'%3E%3Crect x='0.5' y='0' width='9' height='15' rx='2'/%3E%3Cline x1='3.5' y1='12' x2='6.5' y2='12'/%3E%3C/g%3E%3Cg transform='translate(25,150) rotate(5,6,6)'%3E%3Cpath d='M0 4 C3 0 9 0 12 4'/%3E%3Cpath d='M2 6.5 C4 3.5 8 3.5 10 6.5'/%3E%3Cpath d='M4 9 C5 7.5 7 7.5 8 9'/%3E%3Ccircle cx='6' cy='11' r='1' fill='%23b8d5cf'/%3E%3C/g%3E%3Cg transform='translate(75,148) rotate(-30,5,7)'%3E%3Crect x='0' y='0' width='11' height='14' rx='1.5'/%3E%3Cpolyline points='2,3.5 3.5,5.5 6,2.5'/%3E%3Cline x1='7' y1='4' x2='9' y2='4'/%3E%3Cpolyline points='2,8 3.5,10 6,7'/%3E%3Cline x1='7' y1='9' x2='9' y2='9'/%3E%3C/g%3E%3Cg transform='translate(130,145) rotate(35,5,6)'%3E%3Cpath d='M1 5 C1 2.5 3 0.5 5.5 0.5 L8 0.5'/%3E%3Cpolyline points='7,0 9,1.5 7,3'/%3E%3Cpath d='M10 5.5 C10 8 8 10 5.5 10 L3 10'/%3E%3Cpolyline points='4,9 2,10.5 4,12'/%3E%3C/g%3E%3Cg transform='translate(180,142) rotate(-8,6,7)'%3E%3Ccircle cx='4.5' cy='5.5' r='4.5'/%3E%3Ccircle cx='7.5' cy='8.5' r='4.5'/%3E%3Cline x1='7' y1='7' x2='7' y2='10.5'/%3E%3Cline x1='5.5' y1='8.5' x2='8.5' y2='8.5'/%3E%3C/g%3E%3Cg transform='translate(45,198) rotate(22,5,7)'%3E%3Cellipse cx='5' cy='8' rx='5' ry='4.5'/%3E%3Crect x='3' y='2.5' width='4' height='2' rx='0.5'/%3E%3Cline x1='8' y1='11' x2='9' y2='14'/%3E%3Cline x1='2' y1='11' x2='1' y2='14'/%3E%3C/g%3E%3Cg transform='translate(105,200) rotate(-18,5,8)'%3E%3Crect x='0' y='1' width='11' height='14' rx='1.5'/%3E%3Cline x1='3' y1='5' x2='8' y2='5'/%3E%3Cline x1='3' y1='8' x2='8' y2='8'/%3E%3Cline x1='3' y1='11' x2='6' y2='11'/%3E%3C/g%3E%3Cg transform='translate(160,200) rotate(12,5,7)'%3E%3Crect x='1' y='6' width='9' height='7' rx='1'/%3E%3Cpath d='M3 6 L3 3.5 C3 1.5 4 0 5.5 0 C7 0 8 1.5 8 3.5 L8 6'/%3E%3Ccircle cx='5.5' cy='9.5' r='1' fill='%23b8d5cf'/%3E%3C/g%3E%3Cg transform='translate(3,240) rotate(-5,6,7)'%3E%3Cline x1='0' y1='14' x2='12' y2='14'/%3E%3Cline x1='0' y1='0' x2='0' y2='14'/%3E%3Crect x='2' y='8' width='2.5' height='6' fill='%23b8d5cf'/%3E%3Crect x='5.5' y='4' width='2.5' height='10' fill='%23b8d5cf'/%3E%3Crect x='9' y='1.5' width='2.5' height='12.5' fill='%23b8d5cf'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")", backgroundRepeat: 'repeat', backgroundSize: '220px 260px' }}>
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pt-6 pb-24 safe-top">{renderScreen()}</div>
+
+      {/* Toast per PDF condiviso da altre app */}
+      {sharedPdfStatus && (
+        <div className="fixed top-6 left-4 right-4 z-50" style={{ maxWidth: 398, margin: '0 auto' }}>
+          <div className={`rounded-2xl shadow-lg p-4 flex items-center gap-3 ${sharedPdfStatus === 'success' ? 'bg-green-50 border border-green-200' : sharedPdfStatus === 'error' ? 'bg-red-50 border border-red-200' : 'bg-white border border-bolly-200'}`}>
+            {sharedPdfStatus === 'uploading' && <><Loader2 size={20} className="animate-spin text-bolly-500" /><p className="text-sm font-medium text-gray-900">Caricamento bolletta...</p></>}
+            {sharedPdfStatus === 'processing' && <><Loader2 size={20} className="animate-spin text-bolly-500" /><p className="text-sm font-medium text-gray-900">Elaborazione AI in corso...</p></>}
+            {sharedPdfStatus === 'success' && <><Check size={20} className="text-green-600" /><p className="text-sm font-medium text-gray-900">Bolletta elaborata con successo!</p></>}
+            {sharedPdfStatus === 'error' && <><AlertTriangle size={20} className="text-red-600" /><p className="text-sm font-medium text-gray-900">{sharedPdfError || 'Errore nell\'elaborazione'}</p></>}
+          </div>
+        </div>
+      )}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-bottom" style={{ maxWidth: 430, margin: '0 auto' }}>
         <div className="flex items-center justify-around px-6 py-2">
           <button onClick={() => setScreen('dashboard')} className={`flex flex-col items-center gap-1 py-2 px-3 ${screen === 'dashboard' ? 'text-bolly-500' : 'text-gray-400'}`}>

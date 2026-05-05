@@ -65,6 +65,26 @@ self.addEventListener('notificationclick', (event) => {
   )
 })
 
+// Web Share Target: intercetta i PDF condivisi dall'utente
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url)
+  if (url.pathname === '/' && url.searchParams.has('share') && event.request.method === 'POST') {
+    event.respondWith((async () => {
+      const formData = await event.request.formData()
+      const file = formData.get('file')
+      if (file && file.type === 'application/pdf') {
+        // Salva il PDF in cache temporanea per passarlo all'app
+        const cache = await caches.open('bolly-shared-files')
+        await cache.put('/shared-pdf', new Response(file, {
+          headers: { 'Content-Type': 'application/pdf', 'X-Filename': file.name }
+        }))
+      }
+      return Response.redirect('/?shared=1', 303)
+    })())
+    return
+  }
+})
+
 // Attivazione: prende il controllo immediatamente
 self.addEventListener('activate', (event) => {
   event.waitUntil(clients.claim())

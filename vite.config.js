@@ -24,6 +24,22 @@ export default defineConfig({
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
+        share_target: {
+          action: '/?share=true',
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            title: 'title',
+            text: 'text',
+            url: 'url',
+            files: [
+              {
+                name: 'file',
+                accept: ['application/pdf', '.pdf']
+              }
+            ]
+          }
+        },
         icons: [
           {
             src: '/icon-192.png',

@@ -167,8 +167,14 @@ function calcolaProssimaData(dataCorrente, frequenza) {
     case 'mensile':
       d.setMonth(d.getMonth() + 1)
       break
+    case 'bimestrale':
+      d.setMonth(d.getMonth() + 2)
+      break
     case 'trimestrale':
       d.setMonth(d.getMonth() + 3)
+      break
+    case 'semestrale':
+      d.setMonth(d.getMonth() + 6)
       break
     case 'annuale':
       d.setFullYear(d.getFullYear() + 1)

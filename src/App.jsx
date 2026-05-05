@@ -298,7 +298,9 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
     return contratti.filter(c => c.ricorrente).reduce((sum, c) => {
       const imp = Number(c.importo_ricorrente) || 0
       if (c.frequenza === 'mensile') return sum + imp
+      if (c.frequenza === 'bimestrale') return sum + imp / 2
       if (c.frequenza === 'trimestrale') return sum + imp / 3
+      if (c.frequenza === 'semestrale') return sum + imp / 6
       if (c.frequenza === 'annuale') return sum + imp / 12
       return sum
     }, 0)
@@ -431,7 +433,7 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
                     <p className="font-medium text-gray-900">{c.fornitore}</p>
                     <p className="text-sm text-gray-500">
                       {getCategoria(c.categoria).label} · {c.domiciliazione ? 'Domiciliato' : 'Pagamento manuale'}
-                      {c.ricorrente && ` · ${formatEuro(c.importo_ricorrente)}/${c.frequenza === 'mensile' ? 'mese' : c.frequenza === 'trimestrale' ? 'trim.' : 'anno'}`}
+                      {c.ricorrente && ` · ${formatEuro(c.importo_ricorrente)}/${{ mensile: 'mese', bimestrale: '2 mesi', trimestrale: 'trim.', semestrale: '6 mesi', annuale: 'anno' }[c.frequenza] || c.frequenza}`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -918,9 +920,9 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome }) {
               </div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Frequenza</label>
                 <div className="flex gap-2">
-                  {[{ id: 'mensile', l: 'Mensile' }, { id: 'trimestrale', l: 'Trimestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
+                  {[{ id: 'mensile', l: 'Mensile' }, { id: 'bimestrale', l: 'Bimestrale' }, { id: 'trimestrale', l: 'Trimestrale' }, { id: 'semestrale', l: 'Semestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
                     <button key={f.id} onClick={() => update('frequenza', f.id)}
-                      className={`flex-1 py-2 rounded-xl text-sm font-medium border ${form.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
+                      className={`flex-1 py-2 px-1 rounded-xl text-xs font-medium border ${form.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
                   ))}
                 </div>
               </div>
@@ -1361,9 +1363,9 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
               </div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Frequenza</label>
                 <div className="flex gap-2">
-                  {[{ id: 'mensile', l: 'Mensile' }, { id: 'trimestrale', l: 'Trimestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
+                  {[{ id: 'mensile', l: 'Mensile' }, { id: 'bimestrale', l: 'Bimestrale' }, { id: 'trimestrale', l: 'Trimestrale' }, { id: 'semestrale', l: 'Semestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
                     <button key={f.id} onClick={() => update('frequenza', f.id)}
-                      className={`flex-1 py-2 rounded-xl text-sm font-medium border ${form.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
+                      className={`flex-1 py-2 px-1 rounded-xl text-xs font-medium border ${form.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
                   ))}
                 </div>
               </div>
@@ -1479,7 +1481,7 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
     // Proiezioni da contratti ricorrenti
     contratti.forEach(c => {
       if (!c.ricorrente || !c.prossimo_addebito || !c.frequenza) return
-      const freqMesi = c.frequenza === 'mensile' ? 1 : c.frequenza === 'trimestrale' ? 3 : c.frequenza === 'annuale' ? 12 : 0
+      const freqMesi = { mensile: 1, bimestrale: 2, trimestrale: 3, semestrale: 6, annuale: 12 }[c.frequenza] || 0
       if (freqMesi === 0) return
       const dataFine = c.data_fine ? new Date(c.data_fine + 'T00:00:00') : null
       let cur = new Date(c.prossimo_addebito + 'T00:00:00')

@@ -26,13 +26,28 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    self.registration.showNotification(data.title, options).then(() => {
+      // Aggiunge badge numerico sull'icona della PWA
+      if (navigator.setAppBadge) {
+        return self.registration.getNotifications().then(notifications => {
+          navigator.setAppBadge(notifications.length)
+        })
+      }
+    })
   )
 })
 
-// Evento click sulla notifica: apre l'app
+// Evento click sulla notifica: apre l'app e rimuove badge
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
+
+  // Rimuove o aggiorna il badge sull'icona
+  if (navigator.setAppBadge) {
+    self.registration.getNotifications().then(notifications => {
+      if (notifications.length === 0) navigator.clearAppBadge()
+      else navigator.setAppBadge(notifications.length)
+    })
+  }
 
   const url = event.notification.data?.url || '/'
 

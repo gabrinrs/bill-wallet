@@ -88,7 +88,7 @@ export const cercaFornitore = (categoria, query) => {
 }
 
 export const PORTALI_PAGAMENTO = {
-  'Enel Energia': 'https://www.enel.it/area-clienti',
+  'Enel Energia': 'https://www.enel.it/it-it/login',
   'Edison': 'https://www.edison.it/area-clienti',
   'A2A': 'https://www.a2a.it/area-clienti',
   'Iren': 'https://www.irenlucegas.it/area-riservata',

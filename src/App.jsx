@@ -1317,7 +1317,11 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
   }
 
   return (
+<<<<<<< HEAD
+    <div className="space-y-6 pb-16">
+=======
     <div className="space-y-6 pb-24">
+>>>>>>> 5cf4c3a698443fe170e3da5d324ab9229ee22b2c
       <div className="flex items-center gap-3">
         <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-600" /></button>
         <h1 className="text-xl font-bold text-gray-900">Modifica contratto</h1>
@@ -1375,11 +1379,27 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none" />
               </div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Frequenza</label>
+<<<<<<< HEAD
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-center gap-2">
+                    {[{ id: 'mensile', l: 'Mensile' }, { id: 'bimestrale', l: 'Bimestrale' }, { id: 'trimestrale', l: 'Trimestrale' }].map(f => (
+                      <button key={f.id} onClick={() => update('frequenza', f.id)}
+                        className={`py-2 px-3 rounded-xl text-xs font-medium border ${form.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
+                    ))}
+                  </div>
+                  <div className="flex justify-center gap-2">
+                    {[{ id: 'semestrale', l: 'Semestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
+                      <button key={f.id} onClick={() => update('frequenza', f.id)}
+                        className={`py-2 px-3 rounded-xl text-xs font-medium border ${form.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
+                    ))}
+                  </div>
+=======
                 <div className="flex flex-wrap gap-2">
                   {[{ id: 'mensile', l: 'Mensile' }, { id: 'bimestrale', l: 'Bimestrale' }, { id: 'trimestrale', l: 'Trim.' }, { id: 'semestrale', l: 'Semestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
                     <button key={f.id} onClick={() => update('frequenza', f.id)}
                       className={`py-2 px-3 rounded-xl text-xs font-medium border ${form.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
                   ))}
+>>>>>>> 5cf4c3a698443fe170e3da5d324ab9229ee22b2c
                 </div>
               </div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Prossimo addebito</label>

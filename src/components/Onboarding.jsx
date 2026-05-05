@@ -357,7 +357,7 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Data inizio</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Data inizio contratto</label>
               <input type="date" value={contrattoForm.data_inizio} onChange={e => updateContratto('data_inizio', e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
                 style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />

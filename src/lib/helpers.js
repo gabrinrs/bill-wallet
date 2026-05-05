@@ -12,6 +12,8 @@ export const giorniDa = (data) =>
 
 export const getStatoBolletta = (bolletta) => {
   if (bolletta.pagata) return 'pagata'
+  // RID con scadenza passata → già addebitata dalla banca
+  if (bolletta.metodo_pagamento === 'rid' && bolletta.scadenza && giorniDa(bolletta.scadenza) < 0) return 'pagata'
   const giorni = giorniDa(bolletta.scadenza)
   if (giorni < 0) return 'scaduta'
   if (giorni <= 3) return 'in_scadenza'

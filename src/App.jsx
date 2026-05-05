@@ -590,7 +590,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-gray-900">{formatEuro(b.importo)}</p>
-                    <p className="text-sm text-gray-500">{b.periodo ? `${formatPeriodo(b.periodo)} · ` : ''}Scade {b.scadenza ? formatData(b.scadenza) : '—'}</p>
+                    <p className="text-sm text-gray-500">{b.periodo ? `${formatPeriodo(b.periodo)}${b.periodo_fine && b.periodo_fine !== b.periodo ? ' → ' + formatPeriodo(b.periodo_fine) : ''} · ` : ''}Scade {b.scadenza ? formatData(b.scadenza) : '—'}</p>
                     <div className="mt-1"><FonteBadge fonte={b.fonte} /></div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -896,7 +896,7 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome }) {
           </button>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Data inizio</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Data inizio contratto</label>
           <input type="date" value={form.data_inizio} onChange={e => update('data_inizio', e.target.value)}
             className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
             style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
@@ -964,7 +964,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
   const fileInputRef = useRef(null)
   const [form, setForm] = useState({
     contratto_id: contrattoId || (contratti[0]?.id || ''),
-    importo: '', periodo: '', emissione: '', scadenza: '', descrizione_libera: '', metodo_pagamento: null,
+    importo: '', periodo: '', periodo_fine: '', emissione: '', scadenza: '', descrizione_libera: '', metodo_pagamento: null,
   })
   const update = (f, v) => setForm(p => ({ ...p, [f]: v }))
 
@@ -1007,10 +1007,15 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
       const data = {
         importo: parseFloat(form.importo),
         periodo: form.periodo ? form.periodo + '-01' : null,
+        periodo_fine: form.periodo_fine ? form.periodo_fine + '-01' : null,
         emissione: form.emissione || null,
         scadenza: form.scadenza,
         metodo_pagamento: form.metodo_pagamento,
         stato_elaborazione: 'ok',
+      }
+      // RID con scadenza passata → già addebitata automaticamente
+      if (form.metodo_pagamento === 'rid' && form.scadenza && new Date(form.scadenza) < new Date()) {
+        data.pagata = true
       }
       if (mode === 'libero') {
         data.descrizione_libera = form.descrizione_libera
@@ -1152,9 +1157,20 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Periodo di competenza</label>
-                <input type="month" value={form.periodo} onChange={e => update('periodo', e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
-                  style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-xs text-gray-400">Da</span>
+                    <input type="month" value={form.periodo} onChange={e => update('periodo', e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
+                      style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-400">A</span>
+                    <input type="month" value={form.periodo_fine} onChange={e => update('periodo_fine', e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
+                      style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+                  </div>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Emissione</label>
@@ -1203,9 +1219,20 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Periodo di competenza</label>
-              <input type="month" value={form.periodo} onChange={e => update('periodo', e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
-                style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-xs text-gray-400">Da</span>
+                  <input type="month" value={form.periodo} onChange={e => update('periodo', e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
+                    style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+                </div>
+                <div>
+                  <span className="text-xs text-gray-400">A</span>
+                  <input type="month" value={form.periodo_fine} onChange={e => update('periodo_fine', e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
+                    style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+                </div>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Emissione</label>
@@ -1314,7 +1341,7 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
           </button>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Data inizio</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Data inizio contratto</label>
           <input type="date" value={form.data_inizio} onChange={e => update('data_inizio', e.target.value)}
             className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none bg-white text-gray-900"
             style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />

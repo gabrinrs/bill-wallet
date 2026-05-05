@@ -1317,11 +1317,7 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
   }
 
   return (
-<<<<<<< HEAD
     <div className="space-y-6 pb-16">
-=======
-    <div className="space-y-6 pb-24">
->>>>>>> 5cf4c3a698443fe170e3da5d324ab9229ee22b2c
       <div className="flex items-center gap-3">
         <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-600" /></button>
         <h1 className="text-xl font-bold text-gray-900">Modifica contratto</h1>

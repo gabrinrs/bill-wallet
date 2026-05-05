@@ -659,6 +659,9 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome }) {
     setSaving(true)
     try {
       const data = { ...form }
+      // Converte stringhe vuote in null per campi data opzionali
+      if (!data.data_fine) data.data_fine = null
+      if (!data.data_inizio) data.data_inizio = null
       if (data.ricorrente) data.importo_ricorrente = parseFloat(data.importo_ricorrente)
       else { delete data.importo_ricorrente; delete data.frequenza; delete data.prossimo_addebito; delete data.data_fine }
       await onSave(data)
@@ -1296,6 +1299,9 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
     setSaving(true)
     try {
       const data = { ...form }
+      // Converte stringhe vuote in null per campi data opzionali
+      if (!data.data_fine) data.data_fine = null
+      if (!data.data_inizio) data.data_inizio = null
       if (data.ricorrente) data.importo_ricorrente = parseFloat(data.importo_ricorrente)
       else { delete data.importo_ricorrente; delete data.frequenza; delete data.prossimo_addebito; delete data.data_fine }
       await onSave(data)

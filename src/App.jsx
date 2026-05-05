@@ -922,10 +922,10 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome }) {
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none" />
               </div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Frequenza</label>
-                <div className="flex gap-2">
-                  {[{ id: 'mensile', l: 'Mensile' }, { id: 'bimestrale', l: 'Bimestrale' }, { id: 'trimestrale', l: 'Trimestrale' }, { id: 'semestrale', l: 'Semestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
+                <div className="flex flex-wrap gap-2">
+                  {[{ id: 'mensile', l: 'Mensile' }, { id: 'bimestrale', l: 'Bimestrale' }, { id: 'trimestrale', l: 'Trim.' }, { id: 'semestrale', l: 'Semestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
                     <button key={f.id} onClick={() => update('frequenza', f.id)}
-                      className={`flex-1 py-2 px-1 rounded-xl text-xs font-medium border ${form.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
+                      className={`py-2 px-3 rounded-xl text-xs font-medium border ${form.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
                   ))}
                 </div>
               </div>
@@ -935,9 +935,16 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome }) {
                   style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
               </div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Data fine (opzionale)</label>
-                <input type="date" value={form.data_fine} onChange={e => update('data_fine', e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none bg-white text-gray-900"
-                  style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+                <div className="relative">
+                  <input type="date" value={form.data_fine} onChange={e => update('data_fine', e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none bg-white text-gray-900"
+                    style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+                  {form.data_fine && (
+                    <button type="button" onClick={() => update('data_fine', '')} className="absolute right-10 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-100 text-gray-400">
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
                 <p className="text-xs text-gray-400 mt-1">{form.categoria === 'finanziamento' ? 'Quando termina il piano di rimborso' : 'Quando scade il contratto'}</p>
               </div>
             </div>
@@ -1310,7 +1317,7 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
       <div className="flex items-center gap-3">
         <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-600" /></button>
         <h1 className="text-xl font-bold text-gray-900">Modifica contratto</h1>
@@ -1368,10 +1375,10 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none" />
               </div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Frequenza</label>
-                <div className="flex gap-2">
-                  {[{ id: 'mensile', l: 'Mensile' }, { id: 'bimestrale', l: 'Bimestrale' }, { id: 'trimestrale', l: 'Trimestrale' }, { id: 'semestrale', l: 'Semestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
+                <div className="flex flex-wrap gap-2">
+                  {[{ id: 'mensile', l: 'Mensile' }, { id: 'bimestrale', l: 'Bimestrale' }, { id: 'trimestrale', l: 'Trim.' }, { id: 'semestrale', l: 'Semestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
                     <button key={f.id} onClick={() => update('frequenza', f.id)}
-                      className={`flex-1 py-2 px-1 rounded-xl text-xs font-medium border ${form.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
+                      className={`py-2 px-3 rounded-xl text-xs font-medium border ${form.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
                   ))}
                 </div>
               </div>
@@ -1381,9 +1388,16 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
                   style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
               </div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Data fine (opzionale)</label>
-                <input type="date" value={form.data_fine} onChange={e => update('data_fine', e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none bg-white text-gray-900"
-                  style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+                <div className="relative">
+                  <input type="date" value={form.data_fine} onChange={e => update('data_fine', e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none bg-white text-gray-900"
+                    style={{ WebkitAppearance: 'none', minHeight: '44px', colorScheme: 'light' }} />
+                  {form.data_fine && (
+                    <button type="button" onClick={() => update('data_fine', '')} className="absolute right-10 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-100 text-gray-400">
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
                 <p className="text-xs text-gray-400 mt-1">{form.categoria === 'finanziamento' ? 'Quando termina il piano di rimborso' : 'Quando scade il contratto'}</p>
               </div>
             </div>

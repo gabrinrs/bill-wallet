@@ -12,18 +12,79 @@ export const CATEGORIE = [
   { id: 'altro', label: 'Altro', icon: 'Package', color: '#6b7280', freeText: true, placeholder: 'es. Condominio, Affitto box...' },
 ]
 
+// Fornitori principali (mostrati come card)
 export const FORNITORI = {
-  luce: ['Enel Energia', 'Edison', 'A2A', 'Iren', 'Hera'],
-  gas: ['ENI Plenitude', 'Enel Energia', 'Edison', 'A2A', 'Iren'],
-  acqua: ['Acquedotto Pugliese', 'MM Milano', 'ACEA', 'Hera'],
-  telefono: ['TIM', 'Vodafone', 'WindTre', 'Iliad', 'Fastweb'],
-  internet: ['Fastweb', 'TIM', 'Vodafone', 'WindTre', 'Sky WiFi'],
-  assicurazione: ['UnipolSai', 'Allianz', 'Generali', 'AXA', 'Zurich'],
-  abbonamento: ['Netflix', 'Spotify', 'Amazon Prime', 'Disney+', 'DAZN', 'YouTube Premium', 'Apple One'],
+  luce: ['Enel Energia', 'Edison', 'A2A', 'Iren', 'Hera', 'ENI Plenitude'],
+  gas: ['ENI Plenitude', 'Enel Energia', 'Edison', 'A2A', 'Iren', 'Hera'],
+  acqua: ['IRETI', 'ACEA', 'Hera', 'MM Milano', 'Acquedotto Pugliese', 'Gruppo CAP'],
+  telefono: ['TIM', 'Vodafone', 'WindTre', 'Iliad', 'Fastweb', 'ho. Mobile'],
+  internet: ['Fastweb', 'TIM', 'Vodafone', 'WindTre', 'Sky WiFi', 'Iliad'],
+  assicurazione: ['UnipolSai', 'Allianz', 'Generali', 'AXA', 'Zurich', 'Vittoria'],
+  abbonamento: ['Netflix', 'Spotify', 'Amazon Prime', 'Disney+', 'DAZN', 'YouTube Premium', 'Apple One', 'Sky'],
   finanziamento: [],
   f24: [],
   pagopa: [],
   altro: [],
+}
+
+// Lista estesa fornitori mercato libero (per ricerca/autocomplete)
+export const FORNITORI_ESTESI = {
+  luce: [
+    'Octopus Energy', 'Illumia', 'Engie', 'Sorgenia', 'Wekiwi', 'NWG Energia',
+    'VIVI Energia', 'Axpo Italia', 'Dolomiti Energia', 'Alperia', 'Agsm Aim',
+    'Eni gas e luce', 'E.ON', 'Green Network', 'Optima Italia', 'Pulsee',
+    'Iberdrola', 'Duferco Energia', 'Nen', 'Tate Energia', 'Acea Energia',
+    'Heracomm', 'Repower', 'Enel Servizio Elettrico', 'Servizio Elettrico Nazionale',
+  ],
+  gas: [
+    'Octopus Energy', 'Illumia', 'Engie', 'Sorgenia', 'Wekiwi', 'NWG Energia',
+    'VIVI Energia', 'Dolomiti Energia', 'Alperia', 'Agsm Aim',
+    'E.ON', 'Green Network', 'Optima Italia', 'Pulsee',
+    'Duferco Energia', 'Nen', 'Tate Energia', 'Acea Energia',
+    'Heracomm', 'Italgas', 'Gas Plus', '2i Rete Gas',
+  ],
+  acqua: [
+    'Iren Acqua', 'Reggiana Gas Acqua', 'Publiacqua', 'Acque SpA',
+    'Abbanoa', 'SMAT Torino', 'Veritas Venezia', 'Padania Acque',
+    'Lario Reti Holding', 'BrianzAcque', 'Aimag', 'ENIA',
+    'CAP Holding', 'GAIA SpA', 'Acqua Novara VCO', 'Alto Calore',
+    'Acquedotto Lucano', 'Siciliacque', 'AMAP Palermo',
+  ],
+  telefono: [
+    'PosteMobile', 'CoopVoce', 'Very Mobile', 'Kena Mobile', 'Spusu',
+    'Tiscali', 'Lycamobile', 'Rabona Mobile', 'Daily Telecom',
+  ],
+  internet: [
+    'Tiscali', 'Eolo', 'Pianeta Fibra', 'Linkem', 'Open Fiber',
+    'Starlink', 'Dimensione', 'Ehiweb', 'Planetel',
+  ],
+  assicurazione: [
+    'Sara Assicurazioni', 'Cattolica', 'Linear', 'Genialloyd', 'ConTe.it',
+    'Prima Assicurazioni', 'Verti', 'Direct Line', 'MetLife', 'Aviva',
+    'Helvetia', 'Reale Mutua', 'Groupama', 'HDI Assicurazioni',
+  ],
+  abbonamento: [
+    'Apple Music', 'Apple TV+', 'iCloud+', 'Now TV', 'Paramount+',
+    'Crunchyroll', 'Tim Vision', 'Infinity+', 'Xbox Game Pass',
+    'PlayStation Plus', 'Nintendo Switch Online', 'Audible',
+    'Kindle Unlimited', 'Dropbox', 'Google One', 'Microsoft 365',
+    'Adobe Creative Cloud', 'Canva Pro', 'ChatGPT Plus', 'Claude Pro',
+    'Gym/Palestra', 'Corriere della Sera', 'Il Sole 24 Ore', 'Repubblica',
+  ],
+  finanziamento: [],
+  f24: [],
+  pagopa: [],
+  altro: [],
+}
+
+// Funzione di ricerca: cerca in fornitori principali + estesi
+export const cercaFornitore = (categoria, query) => {
+  if (!query || query.length < 2) return []
+  const q = query.toLowerCase()
+  const principali = FORNITORI[categoria] || []
+  const estesi = FORNITORI_ESTESI[categoria] || []
+  const tutti = [...new Set([...principali, ...estesi])]
+  return tutti.filter(f => f.toLowerCase().includes(q))
 }
 
 export const PORTALI_PAGAMENTO = {
@@ -65,6 +126,25 @@ export const PORTALI_PAGAMENTO = {
   'iCloud': 'https://appleid.apple.com/account/manage',
   'Apple iCloud': 'https://appleid.apple.com/account/manage',
   'Claude': 'https://console.anthropic.com/settings/billing',
+  'IRETI': 'https://www.irenlucegas.it/area-riservata',
+  'Iren Acqua': 'https://www.irenlucegas.it/area-riservata',
+  'Reggiana Gas Acqua': 'https://www.reggianagasacqua.it/area-clienti',
+  'Octopus Energy': 'https://octopusenergy.it/area-clienti',
+  'Illumia': 'https://www.illumia.it/area-clienti',
+  'Engie': 'https://www.engie.it/area-clienti',
+  'Sorgenia': 'https://www.sorgenia.it/area-clienti',
+  'Wekiwi': 'https://www.wekiwi.it/area-clienti',
+  'Pulsee': 'https://www.pulsee.it/area-clienti',
+  'Nen': 'https://nen.it/area-personale',
+  'ho. Mobile': 'https://www.ho-mobile.it/area-personale',
+  'PosteMobile': 'https://www.postemobile.it/area-personale',
+  'Very Mobile': 'https://www.verymobile.it/area-personale',
+  'Eolo': 'https://www.eolo.it/area-clienti',
+  'Gruppo CAP': 'https://www.gruppocap.it/area-clienti',
+  'Dolomiti Energia': 'https://www.dolomitienergia.it/area-clienti',
+  'Alperia': 'https://www.alperia.eu/area-clienti',
+  'E.ON': 'https://www.eon-energia.com/area-clienti',
+  'Tate Energia': 'https://www.tateforyou.com/area-personale',
 }
 
 export const getCategoria = (id) => CATEGORIE.find(c => c.id === id) || CATEGORIE[CATEGORIE.length - 1]

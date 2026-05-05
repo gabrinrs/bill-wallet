@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
 import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta } from './lib/database'
-import { CATEGORIE, FORNITORI, getCategoria, PORTALI_PAGAMENTO } from './lib/categorie'
+import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import Auth from './components/Auth'
 import Onboarding from './components/Onboarding'
@@ -10,7 +10,7 @@ import {
   AlertTriangle, Zap, Flame, Droplets, Phone, Wifi, Shield, Package,
   TrendingUp, CalendarDays, Repeat, Tv, CreditCard, Landmark, PenLine, LogOut, Loader2,
   Trash2, ExternalLink, Pencil, Mail, Copy, User, Inbox, FileText, HelpCircle, MessageCircle,
-  Menu, X, ChevronDown
+  Menu, X, ChevronDown, Search
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -636,11 +636,16 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
 // FORM CONTRATTO
 // ============================================================
 
-function FormContratto({ onSave, onBack }) {
+function FormContratto({ onSave, onBack, session, onRefresh, onGoHome }) {
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
   const [customMode, setCustomMode] = useState(false)
   const [customText, setCustomText] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [pdfFile, setPdfFile] = useState(null)
+  const [uploadStatus, setUploadStatus] = useState('idle')
+  const [uploadError, setUploadError] = useState(null)
+  const pdfInputRef = useRef(null)
   const [form, setForm] = useState({
     categoria: '', fornitore: '', intestatario: '', codice: '',
     metodo_ricezione: 'email', domiciliazione: false, data_inizio: '', data_fine: '', note: '',
@@ -657,6 +662,90 @@ function FormContratto({ onSave, onBack }) {
       await onSave(data)
     } catch (e) { console.error(e) }
     setSaving(false)
+  }
+
+  const handlePdfAutoFill = async () => {
+    if (!pdfFile || !session?.user?.id) return
+    setUploadStatus('uploading')
+    setUploadError(null)
+    try {
+      const userId = session.user.id
+      const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 15)
+      const filePath = `${userId}/${timestamp}.pdf`
+
+      const { error: storageError } = await supabase.storage
+        .from('bollette-pdf')
+        .upload(filePath, pdfFile, { contentType: 'application/pdf' })
+      if (storageError) throw new Error('Errore nel caricamento: ' + storageError.message)
+
+      const pdfUrl = `https://iimzetvymamadclfblgy.supabase.co/storage/v1/object/public/bollette-pdf/${filePath}`
+
+      setUploadStatus('processing')
+      const webhookRes = await fetch('https://hook.eu1.make.com/5n4w2qn99uf830yktlyjw8o17ogcd1xt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, pdf_url: pdfUrl })
+      })
+      if (!webhookRes.ok) throw new Error('Errore nell\'invio al sistema di elaborazione')
+
+      setUploadStatus('success')
+      setTimeout(async () => { if (onRefresh) await onRefresh(); if (onGoHome) onGoHome(); else onBack() }, 5000)
+    } catch (e) {
+      console.error('Upload PDF error:', e)
+      setUploadStatus('error')
+      setUploadError(e.message)
+    }
+  }
+
+  // Step "bolletta" — upload PDF per auto-fill
+  if (step === 'bolletta') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <button onClick={() => { setStep(2); setPdfFile(null); setUploadStatus('idle'); setUploadError(null) }} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-600" /></button>
+          <h1 className="text-xl font-bold text-gray-900">Carica bolletta</h1>
+        </div>
+        <p className="text-sm text-gray-500">Carica una bolletta di <span className="font-semibold text-gray-900">{form.fornitore}</span> e compileremo automaticamente i dati del contratto.</p>
+
+        {uploadStatus === 'success' ? (
+          <Card className="p-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+              <Check size={24} className="text-green-600" />
+            </div>
+            <p className="text-sm font-medium text-gray-900 mt-3">Bolletta caricata!</p>
+            <p className="text-xs text-gray-500 mt-1">Contratto e bolletta verranno creati automaticamente in pochi secondi.</p>
+          </Card>
+        ) : (
+          <>
+            <Card
+              className={`p-6 border-dashed border-2 text-center cursor-pointer transition-colors ${pdfFile ? 'border-bolly-500 bg-bolly-50' : 'border-gray-300 hover:border-gray-400'}`}
+              onClick={() => pdfInputRef.current?.click()}
+            >
+              <input ref={pdfInputRef} type="file" accept="application/pdf" className="hidden"
+                onChange={e => { if (e.target.files?.[0]) setPdfFile(e.target.files[0]) }} />
+              {pdfFile ? (
+                <>
+                  <Check size={32} className="text-bolly-500 mx-auto" />
+                  <p className="text-sm font-medium text-gray-900 mt-3">{pdfFile.name}</p>
+                  <p className="text-xs text-gray-400 mt-1">Tocca per cambiare file</p>
+                </>
+              ) : (
+                <>
+                  <Upload size={32} className="text-gray-400 mx-auto" />
+                  <p className="text-sm font-medium text-gray-700 mt-3">Tocca per selezionare il PDF della bolletta</p>
+                  <p className="text-xs text-gray-400 mt-1">L'AI rileverà importo, scadenza, codice cliente e creerà il contratto per te</p>
+                </>
+              )}
+            </Card>
+            {uploadError && <p className="text-sm text-red-600 text-center">{uploadError}</p>}
+            <button onClick={handlePdfAutoFill} disabled={!pdfFile || uploadStatus !== 'idle'}
+              className="w-full py-3 bg-bolly-500 text-white font-semibold rounded-xl disabled:opacity-40">
+              {uploadStatus === 'uploading' ? 'Caricamento...' : uploadStatus === 'processing' ? 'Elaborazione AI...' : 'Analizza bolletta'}
+            </button>
+          </>
+        )}
+      </div>
+    )
   }
 
   // Step 0: Categoria
@@ -710,21 +799,47 @@ function FormContratto({ onSave, onBack }) {
       )
     }
 
+    const risultatiRicerca = searchQuery.length >= 2 ? cercaFornitore(form.categoria, searchQuery) : []
+    const mostraRicerca = searchQuery.length >= 2
+
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <button onClick={() => setStep(0)} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-600" /></button>
+          <button onClick={() => { setStep(0); setSearchQuery('') }} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-600" /></button>
           <h1 className="text-xl font-bold text-gray-900">Seleziona fornitore</h1>
         </div>
+        <div className="relative">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Cerca fornitore..." className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none text-base" />
+        </div>
         <div className="space-y-2">
-          {fornitori.map(f => (
-            <Card key={f} className="p-4" onClick={() => { update('fornitore', f); setStep(2) }}>
-              <p className="font-medium text-gray-900">{f}</p>
+          {mostraRicerca ? (
+            risultatiRicerca.length > 0 ? risultatiRicerca.map(f => (
+              <Card key={f} className="p-4" onClick={() => { update('fornitore', f); setSearchQuery(''); setStep(2) }}>
+                <p className="font-medium text-gray-900">{f}</p>
+              </Card>
+            )) : (
+              <div className="text-center py-4">
+                <p className="text-gray-500 text-sm mb-3">Nessun fornitore trovato per "{searchQuery}"</p>
+                <button onClick={() => { setCustomText(searchQuery); setSearchQuery(''); setCustomMode(true) }}
+                  className="text-bolly-600 font-medium text-sm">Aggiungi "{searchQuery}" manualmente →</button>
+              </div>
+            )
+          ) : (
+            <>
+              {fornitori.map(f => (
+                <Card key={f} className="p-4" onClick={() => { update('fornitore', f); setStep(2) }}>
+                  <p className="font-medium text-gray-900">{f}</p>
+                </Card>
+              ))}
+            </>
+          )}
+          {!mostraRicerca && (
+            <Card className="p-4 border-dashed border-2 border-gray-200" onClick={() => setCustomMode(true)}>
+              <div className="flex items-center gap-2 text-gray-500"><PenLine size={18} /><p className="font-medium">Scrivi nome personalizzato...</p></div>
             </Card>
-          ))}
-          <Card className="p-4 border-dashed border-2 border-gray-200" onClick={() => setCustomMode(true)}>
-            <div className="flex items-center gap-2 text-gray-500"><PenLine size={18} /><p className="font-medium">Scrivi nome personalizzato...</p></div>
-          </Card>
+          )}
         </div>
       </div>
     )
@@ -737,6 +852,21 @@ function FormContratto({ onSave, onBack }) {
         <button onClick={() => setStep(1)} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-600" /></button>
         <h1 className="text-xl font-bold text-gray-900">Dettagli contratto</h1>
       </div>
+
+      {/* Banner "Hai già una bolletta?" */}
+      <Card className="p-4 bg-bolly-50 border border-bolly-200 cursor-pointer" onClick={() => setStep('bolletta')}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-bolly-100 flex items-center justify-center flex-shrink-0">
+            <Upload size={20} className="text-bolly-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-bolly-700">Hai già una bolletta di {form.fornitore}?</p>
+            <p className="text-xs text-bolly-600 mt-0.5">Caricala e compileremo i dati automaticamente</p>
+          </div>
+          <ChevronRight size={18} className="text-bolly-400" />
+        </div>
+      </Card>
+
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Intestatario</label>
@@ -1990,6 +2120,11 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate }) {
             <span className="text-sm text-gray-700">Cookie Policy</span>
             <ExternalLink size={14} className="text-gray-400 ml-auto" />
           </a>
+          <a href="https://www.iubenda.com/privacy-policy/40178798/cookie-policy" target="_blank" rel="noopener noreferrer" className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+            <Shield size={18} className="text-bolly-500" />
+            <span className="text-sm text-gray-700">Preferenze cookie</span>
+            <ExternalLink size={14} className="text-gray-400 ml-auto" />
+          </a>
           <a href="mailto:support@getbolly.app" className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
             <MessageCircle size={18} className="text-bolly-500" />
             <span className="text-sm text-gray-700">Contattaci</span>
@@ -2460,7 +2595,7 @@ export default function App() {
             </Card>
           </div>
         )
-      case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => setScreen('aggiungi')} />
+      case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} />
       case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} /> : null
       case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} />
       case 'calendario': return <Calendario bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />

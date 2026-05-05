@@ -2470,9 +2470,10 @@ export default function App() {
 
   // Badge Notifiche e Inbox: conteggi attuali
   const currentNotificheCount = bollette.filter(b => !b.pagata && b.scadenza && b.stato_elaborazione === 'ok' && giorniDa(b.scadenza) <= 7).length
-  const bolletteNonPagate = bollette.filter(b => b.stato_elaborazione === 'ok' && !b.pagata).length
+  // Inbox conta solo bollette ricevute via email/upload (non manuali) — allineato alla schermata Inbox
+  const bolletteInbox = bollette.filter(b => b.fonte !== 'manuale' && b.stato_elaborazione === 'ok').length
   const comunicazioniCount = bollette.filter(b => b.stato_elaborazione === 'comunicazione').length
-  const currentInboxCount = bolletteNonPagate + comunicazioniCount
+  const currentInboxCount = bolletteInbox + comunicazioniCount
 
   if (loading) return <SplashScreen />
   if (isRecovery) return <ResetPassword onDone={() => setIsRecovery(false)} />

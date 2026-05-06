@@ -1676,7 +1676,8 @@ function Notifiche({ contratti, bollette }) {
 // ============================================================
 
 function FormSpesa({ onSave, onBack, dataPrecompilata }) {
-  const oggi = new Date().toISOString().slice(0, 10)
+  const now = new Date()
+  const oggi = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
   const [importo, setImporto] = useState('')
   const [categoria, setCategoria] = useState('')
   const [descrizione, setDescrizione] = useState('')

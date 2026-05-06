@@ -61,8 +61,11 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
     setSavingContratto(true)
     try {
       const data = { ...contrattoForm }
-      if (data.ricorrente) data.importo_ricorrente = parseFloat(data.importo_ricorrente)
-      else { delete data.importo_ricorrente; delete data.frequenza; delete data.prossimo_addebito; delete data.data_fine }
+      if (!data.data_inizio) data.data_inizio = null
+      if (data.ricorrente) {
+        data.importo_ricorrente = parseFloat(data.importo_ricorrente)
+        if (!data.data_fine) data.data_fine = null
+      } else { delete data.importo_ricorrente; delete data.frequenza; delete data.prossimo_addebito; delete data.data_fine }
       const result = await onCreateContratto(data)
       setNewContrattoId(result?.id || result)
       setPhase('bolletta')
@@ -379,10 +382,10 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
                       className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none" />
                   </div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-1">Frequenza</label>
-                    <div className="flex gap-2">
-                      {[{ id: 'mensile', l: 'Mensile' }, { id: 'trimestrale', l: 'Trimestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
+                    <div className="grid grid-cols-3 gap-2">
+                      {[{ id: 'mensile', l: 'Mensile' }, { id: 'bimestrale', l: 'Bimestrale' }, { id: 'trimestrale', l: 'Trimestrale' }, { id: 'semestrale', l: 'Semestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
                         <button key={f.id} onClick={() => updateContratto('frequenza', f.id)}
-                          className={`flex-1 py-2 rounded-xl text-sm font-medium border ${contrattoForm.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
+                          className={`py-2 rounded-xl text-sm font-medium border ${contrattoForm.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
                       ))}
                     </div>
                   </div>

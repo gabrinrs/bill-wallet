@@ -306,6 +306,30 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
     }, 0)
   }, [contratti])
 
+  const alertTrend = useMemo(() => {
+    const alerts = []
+    contratti.forEach(c => {
+      const bolContratto = bollette
+        .filter(b => b.contratto_id === c.id && b.periodo && b.importo)
+        .sort((a, b) => new Date(a.periodo) - new Date(b.periodo))
+      if (bolContratto.length < 2) return
+      const ultima = Number(bolContratto[bolContratto.length - 1].importo)
+      const precedente = Number(bolContratto[bolContratto.length - 2].importo)
+      if (precedente <= 0) return
+      const variazione = ((ultima - precedente) / precedente) * 100
+      if (variazione > 5) {
+        alerts.push({
+          contratto: c,
+          variazione: variazione.toFixed(0),
+          ultima,
+          precedente,
+          categoria: getCategoria(c.categoria)
+        })
+      }
+    })
+    return alerts.sort((a, b) => Number(b.variazione) - Number(a.variazione))
+  }, [contratti, bollette])
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -356,6 +380,30 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
           </p>
         </Card>
       </div>
+
+      {/* Alert andamento costi */}
+      {alertTrend.length > 0 && (
+        <div className="space-y-2">
+          {alertTrend.map(a => (
+            <Card key={a.contratto.id} className="p-4 bg-red-50 border-red-200" onClick={() => onSelectContratto(a.contratto.id)}>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-red-100">
+                  <TrendingUp size={20} className="text-red-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-red-900">
+                    {a.contratto.fornitore}: +{a.variazione}%
+                  </p>
+                  <p className="text-xs text-red-700 mt-0.5">
+                    Da {formatEuro(a.precedente)} a {formatEuro(a.ultima)} nell'ultima bolletta
+                  </p>
+                </div>
+                <ChevronRight size={18} className="text-red-400" />
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Prossime scadenze */}
       <div>
@@ -922,11 +970,19 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome }) {
                   className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none" />
               </div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Frequenza</label>
-                <div className="flex flex-wrap gap-2">
-                  {[{ id: 'mensile', l: 'Mensile' }, { id: 'bimestrale', l: 'Bimestrale' }, { id: 'trimestrale', l: 'Trim.' }, { id: 'semestrale', l: 'Semestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
-                    <button key={f.id} onClick={() => update('frequenza', f.id)}
-                      className={`py-2 px-3 rounded-xl text-xs font-medium border ${form.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
-                  ))}
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-center gap-2">
+                    {[{ id: 'mensile', l: 'Mensile' }, { id: 'bimestrale', l: 'Bimestrale' }, { id: 'trimestrale', l: 'Trimestrale' }].map(f => (
+                      <button key={f.id} onClick={() => update('frequenza', f.id)}
+                        className={`py-2 px-3 rounded-xl text-xs font-medium border ${form.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
+                    ))}
+                  </div>
+                  <div className="flex justify-center gap-2">
+                    {[{ id: 'semestrale', l: 'Semestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
+                      <button key={f.id} onClick={() => update('frequenza', f.id)}
+                        className={`py-2 px-3 rounded-xl text-xs font-medium border ${form.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
+                    ))}
+                  </div>
                 </div>
               </div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Prossimo addebito</label>
@@ -2050,10 +2106,25 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
 // PROFILO
 // ============================================================
 
-function MenuPanel({ profile, session, onBack, onLogout, onNavigate }) {
+function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdateProfile }) {
   const [copied, setCopied] = useState(false)
   const [faqSectionOpen, setFaqSectionOpen] = useState(false)
   const [faqOpen, setFaqOpen] = useState(null)
+  const [editingNome, setEditingNome] = useState(false)
+  const [nomeValue, setNomeValue] = useState(profile?.nome || '')
+  const [savingNome, setSavingNome] = useState(false)
+
+  const handleSaveNome = async () => {
+    const trimmed = nomeValue.trim()
+    if (!trimmed || trimmed === profile?.nome) { setEditingNome(false); return }
+    setSavingNome(true)
+    try {
+      await supabase.from('profiles').update({ nome: trimmed }).eq('id', session.user.id)
+      if (onUpdateProfile) onUpdateProfile({ ...profile, nome: trimmed })
+      setEditingNome(false)
+    } catch (e) { console.error('Errore aggiornamento nome:', e) }
+    setSavingNome(false)
+  }
 
   const handleCopy = async () => {
     try {
@@ -2096,7 +2167,32 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate }) {
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold text-gray-900">{profile?.nome || 'Utente'}</h2>
+            {editingNome ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={nomeValue}
+                  onChange={e => setNomeValue(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSaveNome(); if (e.key === 'Escape') setEditingNome(false) }}
+                  autoFocus
+                  className="text-lg font-semibold text-gray-900 border-b-2 border-bolly-500 outline-none bg-transparent w-full py-0.5"
+                  placeholder="Il tuo nome"
+                />
+                <button onClick={handleSaveNome} disabled={savingNome} className="p-1.5 rounded-lg bg-bolly-500 text-white flex-shrink-0 disabled:opacity-50">
+                  {savingNome ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                </button>
+                <button onClick={() => { setEditingNome(false); setNomeValue(profile?.nome || '') }} className="p-1.5 rounded-lg bg-gray-100 text-gray-500 flex-shrink-0">
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-gray-900">{profile?.nome || 'Utente'}</h2>
+                <button onClick={() => { setNomeValue(profile?.nome || ''); setEditingNome(true) }} className="p-1 rounded-lg hover:bg-gray-100 text-gray-400">
+                  <Pencil size={14} />
+                </button>
+              </div>
+            )}
             <p className="text-sm text-gray-500 truncate">{session?.user?.email}</p>
           </div>
         </div>
@@ -2709,7 +2805,7 @@ export default function App() {
       case 'calendario': return <Calendario bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />
       case 'bollette': return <StoricoBollette bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />
       case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} />
-      case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} />
+      case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} />
       case 'termini': return <TerminiCondizioni onBack={() => setScreen('menu')} />
       case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} />
       default: return null

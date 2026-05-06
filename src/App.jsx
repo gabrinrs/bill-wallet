@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, deleteSpesa } from './lib/database'
+import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa } from './lib/database'
 import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, CATEGORIE_SPESE, getCategoriaSpesa } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import Auth from './components/Auth'
@@ -264,13 +264,81 @@ function SwipeableContratto({ isOpen, onOpen, onClose, onClick, onEdit, onDelete
   )
 }
 
+function SwipeableSpesa({ isOpen, onOpen, onClose, onEdit, onDelete, children }) {
+  const [dragOffset, setDragOffset] = useState(null)
+  const startX = useRef(0)
+  const moved = useRef(false)
+  const ACTIONS_WIDTH = 152
+  const OPEN_THRESHOLD = 50
+
+  const targetX = isOpen ? -ACTIONS_WIDTH : 0
+  const currentX = dragOffset !== null ? dragOffset : targetX
+
+  const handleTouchStart = (e) => {
+    startX.current = e.touches[0].clientX
+    moved.current = false
+  }
+  const handleTouchMove = (e) => {
+    const deltaX = e.touches[0].clientX - startX.current
+    if (Math.abs(deltaX) > 5) moved.current = true
+    const next = Math.max(-ACTIONS_WIDTH - 10, Math.min(10, targetX + deltaX))
+    setDragOffset(next)
+  }
+  const handleTouchEnd = () => {
+    if (!moved.current) { setDragOffset(null); return }
+    if (dragOffset !== null && dragOffset < -OPEN_THRESHOLD) onOpen()
+    else onClose()
+    setDragOffset(null)
+  }
+
+  const handleClick = (e) => {
+    if (moved.current) { e.preventDefault(); return }
+    if (isOpen) { onClose(); return }
+  }
+
+  return (
+    <div className="relative overflow-hidden rounded-xl">
+      <div className="absolute inset-y-0 right-0 flex">
+        <button
+          onClick={(e) => { e.stopPropagation(); onEdit() }}
+          className="w-[76px] flex flex-col items-center justify-center bg-gray-200 text-gray-700 gap-1 active:bg-gray-300"
+          aria-label="Modifica spesa"
+        >
+          <Pencil size={18} />
+          <span className="text-xs font-medium">Modifica</span>
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete() }}
+          className="w-[76px] flex flex-col items-center justify-center bg-red-600 text-white gap-1 active:bg-red-700"
+          aria-label="Elimina spesa"
+        >
+          <Trash2 size={18} />
+          <span className="text-xs font-medium">Elimina</span>
+        </button>
+      </div>
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onClick={handleClick}
+        style={{ transform: `translateX(${currentX}px)`, transition: dragOffset !== null ? 'none' : 'transform 220ms ease-out' }}
+        className="relative bg-white"
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
 // ============================================================
 // DASHBOARD
 // ============================================================
 
-function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto }) {
+function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto, onDeleteSpesa, onEditSpesa }) {
   const [cardSwipedId, setCardSwipedId] = useState(null)
+  const [spesaSwipedId, setSpesaSwipedId] = useState(null)
   const [deletingContratto, setDeletingContratto] = useState(null)
+  const [deletingSpesa, setDeletingSpesa] = useState(null)
   const bolletteProssime = useMemo(() => {
     return bollette
       .filter(b => !b.pagata && b.stato_elaborazione !== 'errore_parsing' && b.stato_elaborazione !== 'orfana' && b.stato_elaborazione !== 'incompleta' && b.stato_elaborazione !== 'comunicazione')
@@ -535,16 +603,25 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
                   const cat = getCategoriaSpesa(s.categoria)
                   const Icon = SpesaIconMap[cat.icon] || Package
                   return (
-                    <div key={s.id} className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
-                        <Icon size={16} style={{ color: cat.color }} />
+                    <SwipeableSpesa
+                      key={s.id}
+                      isOpen={spesaSwipedId === s.id}
+                      onOpen={() => setSpesaSwipedId(s.id)}
+                      onClose={() => setSpesaSwipedId(null)}
+                      onEdit={() => { setSpesaSwipedId(null); onEditSpesa(s) }}
+                      onDelete={() => { setSpesaSwipedId(null); setDeletingSpesa(s) }}
+                    >
+                      <div className="flex items-center gap-3 py-2">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
+                          <Icon size={16} style={{ color: cat.color }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{s.descrizione || cat.label}</p>
+                          <p className="text-xs text-gray-400">{formatData(s.data)}</p>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-900">{formatEuro(s.importo)}</p>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{s.descrizione || cat.label}</p>
-                        <p className="text-xs text-gray-400">{formatData(s.data)}</p>
-                      </div>
-                      <p className="text-sm font-semibold text-gray-900">{formatEuro(s.importo)}</p>
-                    </div>
+                    </SwipeableSpesa>
                   )
                 })}
               </div>
@@ -565,6 +642,21 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
             <div className="flex gap-2 pt-1">
               <button onClick={() => setDeletingContratto(null)} className="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700">Annulla</button>
               <button onClick={() => { onDeleteContratto(deletingContratto.contratto.id); setDeletingContratto(null) }} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium">Elimina</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deletingSpesa && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setDeletingSpesa(null)}>
+          <div className="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3" onClick={e => e.stopPropagation()}>
+            <p className="font-semibold text-gray-900">Eliminare la spesa?</p>
+            <p className="text-sm text-gray-600">
+              {deletingSpesa.descrizione || getCategoriaSpesa(deletingSpesa.categoria).label} — {formatEuro(deletingSpesa.importo)}. Questa azione non si può annullare.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setDeletingSpesa(null)} className="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700">Annulla</button>
+              <button onClick={() => { onDeleteSpesa(deletingSpesa.id); setDeletingSpesa(null) }} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium">Elimina</button>
             </div>
           </div>
         </div>
@@ -1689,6 +1781,110 @@ function FormSpesa({ onSave, onBack, dataPrecompilata }) {
 }
 
 // ============================================================
+// FORM MODIFICA SPESA
+// ============================================================
+
+function FormModificaSpesa({ spesa, onSave, onBack }) {
+  const [importo, setImporto] = useState(String(spesa.importo))
+  const [categoria, setCategoria] = useState(spesa.categoria)
+  const [descrizione, setDescrizione] = useState(spesa.descrizione || '')
+  const [data, setData] = useState(spesa.data)
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    if (!importo || !categoria) return
+    setSaving(true)
+    try {
+      await onSave(spesa.id, { importo: parseFloat(importo), categoria, descrizione: descrizione || null, data })
+      onBack()
+    } catch (e) { console.error('Errore modifica spesa:', e) }
+    setSaving(false)
+  }
+
+  const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={20} /></button>
+        <h1 className="text-xl font-bold text-gray-900">Modifica spesa</h1>
+      </div>
+
+      <Card className="p-5 space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Importo</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">€</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              value={importo}
+              onChange={e => setImporto(e.target.value)}
+              placeholder="0,00"
+              className="w-full pl-8 pr-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none text-lg font-semibold"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+          <div className="grid grid-cols-4 gap-2">
+            {CATEGORIE_SPESE.map(cat => {
+              const Icon = SpesaIconMap[cat.icon] || Package
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setCategoria(cat.id)}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
+                    categoria === cat.id ? 'border-bolly-500 bg-bolly-50' : 'border-gray-100 bg-white hover:border-gray-200'
+                  }`}
+                >
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
+                    <Icon size={18} style={{ color: cat.color }} />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700 text-center leading-tight">{cat.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Descrizione <span className="text-gray-400 font-normal">(opzionale)</span></label>
+          <input
+            type="text"
+            value={descrizione}
+            onChange={e => setDescrizione(e.target.value)}
+            placeholder="es. Spesa al supermercato"
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Data</label>
+          <input
+            type="date"
+            value={data}
+            onChange={e => setData(e.target.value)}
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none"
+          />
+        </div>
+      </Card>
+
+      <button
+        onClick={handleSave}
+        disabled={!importo || !categoria || saving}
+        className="w-full py-3.5 bg-bolly-500 text-white font-semibold rounded-xl disabled:opacity-40 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+      >
+        {saving ? <Loader2 size={20} className="animate-spin" /> : <Check size={20} />}
+        {saving ? 'Salvataggio...' : 'Salva modifiche'}
+      </button>
+    </div>
+  )
+}
+
+// ============================================================
 // LISTA SPESE (schermata "Vedi tutte")
 // ============================================================
 
@@ -1898,11 +2094,40 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
       .map(([catId, tot]) => ({ catId, tot, cat: getCategoria(catId) }))
       .sort((a, b) => b.tot - a.tot)
 
-    return { totaleMese, totalePrecedente, variazione, categorieSorted, numBollette: bolMese.length }
-  }, [bollette, contratti, meseCorrente, annoCorrente])
+    // Spese giornaliere del mese
+    const speseMese = (spese || []).filter(s => {
+      const d = new Date(s.data)
+      return d.getMonth() === meseCorrente && d.getFullYear() === annoCorrente
+    })
+    const totaleSpeseGiornaliere = speseMese.reduce((s, sp) => s + Number(sp.importo || 0), 0)
+
+    // Spese giornaliere mese precedente
+    const speseMesePrev = (spese || []).filter(s => {
+      const d = new Date(s.data)
+      return d.getMonth() === mesePrev && d.getFullYear() === annoPrev
+    })
+    const totaleSpeseGiornalierePrev = speseMesePrev.reduce((s, sp) => s + Number(sp.importo || 0), 0)
+
+    // Ripartizione spese giornaliere per categoria
+    const perCategoriaSpese = {}
+    speseMese.forEach(s => {
+      const catId = s.categoria || 'altro_spesa'
+      if (!perCategoriaSpese[catId]) perCategoriaSpese[catId] = 0
+      perCategoriaSpese[catId] += Number(s.importo || 0)
+    })
+    const categorieSpeseSort = Object.entries(perCategoriaSpese)
+      .map(([catId, tot]) => ({ catId, tot, cat: getCategoriaSpesa(catId) }))
+      .sort((a, b) => b.tot - a.tot)
+
+    const totaleComplessivo = totaleMese + totaleSpeseGiornaliere
+    const totaleComplessivoPrev = totalePrecedente + totaleSpeseGiornalierePrev
+    const variazioneComplessiva = totaleComplessivoPrev > 0 ? ((totaleComplessivo - totaleComplessivoPrev) / totaleComplessivoPrev) * 100 : null
+
+    return { totaleMese, totalePrecedente, variazione, categorieSorted, numBollette: bolMese.length, totaleSpeseGiornaliere, categorieSpeseSort, numSpese: speseMese.length, totaleComplessivo, variazioneComplessiva }
+  }, [bollette, contratti, spese, meseCorrente, annoCorrente])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-4">
       <div className="flex items-center justify-between">
         <button onClick={mesePrecedente} className="p-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={20} className="text-gray-500" /></button>
         <h1 className="text-lg font-bold text-gray-900">{MESI[meseCorrente]} {annoCorrente}</h1>
@@ -2028,18 +2253,34 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
         <h3 className="text-sm font-semibold text-gray-900 mb-3">Riepilogo {MESI[meseCorrente].toLowerCase()}</h3>
         <div className="flex items-end justify-between mb-3">
           <div>
-            <p className="text-2xl font-bold text-gray-900">{formatEuro(statsMese.totaleMese)}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{statsMese.numBollette} {statsMese.numBollette === 1 ? 'bolletta' : 'bollette'}</p>
+            <p className="text-2xl font-bold text-gray-900">{formatEuro(statsMese.totaleComplessivo)}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{statsMese.numBollette} {statsMese.numBollette === 1 ? 'bolletta' : 'bollette'}{statsMese.numSpese > 0 ? ` · ${statsMese.numSpese} ${statsMese.numSpese === 1 ? 'spesa' : 'spese'}` : ''}</p>
           </div>
-          {statsMese.variazione !== null && (
-            <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${statsMese.variazione > 0 ? 'bg-red-50 text-red-600' : statsMese.variazione < 0 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'}`}>
-              <TrendingUp size={12} className={statsMese.variazione < 0 ? 'rotate-180' : ''} />
-              {statsMese.variazione > 0 ? '+' : ''}{statsMese.variazione.toFixed(0)}% vs mese prec.
+          {statsMese.variazioneComplessiva !== null && (
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${statsMese.variazioneComplessiva > 0 ? 'bg-red-50 text-red-600' : statsMese.variazioneComplessiva < 0 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'}`}>
+              <TrendingUp size={12} className={statsMese.variazioneComplessiva < 0 ? 'rotate-180' : ''} />
+              {statsMese.variazioneComplessiva > 0 ? '+' : ''}{statsMese.variazioneComplessiva.toFixed(0)}% vs mese prec.
             </div>
           )}
         </div>
+
+        {/* Due sotto-totali: Utenze vs Spese quotidiane */}
+        {(statsMese.totaleMese > 0 || statsMese.totaleSpeseGiornaliere > 0) && (
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="bg-bolly-50 rounded-xl p-3">
+              <p className="text-xs text-bolly-600 font-medium">Utenze</p>
+              <p className="text-lg font-bold text-bolly-700">{formatEuro(statsMese.totaleMese)}</p>
+            </div>
+            <div className="bg-purple-50 rounded-xl p-3">
+              <p className="text-xs text-purple-600 font-medium">Spese quotidiane</p>
+              <p className="text-lg font-bold text-purple-700">{formatEuro(statsMese.totaleSpeseGiornaliere)}</p>
+            </div>
+          </div>
+        )}
+
         {statsMese.categorieSorted.length > 0 && (
           <div className="space-y-2 pt-3 border-t border-gray-100">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Utenze per categoria</p>
             {statsMese.categorieSorted.map(({ catId, tot, cat }) => {
               const perc = statsMese.totaleMese > 0 ? (tot / statsMese.totaleMese) * 100 : 0
               const IconComp = IconMap[cat.icon] || Package
@@ -2062,8 +2303,33 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
             })}
           </div>
         )}
-        {statsMese.numBollette === 0 && (
-          <p className="text-xs text-gray-400 text-center py-2">Nessuna bolletta in questo mese</p>
+        {statsMese.categorieSpeseSort.length > 0 && (
+          <div className="space-y-2 pt-3 mt-1 border-t border-gray-100">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Spese quotidiane per categoria</p>
+            {statsMese.categorieSpeseSort.map(({ catId, tot, cat }) => {
+              const perc = statsMese.totaleSpeseGiornaliere > 0 ? (tot / statsMese.totaleSpeseGiornaliere) * 100 : 0
+              const IconComp = IconMap[cat.icon] || Package
+              return (
+                <div key={catId} className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
+                    <IconComp size={14} style={{ color: cat.color }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs font-medium text-gray-700 truncate">{cat.label}</span>
+                      <span className="text-xs font-semibold text-gray-900">{formatEuro(tot)}</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                      <div className="h-1.5 rounded-full" style={{ width: `${perc}%`, backgroundColor: cat.color }} />
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {statsMese.numBollette === 0 && statsMese.numSpese === 0 && (
+          <p className="text-xs text-gray-400 text-center py-2">Nessun movimento in questo mese</p>
         )}
       </Card>
 
@@ -2075,17 +2341,25 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
             if (!b.scadenza || b.stato_elaborazione === 'errore_parsing' || b.stato_elaborazione === 'comunicazione') return false
             return new Date(b.scadenza).getFullYear() === annoCorrente
           })
-          const totaleAnno = bolAnno.reduce((s, b) => s + Number(b.importo || 0), 0)
+          const totaleAnnoUtenze = bolAnno.reduce((s, b) => s + Number(b.importo || 0), 0)
           const numBolletteAnno = bolAnno.length
+
+          const speseAnno = (spese || []).filter(s => new Date(s.data).getFullYear() === annoCorrente)
+          const totaleAnnoSpese = speseAnno.reduce((s, sp) => s + Number(sp.importo || 0), 0)
+          const numSpeseAnno = speseAnno.length
+          const totaleAnno = totaleAnnoUtenze + totaleAnnoSpese
 
           const bolAnnoPrev = bollette.filter(b => {
             if (!b.scadenza || b.stato_elaborazione === 'errore_parsing' || b.stato_elaborazione === 'comunicazione') return false
             return new Date(b.scadenza).getFullYear() === annoCorrente - 1
           })
-          const totaleAnnoPrev = bolAnnoPrev.reduce((s, b) => s + Number(b.importo || 0), 0)
+          const totaleAnnoPrevUtenze = bolAnnoPrev.reduce((s, b) => s + Number(b.importo || 0), 0)
+          const speseAnnoPrev = (spese || []).filter(s => new Date(s.data).getFullYear() === annoCorrente - 1)
+          const totaleAnnoPrevSpese = speseAnnoPrev.reduce((s, sp) => s + Number(sp.importo || 0), 0)
+          const totaleAnnoPrev = totaleAnnoPrevUtenze + totaleAnnoPrevSpese
           const varAnno = totaleAnnoPrev > 0 ? ((totaleAnno - totaleAnnoPrev) / totaleAnnoPrev) * 100 : null
 
-          const mediaMensile = numBolletteAnno > 0 ? totaleAnno / (meseCorrente + 1) : 0
+          const mediaMensile = totaleAnno > 0 ? totaleAnno / (meseCorrente + 1) : 0
 
           const perCatAnno = {}
           bolAnno.forEach(b => {
@@ -2098,12 +2372,22 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
             .map(([catId, tot]) => ({ catId, tot, cat: getCategoria(catId) }))
             .sort((a, b) => b.tot - a.tot)
 
+          const perCatSpeseAnno = {}
+          speseAnno.forEach(s => {
+            const catId = s.categoria || 'altro_spesa'
+            if (!perCatSpeseAnno[catId]) perCatSpeseAnno[catId] = 0
+            perCatSpeseAnno[catId] += Number(s.importo || 0)
+          })
+          const catSpeseAnnoSorted = Object.entries(perCatSpeseAnno)
+            .map(([catId, tot]) => ({ catId, tot, cat: getCategoriaSpesa(catId) }))
+            .sort((a, b) => b.tot - a.tot)
+
           return (
             <>
               <div className="flex items-end justify-between mb-3">
                 <div>
                   <p className="text-2xl font-bold text-gray-900">{formatEuro(totaleAnno)}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{numBolletteAnno} {numBolletteAnno === 1 ? 'bolletta' : 'bollette'} · media {formatEuro(mediaMensile)}/mese</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{numBolletteAnno} {numBolletteAnno === 1 ? 'bolletta' : 'bollette'}{numSpeseAnno > 0 ? ` · ${numSpeseAnno} ${numSpeseAnno === 1 ? 'spesa' : 'spese'}` : ''} · media {formatEuro(mediaMensile)}/mese</p>
                 </div>
                 {varAnno !== null && (
                   <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${varAnno > 0 ? 'bg-red-50 text-red-600' : varAnno < 0 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'}`}>
@@ -2112,10 +2396,25 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
                   </div>
                 )}
               </div>
+
+              {(totaleAnnoUtenze > 0 || totaleAnnoSpese > 0) && (
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div className="bg-bolly-50 rounded-xl p-3">
+                    <p className="text-xs text-bolly-600 font-medium">Utenze</p>
+                    <p className="text-lg font-bold text-bolly-700">{formatEuro(totaleAnnoUtenze)}</p>
+                  </div>
+                  <div className="bg-purple-50 rounded-xl p-3">
+                    <p className="text-xs text-purple-600 font-medium">Spese quotidiane</p>
+                    <p className="text-lg font-bold text-purple-700">{formatEuro(totaleAnnoSpese)}</p>
+                  </div>
+                </div>
+              )}
+
               {catAnnoSorted.length > 0 && (
                 <div className="space-y-2 pt-3 border-t border-gray-100">
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Utenze per categoria</p>
                   {catAnnoSorted.map(({ catId, tot, cat }) => {
-                    const perc = totaleAnno > 0 ? (tot / totaleAnno) * 100 : 0
+                    const perc = totaleAnnoUtenze > 0 ? (tot / totaleAnnoUtenze) * 100 : 0
                     const IconComp = IconMap[cat.icon] || Package
                     return (
                       <div key={catId} className="flex items-center gap-2">
@@ -2136,8 +2435,33 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
                   })}
                 </div>
               )}
-              {numBolletteAnno === 0 && (
-                <p className="text-xs text-gray-400 text-center py-2">Nessuna bolletta in questo anno</p>
+              {catSpeseAnnoSorted.length > 0 && (
+                <div className="space-y-2 pt-3 mt-1 border-t border-gray-100">
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Spese quotidiane per categoria</p>
+                  {catSpeseAnnoSorted.map(({ catId, tot, cat }) => {
+                    const perc = totaleAnnoSpese > 0 ? (tot / totaleAnnoSpese) * 100 : 0
+                    const IconComp = IconMap[cat.icon] || Package
+                    return (
+                      <div key={catId} className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
+                          <IconComp size={14} style={{ color: cat.color }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-xs font-medium text-gray-700 truncate">{cat.label}</span>
+                            <span className="text-xs font-semibold text-gray-900">{formatEuro(tot)}</span>
+                          </div>
+                          <div className="w-full bg-gray-100 rounded-full h-1.5">
+                            <div className="h-1.5 rounded-full" style={{ width: `${perc}%`, backgroundColor: cat.color }} />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {numBolletteAnno === 0 && numSpeseAnno === 0 && (
+                <p className="text-xs text-gray-400 text-center py-2">Nessun movimento in questo anno</p>
               )}
             </>
           )
@@ -2847,6 +3171,7 @@ export default function App() {
   const [selectedContrattoId, setSelectedContrattoId] = useState(null)
   const [editingContratto, setEditingContratto] = useState(null)
   const [spesaDataPrecompilata, setSpesaDataPrecompilata] = useState(null)
+  const [editingSpesa, setEditingSpesa] = useState(null)
   const [lastSeenNotificheCount, setLastSeenNotificheCount] = useState(() => {
     const saved = localStorage.getItem('bolly_seen_notifiche_count')
     return saved ? parseInt(saved, 10) : 0
@@ -3070,9 +3395,19 @@ export default function App() {
     await loadData()
   }
 
+  const handleUpdateSpesa = async (id, updates) => {
+    await updateSpesa(id, updates)
+    await loadData()
+  }
+
   const handleDeleteSpesa = async (id) => {
     await deleteSpesa(id)
     await loadData()
+  }
+
+  const handleEditSpesa = (spesa) => {
+    setEditingSpesa(spesa)
+    setScreen('modifica-spesa')
   }
 
   const notificheCount = currentNotificheCount
@@ -3081,7 +3416,7 @@ export default function App() {
 
   const renderScreen = () => {
     switch (screen) {
-      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} />
+      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} />
       case 'dettaglio': {
         const c = contratti.find(x => x.id === selectedContrattoId)
         if (!c) { setScreen('dashboard'); return null }
@@ -3118,6 +3453,7 @@ export default function App() {
       case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} /> : null
       case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} />
       case 'aggiungi-spesa': return <FormSpesa onSave={handleSaveSpesa} onBack={() => { setSpesaDataPrecompilata(null); setScreen('dashboard') }} dataPrecompilata={spesaDataPrecompilata} />
+      case 'modifica-spesa': return editingSpesa ? <FormModificaSpesa spesa={editingSpesa} onSave={handleUpdateSpesa} onBack={() => { setEditingSpesa(null); setScreen('dashboard') }} /> : null
       case 'spese-lista': return <ListaSpese spese={spese} onBack={() => setScreen('dashboard')} onDelete={handleDeleteSpesa} />
       case 'calendario': return <Calendario bollette={bollette} contratti={contratti} spese={spese} onSelectContratto={handleSelectContratto} onAggiungiSpesa={(data) => { setScreen('aggiungi-spesa'); setSpesaDataPrecompilata(data) }} />
       case 'bollette': return <StoricoBollette bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />

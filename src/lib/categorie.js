@@ -156,8 +156,8 @@ export const CATEGORIE_SPESE = [
   { id: 'svago', label: 'Svago', icon: 'Gamepad2', color: '#a855f7' },
   { id: 'salute', label: 'Salute', icon: 'Heart', color: '#ef4444' },
   { id: 'casa', label: 'Casa', icon: 'Home', color: '#f59e0b' },
-  { id: 'abbigliamento', label: 'Abbigliamento', icon: 'Shirt', color: '#ec4899' },
-  { id: 'ristorazione', label: 'Ristorazione', icon: 'UtensilsCrossed', color: '#f97316' },
+  { id: 'abbigliamento', label: 'Shopping', icon: 'Shirt', color: '#ec4899' },
+  { id: 'ristorazione', label: 'Ristoranti', icon: 'UtensilsCrossed', color: '#f97316' },
   { id: 'altro_spesa', label: 'Altro', icon: 'MoreHorizontal', color: '#6b7280' },
 ]
 

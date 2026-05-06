@@ -332,7 +332,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
   }, [contratti, bollette])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Ciao {profile?.nome || 'utente'}</h1>
@@ -3117,7 +3117,7 @@ export default function App() {
       case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} />
       case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} /> : null
       case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} />
-      case 'aggiungi-spesa': return <FormSpesa onSave={handleSaveSpesa} onBack={() => { setSpesaDataPrecompilata(null); setScreen('aggiungi') }} dataPrecompilata={spesaDataPrecompilata} />
+      case 'aggiungi-spesa': return <FormSpesa onSave={handleSaveSpesa} onBack={() => { setSpesaDataPrecompilata(null); setScreen('dashboard') }} dataPrecompilata={spesaDataPrecompilata} />
       case 'spese-lista': return <ListaSpese spese={spese} onBack={() => setScreen('dashboard')} onDelete={handleDeleteSpesa} />
       case 'calendario': return <Calendario bollette={bollette} contratti={contratti} spese={spese} onSelectContratto={handleSelectContratto} onAggiungiSpesa={(data) => { setScreen('aggiungi-spesa'); setSpesaDataPrecompilata(data) }} />
       case 'bollette': return <StoricoBollette bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />

@@ -2341,25 +2341,17 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
             if (!b.scadenza || b.stato_elaborazione === 'errore_parsing' || b.stato_elaborazione === 'comunicazione') return false
             return new Date(b.scadenza).getFullYear() === annoCorrente
           })
-          const totaleAnnoUtenze = bolAnno.reduce((s, b) => s + Number(b.importo || 0), 0)
+          const totaleAnno = bolAnno.reduce((s, b) => s + Number(b.importo || 0), 0)
           const numBolletteAnno = bolAnno.length
-
-          const speseAnno = (spese || []).filter(s => new Date(s.data).getFullYear() === annoCorrente)
-          const totaleAnnoSpese = speseAnno.reduce((s, sp) => s + Number(sp.importo || 0), 0)
-          const numSpeseAnno = speseAnno.length
-          const totaleAnno = totaleAnnoUtenze + totaleAnnoSpese
 
           const bolAnnoPrev = bollette.filter(b => {
             if (!b.scadenza || b.stato_elaborazione === 'errore_parsing' || b.stato_elaborazione === 'comunicazione') return false
             return new Date(b.scadenza).getFullYear() === annoCorrente - 1
           })
-          const totaleAnnoPrevUtenze = bolAnnoPrev.reduce((s, b) => s + Number(b.importo || 0), 0)
-          const speseAnnoPrev = (spese || []).filter(s => new Date(s.data).getFullYear() === annoCorrente - 1)
-          const totaleAnnoPrevSpese = speseAnnoPrev.reduce((s, sp) => s + Number(sp.importo || 0), 0)
-          const totaleAnnoPrev = totaleAnnoPrevUtenze + totaleAnnoPrevSpese
+          const totaleAnnoPrev = bolAnnoPrev.reduce((s, b) => s + Number(b.importo || 0), 0)
           const varAnno = totaleAnnoPrev > 0 ? ((totaleAnno - totaleAnnoPrev) / totaleAnnoPrev) * 100 : null
 
-          const mediaMensile = totaleAnno > 0 ? totaleAnno / (meseCorrente + 1) : 0
+          const mediaMensile = numBolletteAnno > 0 ? totaleAnno / (meseCorrente + 1) : 0
 
           const perCatAnno = {}
           bolAnno.forEach(b => {
@@ -2372,22 +2364,12 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
             .map(([catId, tot]) => ({ catId, tot, cat: getCategoria(catId) }))
             .sort((a, b) => b.tot - a.tot)
 
-          const perCatSpeseAnno = {}
-          speseAnno.forEach(s => {
-            const catId = s.categoria || 'altro_spesa'
-            if (!perCatSpeseAnno[catId]) perCatSpeseAnno[catId] = 0
-            perCatSpeseAnno[catId] += Number(s.importo || 0)
-          })
-          const catSpeseAnnoSorted = Object.entries(perCatSpeseAnno)
-            .map(([catId, tot]) => ({ catId, tot, cat: getCategoriaSpesa(catId) }))
-            .sort((a, b) => b.tot - a.tot)
-
           return (
             <>
               <div className="flex items-end justify-between mb-3">
                 <div>
                   <p className="text-2xl font-bold text-gray-900">{formatEuro(totaleAnno)}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{numBolletteAnno} {numBolletteAnno === 1 ? 'bolletta' : 'bollette'}{numSpeseAnno > 0 ? ` · ${numSpeseAnno} ${numSpeseAnno === 1 ? 'spesa' : 'spese'}` : ''} · media {formatEuro(mediaMensile)}/mese</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{numBolletteAnno} {numBolletteAnno === 1 ? 'bolletta' : 'bollette'} · media {formatEuro(mediaMensile)}/mese</p>
                 </div>
                 {varAnno !== null && (
                   <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${varAnno > 0 ? 'bg-red-50 text-red-600' : varAnno < 0 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'}`}>
@@ -2396,25 +2378,10 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
                   </div>
                 )}
               </div>
-
-              {(totaleAnnoUtenze > 0 || totaleAnnoSpese > 0) && (
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <div className="bg-bolly-50 rounded-xl p-3">
-                    <p className="text-xs text-bolly-600 font-medium">Utenze</p>
-                    <p className="text-lg font-bold text-bolly-700">{formatEuro(totaleAnnoUtenze)}</p>
-                  </div>
-                  <div className="bg-purple-50 rounded-xl p-3">
-                    <p className="text-xs text-purple-600 font-medium">Spese quotidiane</p>
-                    <p className="text-lg font-bold text-purple-700">{formatEuro(totaleAnnoSpese)}</p>
-                  </div>
-                </div>
-              )}
-
               {catAnnoSorted.length > 0 && (
                 <div className="space-y-2 pt-3 border-t border-gray-100">
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Utenze per categoria</p>
                   {catAnnoSorted.map(({ catId, tot, cat }) => {
-                    const perc = totaleAnnoUtenze > 0 ? (tot / totaleAnnoUtenze) * 100 : 0
+                    const perc = totaleAnno > 0 ? (tot / totaleAnno) * 100 : 0
                     const IconComp = IconMap[cat.icon] || Package
                     return (
                       <div key={catId} className="flex items-center gap-2">
@@ -2435,33 +2402,8 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
                   })}
                 </div>
               )}
-              {catSpeseAnnoSorted.length > 0 && (
-                <div className="space-y-2 pt-3 mt-1 border-t border-gray-100">
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Spese quotidiane per categoria</p>
-                  {catSpeseAnnoSorted.map(({ catId, tot, cat }) => {
-                    const perc = totaleAnnoSpese > 0 ? (tot / totaleAnnoSpese) * 100 : 0
-                    const IconComp = IconMap[cat.icon] || Package
-                    return (
-                      <div key={catId} className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
-                          <IconComp size={14} style={{ color: cat.color }} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-xs font-medium text-gray-700 truncate">{cat.label}</span>
-                            <span className="text-xs font-semibold text-gray-900">{formatEuro(tot)}</span>
-                          </div>
-                          <div className="w-full bg-gray-100 rounded-full h-1.5">
-                            <div className="h-1.5 rounded-full" style={{ width: `${perc}%`, backgroundColor: cat.color }} />
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-              {numBolletteAnno === 0 && numSpeseAnno === 0 && (
-                <p className="text-xs text-gray-400 text-center py-2">Nessun movimento in questo anno</p>
+              {numBolletteAnno === 0 && (
+                <p className="text-xs text-gray-400 text-center py-2">Nessuna bolletta in questo anno</p>
               )}
             </>
           )

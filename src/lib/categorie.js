@@ -148,3 +148,17 @@ export const PORTALI_PAGAMENTO = {
 }
 
 export const getCategoria = (id) => CATEGORIE.find(c => c.id === id) || CATEGORIE[CATEGORIE.length - 1]
+
+// Categorie per le spese giornaliere (diverse da quelle contratti)
+export const CATEGORIE_SPESE = [
+  { id: 'alimentari', label: 'Alimentari', icon: 'ShoppingCart', color: '#22c55e' },
+  { id: 'trasporti', label: 'Trasporti', icon: 'Car', color: '#3b82f6' },
+  { id: 'svago', label: 'Svago', icon: 'Gamepad2', color: '#a855f7' },
+  { id: 'salute', label: 'Salute', icon: 'Heart', color: '#ef4444' },
+  { id: 'casa', label: 'Casa', icon: 'Home', color: '#f59e0b' },
+  { id: 'abbigliamento', label: 'Abbigliamento', icon: 'Shirt', color: '#ec4899' },
+  { id: 'ristorazione', label: 'Ristorazione', icon: 'UtensilsCrossed', color: '#f97316' },
+  { id: 'altro_spesa', label: 'Altro', icon: 'MoreHorizontal', color: '#6b7280' },
+]
+
+export const getCategoriaSpesa = (id) => CATEGORIE_SPESE.find(c => c.id === id) || CATEGORIE_SPESE[CATEGORIE_SPESE.length - 1]

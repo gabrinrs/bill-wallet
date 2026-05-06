@@ -129,3 +129,43 @@ export async function segnaNotificaLetta(id) {
     .eq('id', id)
   if (error) throw error
 }
+
+// ============================================================
+// SPESE GIORNALIERE
+// ============================================================
+
+export async function getSpese() {
+  const { data, error } = await supabase
+    .from('spese')
+    .select('*')
+    .order('data', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createSpesa(spesa) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('spese')
+    .insert({ ...spesa, user_id: user.id })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateSpesa(id, updates) {
+  const { data, error } = await supabase
+    .from('spese')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteSpesa(id) {
+  const { error } = await supabase.from('spese').delete().eq('id', id)
+  if (error) throw error
+}

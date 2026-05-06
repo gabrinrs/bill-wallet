@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta } from './lib/database'
-import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO } from './lib/categorie'
+import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, deleteSpesa } from './lib/database'
+import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, CATEGORIE_SPESE, getCategoriaSpesa } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import Auth from './components/Auth'
 import Onboarding from './components/Onboarding'
@@ -10,11 +10,12 @@ import {
   AlertTriangle, Zap, Flame, Droplets, Phone, Wifi, Shield, Package,
   TrendingUp, CalendarDays, Repeat, Tv, CreditCard, Landmark, PenLine, LogOut, Loader2,
   Trash2, ExternalLink, Pencil, Mail, Copy, User, Inbox, FileText, HelpCircle, MessageCircle,
-  Menu, X, ChevronDown, Search
+  Menu, X, ChevronDown, Search,
+  ShoppingCart, Car, Gamepad2, Heart, Shirt, UtensilsCrossed, MoreHorizontal, Wallet
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
-const IconMap = { Zap, Flame, Droplets, Phone, Wifi, Shield, Package, Tv, Repeat, CreditCard, Landmark }
+const IconMap = { Zap, Flame, Droplets, Phone, Wifi, Shield, Package, Tv, Repeat, CreditCard, Landmark, ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
 
 // ============================================================
 // SHARED COMPONENTS
@@ -267,7 +268,7 @@ function SwipeableContratto({ isOpen, onOpen, onClose, onClick, onEdit, onDelete
 // DASHBOARD
 // ============================================================
 
-function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto }) {
+function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto }) {
   const [cardSwipedId, setCardSwipedId] = useState(null)
   const [deletingContratto, setDeletingContratto] = useState(null)
   const bolletteProssime = useMemo(() => {
@@ -502,6 +503,56 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
         </div>
       </div>
 
+      {/* Spese recenti */}
+      {(() => {
+        const now = new Date()
+        const speseMeseCorrente = spese.filter(s => {
+          const d = new Date(s.data)
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+        })
+        const totaleSpeseDelMese = speseMeseCorrente.reduce((sum, s) => sum + Number(s.importo), 0)
+        const ultime5 = spese.slice(0, 5)
+        const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
+        if (spese.length === 0) return null
+        return (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-gray-900">Spese recenti</h2>
+              <button onClick={() => onNavigate('spese-lista')} className="text-sm font-medium text-bolly-500">Vedi tutte</button>
+            </div>
+            <Card className="p-4">
+              <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-100">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Spese di {MESI_BREVI[now.getMonth()]}</p>
+                  <p className="text-xl font-bold text-gray-900 mt-0.5">{formatEuro(totaleSpeseDelMese)}</p>
+                </div>
+                <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                  <Wallet size={20} className="text-purple-600" />
+                </div>
+              </div>
+              <div className="space-y-2.5">
+                {ultime5.map(s => {
+                  const cat = getCategoriaSpesa(s.categoria)
+                  const Icon = SpesaIconMap[cat.icon] || Package
+                  return (
+                    <div key={s.id} className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
+                        <Icon size={16} style={{ color: cat.color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{s.descrizione || cat.label}</p>
+                        <p className="text-xs text-gray-400">{formatData(s.data)}</p>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900">{formatEuro(s.importo)}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+          </div>
+        )
+      })()}
+
       {deletingContratto && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setDeletingContratto(null)}>
           <div className="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3" onClick={e => e.stopPropagation()}>
@@ -521,6 +572,8 @@ function Dashboard({ contratti, bollette, onSelectContratto, onNavigate, profile
     </div>
   )
 }
+
+const MESI_BREVI = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic']
 
 // ============================================================
 // DETTAGLIO CONTRATTO
@@ -1526,10 +1579,201 @@ function Notifiche({ contratti, bollette }) {
 // CALENDARIO
 // ============================================================
 
+// ============================================================
+// FORM SPESA GIORNALIERA
+// ============================================================
+
+function FormSpesa({ onSave, onBack, dataPrecompilata }) {
+  const oggi = new Date().toISOString().slice(0, 10)
+  const [importo, setImporto] = useState('')
+  const [categoria, setCategoria] = useState('')
+  const [descrizione, setDescrizione] = useState('')
+  const [data, setData] = useState(dataPrecompilata || oggi)
+  const [saving, setSaving] = useState(false)
+  const importoRef = useRef(null)
+
+  useEffect(() => { importoRef.current?.focus() }, [])
+
+  const handleSave = async () => {
+    if (!importo || !categoria) return
+    setSaving(true)
+    try {
+      await onSave({ importo: parseFloat(importo), categoria, descrizione: descrizione || null, data })
+      onBack()
+    } catch (e) { console.error('Errore salvataggio spesa:', e) }
+    setSaving(false)
+  }
+
+  const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={20} /></button>
+        <h1 className="text-xl font-bold text-gray-900">Registra spesa</h1>
+      </div>
+
+      <Card className="p-5 space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Importo</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">€</span>
+            <input
+              ref={importoRef}
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              value={importo}
+              onChange={e => setImporto(e.target.value)}
+              placeholder="0,00"
+              className="w-full pl-8 pr-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none text-lg font-semibold"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+          <div className="grid grid-cols-4 gap-2">
+            {CATEGORIE_SPESE.map(cat => {
+              const Icon = SpesaIconMap[cat.icon] || Package
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setCategoria(cat.id)}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
+                    categoria === cat.id ? 'border-bolly-500 bg-bolly-50' : 'border-gray-100 bg-white hover:border-gray-200'
+                  }`}
+                >
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
+                    <Icon size={18} style={{ color: cat.color }} />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700 text-center leading-tight">{cat.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Descrizione <span className="text-gray-400 font-normal">(opzionale)</span></label>
+          <input
+            type="text"
+            value={descrizione}
+            onChange={e => setDescrizione(e.target.value)}
+            placeholder="es. Spesa al supermercato"
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Data</label>
+          <input
+            type="date"
+            value={data}
+            onChange={e => setData(e.target.value)}
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none"
+          />
+        </div>
+      </Card>
+
+      <button
+        onClick={handleSave}
+        disabled={!importo || !categoria || saving}
+        className="w-full py-3.5 bg-bolly-500 text-white font-semibold rounded-xl disabled:opacity-40 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+      >
+        {saving ? <Loader2 size={20} className="animate-spin" /> : <Check size={20} />}
+        {saving ? 'Salvataggio...' : 'Salva spesa'}
+      </button>
+    </div>
+  )
+}
+
+// ============================================================
+// LISTA SPESE (schermata "Vedi tutte")
+// ============================================================
+
+function ListaSpese({ spese, onBack, onDelete }) {
+  const [deletingId, setDeletingId] = useState(null)
+
+  const spesePerMese = useMemo(() => {
+    const mappa = {}
+    spese.forEach(s => {
+      const d = new Date(s.data)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const label = d.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
+      if (!mappa[key]) mappa[key] = { label, items: [], totale: 0 }
+      mappa[key].items.push(s)
+      mappa[key].totale += Number(s.importo)
+    })
+    return Object.entries(mappa).sort((a, b) => b[0].localeCompare(a[0]))
+  }, [spese])
+
+  const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={20} /></button>
+        <h1 className="text-xl font-bold text-gray-900">Tutte le spese</h1>
+      </div>
+
+      {spesePerMese.length === 0 && (
+        <Card className="p-8 text-center">
+          <Wallet size={32} className="text-gray-300 mx-auto mb-2" />
+          <p className="text-gray-400">Nessuna spesa registrata</p>
+        </Card>
+      )}
+
+      {spesePerMese.map(([key, { label, items, totale }]) => (
+        <div key={key}>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{label}</h2>
+            <span className="text-sm font-bold text-gray-700">{formatEuro(totale)}</span>
+          </div>
+          <Card className="divide-y divide-gray-50">
+            {items.map(s => {
+              const cat = getCategoriaSpesa(s.categoria)
+              const Icon = SpesaIconMap[cat.icon] || Package
+              return (
+                <div key={s.id} className="flex items-center gap-3 p-3.5">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
+                    <Icon size={18} style={{ color: cat.color }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{s.descrizione || cat.label}</p>
+                    <p className="text-xs text-gray-500">{formatData(s.data)}</p>
+                  </div>
+                  <p className="text-sm font-semibold text-gray-900">{formatEuro(s.importo)}</p>
+                  <button onClick={() => setDeletingId(s.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              )
+            })}
+          </Card>
+        </div>
+      ))}
+
+      {deletingId && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setDeletingId(null)}>
+          <div className="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3" onClick={e => e.stopPropagation()}>
+            <p className="font-semibold text-gray-900">Eliminare la spesa?</p>
+            <p className="text-sm text-gray-600">Questa azione non si può annullare.</p>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setDeletingId(null)} className="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700">Annulla</button>
+              <button onClick={() => { onDelete(deletingId); setDeletingId(null) }} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium">Elimina</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre']
 const GIORNI_SETT = ['L','M','M','G','V','S','D']
 
-function Calendario({ bollette, contratti, onSelectContratto }) {
+function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiSpesa }) {
   const oggi = new Date()
   const [meseCorrente, setMeseCorrente] = useState(oggi.getMonth())
   const [annoCorrente, setAnnoCorrente] = useState(oggi.getFullYear())
@@ -1594,6 +1838,20 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
     return mappa
   }, [bollette, contratti, meseCorrente, annoCorrente])
 
+  // Mappa spese per giorno
+  const spesePerGiorno = useMemo(() => {
+    const mappa = {}
+    ;(spese || []).forEach(s => {
+      const d = new Date(s.data)
+      if (d.getMonth() === meseCorrente && d.getFullYear() === annoCorrente) {
+        const g = d.getDate()
+        if (!mappa[g]) mappa[g] = []
+        mappa[g].push(s)
+      }
+    })
+    return mappa
+  }, [spese, meseCorrente, annoCorrente])
+
   const isOggi = (g) => g === oggi.getDate() && meseCorrente === oggi.getMonth() && annoCorrente === oggi.getFullYear()
   const isDomiciliata = (b) => b.contratto?.metodo_pagamento === 'rid' || b.contratto?.domiciliazione
 
@@ -1605,6 +1863,7 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
   if (restanti < 7) for (let i = 1; i <= restanti; i++) celle.push({ giorno: i, corrente: false })
 
   const bolletteGiornoSelezionato = giornoSelezionato ? (bollettePerGiorno[giornoSelezionato] || []) : []
+  const speseGiornoSelezionato = giornoSelezionato ? (spesePerGiorno[giornoSelezionato] || []) : []
 
   // Statistiche del mese corrente
   const statsMese = useMemo(() => {
@@ -1662,6 +1921,7 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
             const hasDomiciliata = dots?.some(b => !b.proiezione && isDomiciliata(b))
             const hasManuale = dots?.some(b => !b.proiezione && !isDomiciliata(b))
             const hasProiezione = dots?.some(b => b.proiezione)
+            const hasSpese = c.corrente && spesePerGiorno[c.giorno]?.length > 0
             const selezionato = c.corrente && giornoSelezionato === c.giorno
             return (
               <button key={i}
@@ -1677,6 +1937,7 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
                   {hasDomiciliata && <span className="w-1.5 h-1.5 rounded-full bg-bolly-500" />}
                   {hasManuale && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
                   {hasProiezione && <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />}
+                  {hasSpese && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
                 </div>
               </button>
             )
@@ -1688,14 +1949,26 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
         <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-bolly-500" /><span className="text-xs text-gray-500">Domiciliata (RID)</span></div>
         <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" /><span className="text-xs text-gray-500">Da pagare</span></div>
         <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-purple-400" /><span className="text-xs text-gray-500">Previsto</span></div>
+        <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400" /><span className="text-xs text-gray-500">Spesa</span></div>
       </div>
 
-      {/* Scadenze giorno selezionato (sopra le statistiche) */}
+      {/* Scadenze + spese giorno selezionato */}
       {giornoSelezionato && (
         <Card className="p-4">
-          <p className="text-sm font-medium text-gray-500 mb-3">{giornoSelezionato} {MESI[meseCorrente].toLowerCase()} {annoCorrente}</p>
-          {bolletteGiornoSelezionato.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">Nessuna scadenza in questo giorno</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-medium text-gray-500">{giornoSelezionato} {MESI[meseCorrente].toLowerCase()} {annoCorrente}</p>
+            <button
+              onClick={() => {
+                const dataStr = `${annoCorrente}-${String(meseCorrente + 1).padStart(2, '0')}-${String(giornoSelezionato).padStart(2, '0')}`
+                onAggiungiSpesa(dataStr)
+              }}
+              className="flex items-center gap-1 text-xs font-medium text-bolly-500 px-2 py-1 rounded-lg hover:bg-bolly-50"
+            >
+              <Plus size={14} /> Spesa
+            </button>
+          </div>
+          {bolletteGiornoSelezionato.length === 0 && speseGiornoSelezionato.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-4">Nessuna scadenza o spesa in questo giorno</p>
           ) : (
             <div className="space-y-3">
               {bolletteGiornoSelezionato.map((b, idx) => {
@@ -1720,6 +1993,28 @@ function Calendario({ bollette, contratti, onSelectContratto }) {
                         {isProiezione ? 'Previsto' : b.contratto?.metodo_pagamento === 'rid' ? 'RID' : b.contratto?.metodo_pagamento === 'bollettino' ? 'Bollettino' : 'Manuale'}
                       </span>
                     </div>
+                  </div>
+                )
+              })}
+              {speseGiornoSelezionato.length > 0 && bolletteGiornoSelezionato.length > 0 && (
+                <div className="border-t border-gray-100 pt-2 mt-2">
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Spese</p>
+                </div>
+              )}
+              {speseGiornoSelezionato.map(s => {
+                const cat = getCategoriaSpesa(s.categoria)
+                const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
+                const Icon = SpesaIconMap[cat.icon] || Package
+                return (
+                  <div key={s.id} className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-blue-50">
+                      <Icon size={18} className="text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{s.descrizione || cat.label}</p>
+                      <p className="text-xs text-gray-500">{cat.label}</p>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900">{formatEuro(s.importo)}</p>
                   </div>
                 )
               })}
@@ -2547,9 +2842,11 @@ export default function App() {
   const [profile, setProfile] = useState(null)
   const [contratti, setContratti] = useState([])
   const [bollette, setBollette] = useState([])
+  const [spese, setSpese] = useState([])
   const [screen, setScreen] = useState('dashboard')
   const [selectedContrattoId, setSelectedContrattoId] = useState(null)
   const [editingContratto, setEditingContratto] = useState(null)
+  const [spesaDataPrecompilata, setSpesaDataPrecompilata] = useState(null)
   const [lastSeenNotificheCount, setLastSeenNotificheCount] = useState(() => {
     const saved = localStorage.getItem('bolly_seen_notifiche_count')
     return saved ? parseInt(saved, 10) : 0
@@ -2651,9 +2948,10 @@ export default function App() {
     try {
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
       setProfile(prof)
-      const [c, b] = await Promise.all([getContratti(), getBollette()])
+      const [c, b, s] = await Promise.all([getContratti(), getBollette(), getSpese()])
       setContratti(c)
       setBollette(b)
+      setSpese(s)
     } catch (e) { console.error('Errore caricamento dati:', e) }
   }, [session])
 
@@ -2767,13 +3065,23 @@ export default function App() {
     await loadData()
   }
 
+  const handleSaveSpesa = async (spesa) => {
+    await createSpesa(spesa)
+    await loadData()
+  }
+
+  const handleDeleteSpesa = async (id) => {
+    await deleteSpesa(id)
+    await loadData()
+  }
+
   const notificheCount = currentNotificheCount
   const showBadgeNotifiche = currentNotificheCount > 0 && currentNotificheCount > lastSeenNotificheCount
   const showBadgeInbox = nuoveBolletteInbox > 0
 
   const renderScreen = () => {
     switch (screen) {
-      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} />
+      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} />
       case 'dettaglio': {
         const c = contratti.find(x => x.id === selectedContrattoId)
         if (!c) { setScreen('dashboard'); return null }
@@ -2797,12 +3105,21 @@ export default function App() {
                 <ChevronRight size={20} className="text-gray-400 ml-auto" />
               </div>
             </Card>
+            <Card className="p-5" onClick={() => setScreen('aggiungi-spesa')}>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center"><Wallet size={24} className="text-purple-600" /></div>
+                <div><p className="font-semibold text-gray-900">Registra spesa</p><p className="text-sm text-gray-500 mt-0.5">Spese quotidiane: cibo, trasporti, svago...</p></div>
+                <ChevronRight size={20} className="text-gray-400 ml-auto" />
+              </div>
+            </Card>
           </div>
         )
       case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} />
       case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} /> : null
       case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} />
-      case 'calendario': return <Calendario bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />
+      case 'aggiungi-spesa': return <FormSpesa onSave={handleSaveSpesa} onBack={() => { setSpesaDataPrecompilata(null); setScreen('aggiungi') }} dataPrecompilata={spesaDataPrecompilata} />
+      case 'spese-lista': return <ListaSpese spese={spese} onBack={() => setScreen('dashboard')} onDelete={handleDeleteSpesa} />
+      case 'calendario': return <Calendario bollette={bollette} contratti={contratti} spese={spese} onSelectContratto={handleSelectContratto} onAggiungiSpesa={(data) => { setScreen('aggiungi-spesa'); setSpesaDataPrecompilata(data) }} />
       case 'bollette': return <StoricoBollette bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />
       case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} />
       case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} />

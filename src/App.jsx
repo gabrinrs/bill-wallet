@@ -405,7 +405,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Ciao {profile?.nome || 'utente'}</h1>
-          <p className="text-gray-500 mt-0.5 text-sm">Riepilogo delle tue spese</p>
+          <p className="text-sm font-medium text-gray-700 mt-0.5">Riepilogo di questo mese</p>
         </div>
         <button onClick={() => onNavigate('menu')} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500">
           <Menu size={22} />
@@ -429,7 +429,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
 
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Spese del mese</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Spese totali</p>
           <p className="text-xl font-bold text-gray-900 mt-1">{formatEuro(totaleMesseCorrente)}</p>
         </Card>
         <Card className="p-4">
@@ -437,7 +437,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
           <p className="text-xl font-bold text-red-600 mt-1">{formatEuro(totaleDaPagare)}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Fisso mensile</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Spese fisse</p>
           <div className="flex items-center gap-1.5 mt-1">
             <Repeat size={14} className="text-pink-500" />
             <p className="text-xl font-bold text-pink-600">{formatEuro(totaleRicorrentiMensili)}</p>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
 import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa } from './lib/database'
-import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, CATEGORIE_SPESE, getCategoriaSpesa } from './lib/categorie'
+import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, CATEGORIE_SPESE, getCategoriaSpesa, CATEGORIE_ENTRATE, getCategoriaEntrata } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import Auth from './components/Auth'
 import Onboarding from './components/Onboarding'
@@ -11,7 +11,8 @@ import {
   TrendingUp, CalendarDays, Repeat, Tv, CreditCard, Landmark, PenLine, LogOut, Loader2,
   Trash2, ExternalLink, Pencil, Mail, Copy, User, Inbox, FileText, HelpCircle, MessageCircle,
   Menu, X, ChevronDown, Search,
-  ShoppingCart, Car, Gamepad2, Heart, Shirt, UtensilsCrossed, MoreHorizontal, Wallet
+  ShoppingCart, Car, Gamepad2, Heart, Shirt, UtensilsCrossed, MoreHorizontal, Wallet,
+  Banknote, Gift, RotateCcw
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -571,22 +572,30 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
         </div>
       </div>
 
-      {/* Spese recenti */}
+      {/* Spese e entrate recenti */}
       {(() => {
         const now = new Date()
-        const speseMeseCorrente = spese.filter(s => {
+        const soloSpeseMese = spese.filter(s => {
+          if (s.tipo === 'entrata') return false
           const d = new Date(s.data)
           return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
         })
-        const totaleSpeseDelMese = speseMeseCorrente.reduce((sum, s) => sum + Number(s.importo), 0)
+        const totaleSpeseDelMese = soloSpeseMese.reduce((sum, s) => sum + Number(s.importo), 0)
+        const entrateDelMese = spese.filter(s => {
+          if (s.tipo !== 'entrata') return false
+          const d = new Date(s.data)
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+        })
+        const totaleEntrateDelMese = entrateDelMese.reduce((sum, s) => sum + Number(s.importo), 0)
         const ultime5 = spese.slice(0, 5)
         const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
+        const EntrataIconMap = { Banknote, Home, RotateCcw, Gift, Landmark, MoreHorizontal }
         if (spese.length === 0) return null
         return (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-gray-900">Spese recenti</h2>
-              <button onClick={() => onNavigate('spese-lista')} className="text-sm font-medium text-bolly-500">Vedi tutte</button>
+              <h2 className="text-lg font-semibold text-gray-900">Movimenti recenti</h2>
+              <button onClick={() => onNavigate('spese-lista')} className="text-sm font-medium text-bolly-500">Vedi tutti</button>
             </div>
             <Card className="p-4">
               <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-100">
@@ -594,14 +603,23 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
                   <p className="text-xs text-gray-500 uppercase tracking-wide">Spese di {MESI_BREVI[now.getMonth()]}</p>
                   <p className="text-xl font-bold text-gray-900 mt-0.5">{formatEuro(totaleSpeseDelMese)}</p>
                 </div>
-                <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-                  <Wallet size={20} className="text-purple-600" />
-                </div>
+                {totaleEntrateDelMese > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide text-right">Entrate</p>
+                    <p className="text-xl font-bold text-green-600 mt-0.5">+{formatEuro(totaleEntrateDelMese)}</p>
+                  </div>
+                )}
+                {totaleEntrateDelMese === 0 && (
+                  <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                    <Wallet size={20} className="text-purple-600" />
+                  </div>
+                )}
               </div>
               <div className="space-y-2.5">
                 {ultime5.map(s => {
-                  const cat = getCategoriaSpesa(s.categoria)
-                  const Icon = SpesaIconMap[cat.icon] || Package
+                  const isEntrata = s.tipo === 'entrata'
+                  const cat = isEntrata ? getCategoriaEntrata(s.categoria) : getCategoriaSpesa(s.categoria)
+                  const Icon = isEntrata ? (EntrataIconMap[cat.icon] || Package) : (SpesaIconMap[cat.icon] || Package)
                   return (
                     <SwipeableSpesa
                       key={s.id}
@@ -619,7 +637,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
                           <p className="text-sm font-medium text-gray-900 truncate">{s.descrizione || cat.label}</p>
                           <p className="text-xs text-gray-400">{formatData(s.data)}</p>
                         </div>
-                        <p className="text-sm font-semibold text-gray-900">{formatEuro(s.importo)}</p>
+                        <p className={`text-sm font-semibold ${isEntrata ? 'text-green-600' : 'text-gray-900'}`}>{isEntrata ? '+' : ''}{formatEuro(s.importo)}</p>
                       </div>
                     </SwipeableSpesa>
                   )
@@ -1886,6 +1904,116 @@ function FormModificaSpesa({ spesa, onSave, onBack }) {
 }
 
 // ============================================================
+// FORM ENTRATA
+// ============================================================
+
+function FormEntrata({ onSave, onBack, dataPrecompilata }) {
+  const now = new Date()
+  const oggi = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
+  const [importo, setImporto] = useState('')
+  const [categoria, setCategoria] = useState('')
+  const [descrizione, setDescrizione] = useState('')
+  const [data, setData] = useState(dataPrecompilata || oggi)
+  const [saving, setSaving] = useState(false)
+  const importoRef = useRef(null)
+
+  useEffect(() => { importoRef.current?.focus() }, [])
+
+  const handleSave = async () => {
+    if (!importo || !categoria) return
+    setSaving(true)
+    try {
+      await onSave({ importo: parseFloat(importo), categoria, descrizione: descrizione || null, data, tipo: 'entrata' })
+      onBack()
+    } catch (e) { console.error('Errore salvataggio entrata:', e) }
+    setSaving(false)
+  }
+
+  const EntrataIconMap = { Banknote, Home, RotateCcw, Gift, Landmark, MoreHorizontal }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={20} /></button>
+        <h1 className="text-xl font-bold text-gray-900">Registra entrata</h1>
+      </div>
+
+      <Card className="p-5 space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Importo</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">€</span>
+            <input
+              ref={importoRef}
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              value={importo}
+              onChange={e => setImporto(e.target.value)}
+              placeholder="0,00"
+              className="w-full pl-8 pr-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none text-lg font-semibold"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+          <div className="grid grid-cols-3 gap-2">
+            {CATEGORIE_ENTRATE.map(cat => {
+              const Icon = EntrataIconMap[cat.icon] || Package
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setCategoria(cat.id)}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
+                    categoria === cat.id ? 'border-green-500 bg-green-50' : 'border-gray-100 bg-white hover:border-gray-200'
+                  }`}
+                >
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
+                    <Icon size={18} style={{ color: cat.color }} />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700 text-center leading-tight">{cat.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Descrizione <span className="text-gray-400 font-normal">(opzionale)</span></label>
+          <input
+            type="text"
+            value={descrizione}
+            onChange={e => setDescrizione(e.target.value)}
+            placeholder="es. Stipendio marzo"
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Data</label>
+          <input
+            type="date"
+            value={data}
+            onChange={e => setData(e.target.value)}
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+          />
+        </div>
+      </Card>
+
+      <button
+        onClick={handleSave}
+        disabled={!importo || !categoria || saving}
+        className="w-full py-3.5 bg-green-500 text-white font-semibold rounded-xl disabled:opacity-40 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+      >
+        {saving ? <Loader2 size={20} className="animate-spin" /> : <Check size={20} />}
+        {saving ? 'Salvataggio...' : 'Salva entrata'}
+      </button>
+    </div>
+  )
+}
+
+// ============================================================
 // LISTA SPESE (schermata "Vedi tutte")
 // ============================================================
 
@@ -2095,19 +2223,37 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
       .map(([catId, tot]) => ({ catId, tot, cat: getCategoria(catId) }))
       .sort((a, b) => b.tot - a.tot)
 
-    // Spese giornaliere del mese
+    // Spese giornaliere del mese (solo tipo 'spesa' o senza tipo per retrocompatibilità)
     const speseMese = (spese || []).filter(s => {
+      if (s.tipo === 'entrata') return false
       const d = new Date(s.data)
       return d.getMonth() === meseCorrente && d.getFullYear() === annoCorrente
     })
     const totaleSpeseGiornaliere = speseMese.reduce((s, sp) => s + Number(sp.importo || 0), 0)
 
+    // Entrate del mese
+    const entrateMese = (spese || []).filter(s => {
+      if (s.tipo !== 'entrata') return false
+      const d = new Date(s.data)
+      return d.getMonth() === meseCorrente && d.getFullYear() === annoCorrente
+    })
+    const totaleEntrate = entrateMese.reduce((s, e) => s + Number(e.importo || 0), 0)
+
     // Spese giornaliere mese precedente
     const speseMesePrev = (spese || []).filter(s => {
+      if (s.tipo === 'entrata') return false
       const d = new Date(s.data)
       return d.getMonth() === mesePrev && d.getFullYear() === annoPrev
     })
     const totaleSpeseGiornalierePrev = speseMesePrev.reduce((s, sp) => s + Number(sp.importo || 0), 0)
+
+    // Entrate mese precedente
+    const entrateMesePrev = (spese || []).filter(s => {
+      if (s.tipo !== 'entrata') return false
+      const d = new Date(s.data)
+      return d.getMonth() === mesePrev && d.getFullYear() === annoPrev
+    })
+    const totaleEntratePrev = entrateMesePrev.reduce((s, e) => s + Number(e.importo || 0), 0)
 
     // Ripartizione spese giornaliere per categoria
     const perCategoriaSpese = {}
@@ -2120,11 +2266,24 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
       .map(([catId, tot]) => ({ catId, tot, cat: getCategoriaSpesa(catId) }))
       .sort((a, b) => b.tot - a.tot)
 
-    const totaleComplessivo = totaleMese + totaleSpeseGiornaliere
+    // Ripartizione entrate per categoria
+    const perCategoriaEntrate = {}
+    entrateMese.forEach(s => {
+      const catId = s.categoria || 'altro_entrata'
+      if (!perCategoriaEntrate[catId]) perCategoriaEntrate[catId] = 0
+      perCategoriaEntrate[catId] += Number(s.importo || 0)
+    })
+    const categorieEntrateSort = Object.entries(perCategoriaEntrate)
+      .map(([catId, tot]) => ({ catId, tot, cat: getCategoriaEntrata(catId) }))
+      .sort((a, b) => b.tot - a.tot)
+
+    const totaleUscite = totaleMese + totaleSpeseGiornaliere
+    const totaleComplessivo = totaleUscite
     const totaleComplessivoPrev = totalePrecedente + totaleSpeseGiornalierePrev
     const variazioneComplessiva = totaleComplessivoPrev > 0 ? ((totaleComplessivo - totaleComplessivoPrev) / totaleComplessivoPrev) * 100 : null
+    const bilancio = totaleEntrate - totaleUscite
 
-    return { totaleMese, totalePrecedente, variazione, categorieSorted, numBollette: bolMese.length, totaleSpeseGiornaliere, categorieSpeseSort, numSpese: speseMese.length, totaleComplessivo, variazioneComplessiva }
+    return { totaleMese, totalePrecedente, variazione, categorieSorted, numBollette: bolMese.length, totaleSpeseGiornaliere, categorieSpeseSort, numSpese: speseMese.length, totaleComplessivo, variazioneComplessiva, totaleEntrate, totaleEntratePrev, categorieEntrateSort, numEntrate: entrateMese.length, totaleUscite, bilancio }
   }, [bollette, contratti, spese, meseCorrente, annoCorrente])
 
   return (
@@ -2255,7 +2414,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
         <div className="flex items-end justify-between mb-3">
           <div>
             <p className="text-2xl font-bold text-gray-900">{formatEuro(statsMese.totaleComplessivo)}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{statsMese.numBollette} {statsMese.numBollette === 1 ? 'bolletta' : 'bollette'}{statsMese.numSpese > 0 ? ` · ${statsMese.numSpese} ${statsMese.numSpese === 1 ? 'spesa' : 'spese'}` : ''}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{statsMese.numBollette} {statsMese.numBollette === 1 ? 'bolletta' : 'bollette'}{statsMese.numSpese > 0 ? ` · ${statsMese.numSpese} ${statsMese.numSpese === 1 ? 'spesa' : 'spese'}` : ''}{statsMese.numEntrate > 0 ? ` · ${statsMese.numEntrate} ${statsMese.numEntrate === 1 ? 'entrata' : 'entrate'}` : ''}</p>
           </div>
           {statsMese.variazioneComplessiva !== null && (
             <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${statsMese.variazioneComplessiva > 0 ? 'bg-red-50 text-red-600' : statsMese.variazioneComplessiva < 0 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'}`}>
@@ -2264,6 +2423,24 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
             </div>
           )}
         </div>
+
+        {/* Bilancio entrate/uscite — solo se ci sono entrate */}
+        {statsMese.totaleEntrate > 0 && (
+          <div className={`rounded-xl p-3 mb-3 ${statsMese.bilancio >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-green-600">Entrate</span>
+              <span className="text-sm font-bold text-green-700">+{formatEuro(statsMese.totaleEntrate)}</span>
+            </div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-red-600">Uscite</span>
+              <span className="text-sm font-bold text-red-700">-{formatEuro(statsMese.totaleUscite)}</span>
+            </div>
+            <div className="border-t border-gray-200 pt-2 flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-700">Bilancio</span>
+              <span className={`text-sm font-bold ${statsMese.bilancio >= 0 ? 'text-green-700' : 'text-red-700'}`}>{statsMese.bilancio >= 0 ? '+' : ''}{formatEuro(statsMese.bilancio)}</span>
+            </div>
+          </div>
+        )}
 
         {/* Due sotto-totali: Utenze vs Spese quotidiane */}
         {(statsMese.totaleMese > 0 || statsMese.totaleSpeseGiornaliere > 0) && (
@@ -2329,7 +2506,33 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
             })}
           </div>
         )}
-        {statsMese.numBollette === 0 && statsMese.numSpese === 0 && (
+        {statsMese.categorieEntrateSort.length > 0 && (
+          <div className="space-y-2 pt-3 mt-1 border-t border-gray-100">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Entrate per categoria</p>
+            {statsMese.categorieEntrateSort.map(({ catId, tot, cat }) => {
+              const perc = statsMese.totaleEntrate > 0 ? (tot / statsMese.totaleEntrate) * 100 : 0
+              const EntrataIconMap = { Banknote, Home, RotateCcw, Gift, Landmark, MoreHorizontal }
+              const IconComp = EntrataIconMap[cat.icon] || Package
+              return (
+                <div key={catId} className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
+                    <IconComp size={14} style={{ color: cat.color }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs font-medium text-gray-700 truncate">{cat.label}</span>
+                      <span className="text-xs font-semibold text-green-700">+{formatEuro(tot)}</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                      <div className="h-1.5 rounded-full" style={{ width: `${perc}%`, backgroundColor: cat.color }} />
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {statsMese.numBollette === 0 && statsMese.numSpese === 0 && statsMese.numEntrate === 0 && (
           <p className="text-xs text-gray-400 text-center py-2">Nessun movimento in questo mese</p>
         )}
       </Card>
@@ -3390,12 +3593,20 @@ export default function App() {
                 <ChevronRight size={20} className="text-gray-400 ml-auto" />
               </div>
             </Card>
+            <Card className="p-5" onClick={() => setScreen('aggiungi-entrata')}>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center"><Banknote size={24} className="text-green-600" /></div>
+                <div><p className="font-semibold text-gray-900">Registra entrata</p><p className="text-sm text-gray-500 mt-0.5">Stipendio, affitto, rimborsi, pensione...</p></div>
+                <ChevronRight size={20} className="text-gray-400 ml-auto" />
+              </div>
+            </Card>
           </div>
         )
       case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} />
       case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} /> : null
       case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} />
       case 'aggiungi-spesa': return <FormSpesa onSave={handleSaveSpesa} onBack={() => { setSpesaDataPrecompilata(null); setScreen('dashboard') }} dataPrecompilata={spesaDataPrecompilata} />
+      case 'aggiungi-entrata': return <FormEntrata onSave={handleSaveSpesa} onBack={() => setScreen('dashboard')} />
       case 'modifica-spesa': return editingSpesa ? <FormModificaSpesa spesa={editingSpesa} onSave={handleUpdateSpesa} onBack={() => { setEditingSpesa(null); setScreen('dashboard') }} /> : null
       case 'spese-lista': return <ListaSpese spese={spese} onBack={() => setScreen('dashboard')} onDelete={handleDeleteSpesa} />
       case 'calendario': return <Calendario bollette={bollette} contratti={contratti} spese={spese} onSelectContratto={handleSelectContratto} onAggiungiSpesa={(data) => { setScreen('aggiungi-spesa'); setSpesaDataPrecompilata(data) }} />

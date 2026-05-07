@@ -162,3 +162,15 @@ export const CATEGORIE_SPESE = [
 ]
 
 export const getCategoriaSpesa = (id) => CATEGORIE_SPESE.find(c => c.id === id) || CATEGORIE_SPESE[CATEGORIE_SPESE.length - 1]
+
+// Categorie per le entrate
+export const CATEGORIE_ENTRATE = [
+  { id: 'stipendio', label: 'Stipendio', icon: 'Banknote', color: '#22c55e' },
+  { id: 'affitto', label: 'Affitto', icon: 'Home', color: '#3b82f6' },
+  { id: 'rimborso', label: 'Rimborso', icon: 'RotateCcw', color: '#f59e0b' },
+  { id: 'regalo', label: 'Regalo', icon: 'Gift', color: '#ec4899' },
+  { id: 'pensione', label: 'Pensione', icon: 'Landmark', color: '#8b5cf6' },
+  { id: 'altro_entrata', label: 'Altro', icon: 'MoreHorizontal', color: '#6b7280' },
+]
+
+export const getCategoriaEntrata = (id) => CATEGORIE_ENTRATE.find(c => c.id === id) || CATEGORIE_ENTRATE[CATEGORIE_ENTRATE.length - 1]

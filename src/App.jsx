@@ -364,6 +364,24 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
     bollette.filter(b => !b.pagata).reduce((s, b) => s + Number(b.importo), 0)
   , [bollette])
 
+  const totaleSpeseMese = useMemo(() => {
+    const now = new Date()
+    return (spese || []).filter(s => {
+      if (s.tipo === 'entrata') return false
+      const d = new Date(s.data)
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+    }).reduce((s, sp) => s + Number(sp.importo || 0), 0)
+  }, [spese])
+
+  const totaleEntrateMese = useMemo(() => {
+    const now = new Date()
+    return (spese || []).filter(s => {
+      if (s.tipo !== 'entrata') return false
+      const d = new Date(s.data)
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+    }).reduce((s, sp) => s + Number(sp.importo || 0), 0)
+  }, [spese])
+
   const totaleRicorrentiMensili = useMemo(() => {
     return contratti.filter(c => c.ricorrente).reduce((sum, c) => {
       const imp = Number(c.importo_ricorrente) || 0
@@ -431,7 +449,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wide">Spese totali</p>
-          <p className="text-xl font-bold text-gray-900 mt-1">{formatEuro(totaleMesseCorrente)}</p>
+          <p className="text-xl font-bold text-gray-900 mt-1">{formatEuro(totaleMesseCorrente + totaleSpeseMese)}</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wide">Da pagare</p>
@@ -451,6 +469,30 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
           </p>
         </Card>
       </div>
+
+      {totaleEntrateMese > 0 && (() => {
+        const totaleUscite = totaleMesseCorrente + totaleSpeseMese
+        const bilancio = totaleEntrateMese - totaleUscite
+        return (
+          <Card className={`p-4 ${bilancio >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${bilancio >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                  <TrendingUp size={20} className={`${bilancio >= 0 ? 'text-green-600' : 'text-red-500'} ${bilancio < 0 ? 'rotate-180' : ''}`} />
+                </div>
+                <div>
+                  <p className={`text-xs font-medium ${bilancio >= 0 ? 'text-green-600' : 'text-red-600'}`}>Bilancio del mese</p>
+                  <p className={`text-lg font-bold ${bilancio >= 0 ? 'text-green-700' : 'text-red-700'}`}>{bilancio >= 0 ? '+' : ''}{formatEuro(bilancio)}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-green-600">Entrate: +{formatEuro(totaleEntrateMese)}</p>
+                <p className="text-xs text-red-600 mt-0.5">Uscite: -{formatEuro(totaleUscite)}</p>
+              </div>
+            </div>
+          </Card>
+        )
+      })()}
 
       {/* Alert andamento costi */}
       {alertTrend.length > 0 && (
@@ -1805,6 +1847,7 @@ function FormSpesa({ onSave, onBack, dataPrecompilata }) {
 // ============================================================
 
 function FormModificaSpesa({ spesa, onSave, onBack }) {
+  const isEntrata = spesa.tipo === 'entrata'
   const [importo, setImporto] = useState(String(spesa.importo))
   const [categoria, setCategoria] = useState(spesa.categoria)
   const [descrizione, setDescrizione] = useState(spesa.descrizione || '')
@@ -1817,17 +1860,21 @@ function FormModificaSpesa({ spesa, onSave, onBack }) {
     try {
       await onSave(spesa.id, { importo: parseFloat(importo), categoria, descrizione: descrizione || null, data })
       onBack()
-    } catch (e) { console.error('Errore modifica spesa:', e) }
+    } catch (e) { console.error('Errore modifica:', e) }
     setSaving(false)
   }
 
   const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
+  const EntrataIconMap = { Banknote, Home, RotateCcw, Gift, Landmark, MoreHorizontal }
+  const categorie = isEntrata ? CATEGORIE_ENTRATE : CATEGORIE_SPESE
+  const iconMap = isEntrata ? EntrataIconMap : SpesaIconMap
+  const accentColor = isEntrata ? 'green' : 'bolly'
 
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
         <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={20} /></button>
-        <h1 className="text-xl font-bold text-gray-900">Modifica spesa</h1>
+        <h1 className="text-xl font-bold text-gray-900">{isEntrata ? 'Modifica entrata' : 'Modifica spesa'}</h1>
       </div>
 
       <Card className="p-5 space-y-4">
@@ -1842,22 +1889,24 @@ function FormModificaSpesa({ spesa, onSave, onBack }) {
               value={importo}
               onChange={e => setImporto(e.target.value)}
               placeholder="0,00"
-              className="w-full pl-8 pr-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none text-lg font-semibold"
+              className={`w-full pl-8 pr-3 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-${accentColor}-500 focus:border-transparent outline-none text-lg font-semibold`}
             />
           </div>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
-          <div className="grid grid-cols-4 gap-2">
-            {CATEGORIE_SPESE.map(cat => {
-              const Icon = SpesaIconMap[cat.icon] || Package
+          <div className={`grid ${isEntrata ? 'grid-cols-3' : 'grid-cols-4'} gap-2`}>
+            {categorie.map(cat => {
+              const Icon = iconMap[cat.icon] || Package
               return (
                 <button
                   key={cat.id}
                   onClick={() => setCategoria(cat.id)}
                   className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
-                    categoria === cat.id ? 'border-bolly-500 bg-bolly-50' : 'border-gray-100 bg-white hover:border-gray-200'
+                    categoria === cat.id
+                      ? isEntrata ? 'border-green-500 bg-green-50' : 'border-bolly-500 bg-bolly-50'
+                      : 'border-gray-100 bg-white hover:border-gray-200'
                   }`}
                 >
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
@@ -1876,8 +1925,8 @@ function FormModificaSpesa({ spesa, onSave, onBack }) {
             type="text"
             value={descrizione}
             onChange={e => setDescrizione(e.target.value)}
-            placeholder="es. Spesa al supermercato"
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none"
+            placeholder={isEntrata ? 'es. Stipendio marzo' : 'es. Spesa al supermercato'}
+            className={`w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-${accentColor}-500 focus:border-transparent outline-none`}
           />
         </div>
 
@@ -1887,7 +1936,7 @@ function FormModificaSpesa({ spesa, onSave, onBack }) {
             type="date"
             value={data}
             onChange={e => setData(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none"
+            className={`w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-${accentColor}-500 focus:border-transparent outline-none`}
           />
         </div>
       </Card>
@@ -1895,7 +1944,7 @@ function FormModificaSpesa({ spesa, onSave, onBack }) {
       <button
         onClick={handleSave}
         disabled={!importo || !categoria || saving}
-        className="w-full py-3.5 bg-bolly-500 text-white font-semibold rounded-xl disabled:opacity-40 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+        className={`w-full py-3.5 ${isEntrata ? 'bg-green-500' : 'bg-bolly-500'} text-white font-semibold rounded-xl disabled:opacity-40 active:scale-[0.98] transition-transform flex items-center justify-center gap-2`}
       >
         {saving ? <Loader2 size={20} className="animate-spin" /> : <Check size={20} />}
         {saving ? 'Salvataggio...' : 'Salva modifiche'}
@@ -2035,18 +2084,19 @@ function ListaSpese({ spese, onBack, onDelete }) {
   }, [spese])
 
   const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
+  const EntrataIconMap = { Banknote, Home, RotateCcw, Gift, Landmark, MoreHorizontal }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={20} /></button>
-        <h1 className="text-xl font-bold text-gray-900">Tutte le spese</h1>
+        <h1 className="text-xl font-bold text-gray-900">Tutti i movimenti</h1>
       </div>
 
       {spesePerMese.length === 0 && (
         <Card className="p-8 text-center">
           <Wallet size={32} className="text-gray-300 mx-auto mb-2" />
-          <p className="text-gray-400">Nessuna spesa registrata</p>
+          <p className="text-gray-400">Nessun movimento registrato</p>
         </Card>
       )}
 
@@ -2058,8 +2108,9 @@ function ListaSpese({ spese, onBack, onDelete }) {
           </div>
           <Card className="divide-y divide-gray-50">
             {items.map(s => {
-              const cat = getCategoriaSpesa(s.categoria)
-              const Icon = SpesaIconMap[cat.icon] || Package
+              const isEntrata = s.tipo === 'entrata'
+              const cat = isEntrata ? getCategoriaEntrata(s.categoria) : getCategoriaSpesa(s.categoria)
+              const Icon = isEntrata ? (EntrataIconMap[cat.icon] || Package) : (SpesaIconMap[cat.icon] || Package)
               return (
                 <div key={s.id} className="flex items-center gap-3 p-3.5">
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
@@ -2069,7 +2120,7 @@ function ListaSpese({ spese, onBack, onDelete }) {
                     <p className="text-sm font-medium text-gray-900 truncate">{s.descrizione || cat.label}</p>
                     <p className="text-xs text-gray-500">{formatData(s.data)}</p>
                   </div>
-                  <p className="text-sm font-semibold text-gray-900">{formatEuro(s.importo)}</p>
+                  <p className={`text-sm font-semibold ${isEntrata ? 'text-green-600' : 'text-gray-900'}`}>{isEntrata ? '+' : ''}{formatEuro(s.importo)}</p>
                   <button onClick={() => setDeletingId(s.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors">
                     <Trash2 size={16} />
                   </button>

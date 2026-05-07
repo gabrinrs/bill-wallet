@@ -382,11 +382,19 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
                       className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none" />
                   </div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-1">Frequenza</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[{ id: 'mensile', l: 'Mensile' }, { id: 'bimestrale', l: 'Bimestrale' }, { id: 'trimestrale', l: 'Trimestrale' }, { id: 'semestrale', l: 'Semestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
-                        <button key={f.id} onClick={() => updateContratto('frequenza', f.id)}
-                          className={`py-2 rounded-xl text-sm font-medium border ${contrattoForm.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
-                      ))}
+                    <div className="flex flex-col gap-2">
+                      <div className="flex justify-center gap-2">
+                        {[{ id: 'mensile', l: 'Mensile' }, { id: 'bimestrale', l: 'Bimestrale' }, { id: 'trimestrale', l: 'Trimestrale' }].map(f => (
+                          <button key={f.id} onClick={() => updateContratto('frequenza', f.id)}
+                            className={`py-2 px-3 rounded-xl text-sm font-medium border ${contrattoForm.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
+                        ))}
+                      </div>
+                      <div className="flex justify-center gap-2">
+                        {[{ id: 'semestrale', l: 'Semestrale' }, { id: 'annuale', l: 'Annuale' }].map(f => (
+                          <button key={f.id} onClick={() => updateContratto('frequenza', f.id)}
+                            className={`py-2 px-3 rounded-xl text-sm font-medium border ${contrattoForm.frequenza === f.id ? 'bg-pink-100 border-pink-300 text-pink-700' : 'border-gray-200 text-gray-600'}`}>{f.l}</button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-1">Prossimo addebito</label>

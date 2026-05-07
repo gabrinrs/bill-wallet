@@ -405,12 +405,13 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Ciao {profile?.nome || 'utente'}</h1>
-          <p className="text-sm font-medium text-gray-700 mt-0.5">Riepilogo di questo mese</p>
         </div>
         <button onClick={() => onNavigate('menu')} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500">
           <Menu size={22} />
         </button>
       </div>
+
+      <h2 className="text-lg font-semibold text-gray-900">Riepilogo di questo mese</h2>
 
       {bolletteOrfaneCount > 0 && (
         <Card className="p-4 bg-amber-50 border-amber-200" onClick={() => onNavigate('bollette-orfane')}>

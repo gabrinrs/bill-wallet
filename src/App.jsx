@@ -5,6 +5,7 @@ import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, 
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import Auth from './components/Auth'
 import Onboarding from './components/Onboarding'
+import LandingPage from './components/LandingPage'
 import {
   Home, Plus, Bell, ChevronLeft, ChevronRight, Upload, Check,
   AlertTriangle, Zap, Flame, Droplets, Phone, Wifi, Shield, Package,
@@ -3465,6 +3466,7 @@ export default function App() {
   const [session, setSession] = useState(null)
   const [isRecovery, setIsRecovery] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [showAuth, setShowAuth] = useState(false)
   const [profile, setProfile] = useState(null)
   const [contratti, setContratti] = useState([])
   const [bollette, setBollette] = useState([])
@@ -3605,7 +3607,8 @@ export default function App() {
 
   if (loading) return <SplashScreen />
   if (isRecovery) return <ResetPassword onDone={() => setIsRecovery(false)} />
-  if (!session) return <Auth />
+  if (!session && showAuth) return <Auth onBack={() => setShowAuth(false)} />
+  if (!session) return <LandingPage onGoToAuth={() => setShowAuth(true)} />
   if (showOnboarding) return (
     <Onboarding
       emailDedicata={profile?.email_dedicata}

@@ -11,7 +11,7 @@ import {
   TrendingUp, CalendarDays, Repeat, Tv, CreditCard, Landmark, PenLine, LogOut, Loader2,
   Trash2, ExternalLink, Pencil, Mail, Copy, User, Inbox, FileText, HelpCircle, MessageCircle,
   Menu, X, ChevronDown, Search,
-  ShoppingCart, Car, Gamepad2, Heart, Shirt, UtensilsCrossed, MoreHorizontal, Wallet,
+  ShoppingCart, Car, Gamepad2, Heart, Shirt, UtensilsCrossed, MoreHorizontal, Wallet, Camera,
   Banknote, Gift, RotateCcw
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
@@ -1744,9 +1744,77 @@ function FormSpesa({ onSave, onBack, dataPrecompilata }) {
   const [descrizione, setDescrizione] = useState('')
   const [data, setData] = useState(dataPrecompilata || oggi)
   const [saving, setSaving] = useState(false)
+  const [scanning, setScanning] = useState(false)
+  const [scanError, setScanError] = useState('')
   const importoRef = useRef(null)
+  const fileInputRef = useRef(null)
 
-  useEffect(() => { importoRef.current?.focus() }, [])
+  useEffect(() => { if (!scanning) importoRef.current?.focus() }, [scanning])
+
+  const handleScanScontrino = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setScanning(true)
+    setScanError('')
+
+    try {
+      // Comprimi l'immagine prima dell'invio
+      const compressedBase64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = (ev) => {
+          const img = new Image()
+          img.onload = () => {
+            const canvas = document.createElement('canvas')
+            const MAX_SIZE = 1024
+            let w = img.width, h = img.height
+            if (w > h && w > MAX_SIZE) { h = h * MAX_SIZE / w; w = MAX_SIZE }
+            else if (h > MAX_SIZE) { w = w * MAX_SIZE / h; h = MAX_SIZE }
+            canvas.width = w
+            canvas.height = h
+            const ctx = canvas.getContext('2d')
+            ctx.drawImage(img, 0, 0, w, h)
+            resolve(canvas.toDataURL('image/jpeg', 0.8))
+          }
+          img.onerror = reject
+          img.src = ev.target.result
+        }
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+
+      // Invia alla Edge Function
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('https://iimzetvymamadclfblgy.supabase.co/functions/v1/ocr-scontrino', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ image_base64: compressedBase64 }),
+      })
+
+      const result = await res.json()
+
+      if (!res.ok) {
+        throw new Error(result.error || 'Errore nella scansione')
+      }
+
+      // Pre-compila i campi
+      if (result.importo) setImporto(String(result.importo))
+      if (result.categoria_suggerita) setCategoria(result.categoria_suggerita)
+      if (result.descrizione_suggerita) setDescrizione(result.descrizione_suggerita)
+      if (result.data) setData(result.data)
+
+    } catch (err) {
+      console.error('Errore OCR:', err)
+      setScanError('Non sono riuscito a leggere lo scontrino. Riprova con una foto più nitida.')
+    }
+
+    setScanning(false)
+    // Reset file input per permettere nuovo scan
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   const handleSave = async () => {
     if (!importo || !categoria) return
@@ -1766,6 +1834,40 @@ function FormSpesa({ onSave, onBack, dataPrecompilata }) {
         <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={20} /></button>
         <h1 className="text-xl font-bold text-gray-900">Registra spesa</h1>
       </div>
+
+      {/* Bottone Scansiona Scontrino */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleScanScontrino}
+        className="hidden"
+      />
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        disabled={scanning}
+        className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 shadow-sm disabled:opacity-60"
+      >
+        {scanning ? (
+          <>
+            <Loader2 size={20} className="animate-spin" />
+            Analizzo lo scontrino...
+          </>
+        ) : (
+          <>
+            <Camera size={20} />
+            Scansiona scontrino
+          </>
+        )}
+      </button>
+
+      {scanError && (
+        <div className="flex items-start gap-2 p-3 bg-red-50 text-red-700 text-sm rounded-xl">
+          <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />
+          {scanError}
+        </div>
+      )}
 
       <Card className="p-5 space-y-4">
         <div>

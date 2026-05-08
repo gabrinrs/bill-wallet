@@ -100,7 +100,7 @@ export default function LandingPage({ onGoToAuth }) {
     <div className="min-h-screen bg-white">
 
       {/* ── NAVBAR ── */}
-      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100">
+      <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="max-w-5xl mx-auto px-5 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(145deg, #00897B, #00695C)' }}>

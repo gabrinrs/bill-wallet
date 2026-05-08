@@ -1869,7 +1869,7 @@ function FormSpesa({ onSave, onBack, dataPrecompilata }) {
         </div>
       )}
 
-      <Card className="p-5 space-y-4">
+      <Card className="p-5 space-y-4 overflow-hidden">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Importo</label>
           <div className="relative">
@@ -1921,7 +1921,7 @@ function FormSpesa({ onSave, onBack, dataPrecompilata }) {
           />
         </div>
 
-        <div>
+        <div className="pb-1">
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Data</label>
           <input
             type="date"
@@ -2090,7 +2090,7 @@ function FormEntrata({ onSave, onBack, dataPrecompilata }) {
         <h1 className="text-xl font-bold text-gray-900">Registra entrata</h1>
       </div>
 
-      <Card className="p-5 space-y-4">
+      <Card className="p-5 space-y-4 overflow-hidden">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Importo</label>
           <div className="relative">
@@ -2142,7 +2142,7 @@ function FormEntrata({ onSave, onBack, dataPrecompilata }) {
           />
         </div>
 
-        <div>
+        <div className="pb-1">
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Data</label>
           <input
             type="date"

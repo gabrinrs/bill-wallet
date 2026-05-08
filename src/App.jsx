@@ -1927,8 +1927,8 @@ function FormSpesa({ onSave, onBack, dataPrecompilata }) {
             type="date"
             value={data}
             onChange={e => setData(e.target.value)}
-            className="px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none"
-            style={{ display: 'block', maxWidth: '100%', boxSizing: 'border-box' }}
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none"
+            style={{ WebkitAppearance: 'none', MozAppearance: 'none', appearance: 'none' }}
           />
         </div>
       </Card>
@@ -2149,8 +2149,8 @@ function FormEntrata({ onSave, onBack, dataPrecompilata }) {
             type="date"
             value={data}
             onChange={e => setData(e.target.value)}
-            className="px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-            style={{ display: 'block', maxWidth: '100%', boxSizing: 'border-box' }}
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+            style={{ WebkitAppearance: 'none', MozAppearance: 'none', appearance: 'none' }}
           />
         </div>
       </Card>

@@ -1921,13 +1921,14 @@ function FormSpesa({ onSave, onBack, dataPrecompilata }) {
           />
         </div>
 
-        <div className="pb-1">
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Data</label>
           <input
             type="date"
             value={data}
             onChange={e => setData(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none"
+            className="px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none"
+            style={{ display: 'block', maxWidth: '100%', boxSizing: 'border-box' }}
           />
         </div>
       </Card>
@@ -2142,13 +2143,14 @@ function FormEntrata({ onSave, onBack, dataPrecompilata }) {
           />
         </div>
 
-        <div className="pb-1">
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Data</label>
           <input
             type="date"
             value={data}
             onChange={e => setData(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+            className="px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+            style={{ display: 'block', maxWidth: '100%', boxSizing: 'border-box' }}
           />
         </div>
       </Card>

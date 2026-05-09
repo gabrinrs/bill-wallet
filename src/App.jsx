@@ -14,7 +14,7 @@ import {
   Trash2, ExternalLink, Pencil, Mail, Copy, User, Inbox, FileText, HelpCircle, MessageCircle,
   Menu, X, ChevronDown, Search,
   ShoppingCart, Car, Gamepad2, Heart, Shirt, UtensilsCrossed, MoreHorizontal, Wallet, Camera,
-  Banknote, Gift, RotateCcw, Building2, Sun, MapPin
+  Banknote, Gift, RotateCcw, Building2, Sun, MapPin, Warehouse
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -27,8 +27,14 @@ const ICONE_ABITAZIONE = [
   { id: 'MapPin', icon: MapPin, label: 'Altro' },
 ]
 
+const ICONE_ALTRO = [
+  { id: 'Car', icon: Car, label: 'Garage/Box' },
+  { id: 'ShoppingCart', icon: ShoppingCart, label: 'Negozio' },
+  { id: 'Warehouse', icon: Warehouse, label: 'Magazzino' },
+]
+
 function getIconaAbitazione(iconaId) {
-  return ICONE_ABITAZIONE.find(i => i.id === iconaId) || ICONE_ABITAZIONE[0]
+  return ICONE_ABITAZIONE.find(i => i.id === iconaId) || ICONE_ALTRO.find(i => i.id === iconaId) || ICONE_ABITAZIONE[0]
 }
 
 // ============================================================
@@ -3462,15 +3468,19 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Icona</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Tipologia</label>
               <div className="flex gap-2">
                 {ICONE_ABITAZIONE.map(ic => {
                   const IcIcon = ic.icon
+                  const isAltroCategory = ic.id === 'MapPin'
+                  const isSelectedDirect = abitazioneIcona === ic.id
+                  const isAltroSubSelected = isAltroCategory && ICONE_ALTRO.some(a => a.id === abitazioneIcona)
+                  const isActive = isSelectedDirect || isAltroSubSelected
                   return (
                     <button
                       key={ic.id}
                       onClick={() => setAbitazioneIcona(ic.id)}
-                      className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-xs border transition-colors ${abitazioneIcona === ic.id ? 'bg-bolly-100 border-bolly-300 text-bolly-700' : 'border-gray-200 text-gray-500 bg-white'}`}
+                      className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-xs border transition-colors ${isActive ? 'bg-bolly-100 border-bolly-300 text-bolly-700' : 'border-gray-200 text-gray-500 bg-white'}`}
                     >
                       <IcIcon size={18} />
                       <span className="leading-tight">{ic.label}</span>
@@ -3478,6 +3488,30 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
                   )
                 })}
               </div>
+              {(abitazioneIcona === 'MapPin' || ICONE_ALTRO.some(a => a.id === abitazioneIcona)) && (
+                <div className="flex gap-2 mt-2">
+                  {ICONE_ALTRO.map(ic => {
+                    const IcIcon = ic.icon
+                    return (
+                      <button
+                        key={ic.id}
+                        onClick={() => setAbitazioneIcona(ic.id)}
+                        className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-xs border transition-colors ${abitazioneIcona === ic.id ? 'bg-bolly-100 border-bolly-300 text-bolly-700' : 'border-gray-200 text-gray-500 bg-white'}`}
+                      >
+                        <IcIcon size={18} />
+                        <span className="leading-tight">{ic.label}</span>
+                      </button>
+                    )
+                  })}
+                  <button
+                    onClick={() => setAbitazioneIcona('MapPin')}
+                    className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-xs border transition-colors ${abitazioneIcona === 'MapPin' ? 'bg-bolly-100 border-bolly-300 text-bolly-700' : 'border-gray-200 text-gray-500 bg-white'}`}
+                  >
+                    <MapPin size={18} />
+                    <span className="leading-tight">Generico</span>
+                  </button>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Indirizzo (opzionale)</label>

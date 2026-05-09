@@ -10,10 +10,13 @@ export const formatPeriodo = (d) =>
 export const giorniDa = (data) =>
   Math.ceil((new Date(data) - new Date()) / (1000 * 60 * 60 * 24))
 
-export const getStatoBolletta = (bolletta) => {
+export const getStatoBolletta = (bolletta, contratto) => {
   if (bolletta.pagata) return 'pagata'
-  // RID con scadenza passata → già addebitata dalla banca
-  if (bolletta.metodo_pagamento === 'rid' && bolletta.scadenza && giorniDa(bolletta.scadenza) < 0) return 'pagata'
+  // Determina se è domiciliata: dal metodo_pagamento della bolletta, oppure dal contratto padre
+  const c = contratto || bolletta.contratto
+  const isDomiciliata = bolletta.metodo_pagamento === 'rid' || c?.metodo_pagamento === 'rid' || c?.domiciliazione
+  // Domiciliata con scadenza passata → già addebitata dalla banca
+  if (isDomiciliata && bolletta.scadenza && giorniDa(bolletta.scadenza) < 0) return 'pagata'
   const giorni = giorniDa(bolletta.scadenza)
   if (giorni < 0) return 'scaduta'
   if (giorni <= 3) return 'in_scadenza'

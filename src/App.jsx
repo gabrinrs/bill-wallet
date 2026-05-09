@@ -3,6 +3,7 @@ import { supabase } from './lib/supabase'
 import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione } from './lib/database'
 import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, CATEGORIE_SPESE, getCategoriaSpesa, CATEGORIE_ENTRATE, getCategoriaEntrata } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
+import { subscribeToPush, isPushSubscribed } from './lib/pushNotifications'
 import Auth from './components/Auth'
 import Onboarding from './components/Onboarding'
 import LandingPage from './components/LandingPage'
@@ -371,7 +372,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
   const bolletteProssime = useMemo(() => {
     return bolletteFiltrate
       .filter(b => !b.pagata && b.stato_elaborazione !== 'errore_parsing' && b.stato_elaborazione !== 'orfana' && b.stato_elaborazione !== 'incompleta' && b.stato_elaborazione !== 'comunicazione')
-      .map(b => ({ ...b, contratto: contrattiFiltrati.find(c => c.id === b.contratto_id), stato: getStatoBolletta(b) }))
+      .map(b => { const ct = contrattiFiltrati.find(c => c.id === b.contratto_id); return { ...b, contratto: ct, stato: getStatoBolletta(b, ct) } })
       .filter(b => b.contratto)
       .filter(b => b.scadenza)
       .sort((a, b) => new Date(a.scadenza) - new Date(b.scadenza))
@@ -937,7 +938,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
         </div>
         <div className="space-y-2">
           {bolletteOrdinate.map(b => {
-            const stato = getStatoBolletta(b)
+            const stato = getStatoBolletta(b, contratto)
             return (
               <Card key={b.id} className="p-4">
                 <div className="flex items-center justify-between">
@@ -3219,6 +3220,8 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
   const [editingNome, setEditingNome] = useState(false)
   const [nomeValue, setNomeValue] = useState(profile?.nome || '')
   const [savingNome, setSavingNome] = useState(false)
+  const [pushActive, setPushActive] = useState(null)
+  const [pushLoading, setPushLoading] = useState(false)
   const [showAbitazioneForm, setShowAbitazioneForm] = useState(false)
   const [editingAbitazione, setEditingAbitazione] = useState(null)
   const [abitazioneNome, setAbitazioneNome] = useState('')
@@ -3291,6 +3294,22 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
     } catch (e) {
       console.error('Errore copia:', e)
     }
+  }
+
+  // Controlla stato notifiche push
+  useEffect(() => {
+    isPushSubscribed().then(active => setPushActive(active))
+  }, [])
+
+  const handleActivatePush = async () => {
+    setPushLoading(true)
+    try {
+      const success = await subscribeToPush(session.user.id)
+      setPushActive(success)
+    } catch (e) {
+      console.error('Errore attivazione push:', e)
+    }
+    setPushLoading(false)
   }
 
   const faqItems = [
@@ -3498,6 +3517,44 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
                 <button onClick={() => handleDeleteAbitazione(deletingAbitazione.id)} className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-medium text-sm">Elimina</button>
               </div>
             </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Notifiche push */}
+      <Card className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Bell size={18} className="text-bolly-500" />
+          <h3 className="font-semibold text-gray-900 text-sm">Notifiche push</h3>
+        </div>
+        {pushActive === null ? (
+          <div className="flex items-center gap-2 py-2">
+            <Loader2 size={16} className="animate-spin text-gray-400" />
+            <span className="text-sm text-gray-400">Verifica in corso...</span>
+          </div>
+        ) : pushActive ? (
+          <div className="flex items-center gap-2 py-2">
+            <div className="w-2 h-2 rounded-full bg-green-500" />
+            <span className="text-sm text-green-700">Notifiche attive su questo dispositivo</span>
+          </div>
+        ) : (
+          <div>
+            <p className="text-sm text-gray-500 mb-3">Le notifiche non sono attive su questo dispositivo. Attivale per ricevere avvisi sulle bollette in scadenza.</p>
+            <button
+              onClick={handleActivatePush}
+              disabled={pushLoading}
+              className="w-full py-2.5 rounded-xl text-sm font-medium text-white disabled:opacity-50"
+              style={{ background: 'linear-gradient(145deg, #00897B, #00695C)' }}
+            >
+              {pushLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 size={16} className="animate-spin" />
+                  Attivazione...
+                </span>
+              ) : (
+                'Attiva notifiche'
+              )}
+            </button>
           </div>
         )}
       </Card>

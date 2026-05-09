@@ -806,6 +806,10 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
   const chartData = useMemo(() =>
     [...bollette].filter(b => b.periodo).sort((a, b) => new Date(a.periodo) - new Date(b.periodo)).map(b => ({ periodo: formatPeriodo(b.periodo), importo: Number(b.importo) }))
   , [bollette])
+  const chartDataConsumi = useMemo(() =>
+    [...bollette].filter(b => b.periodo && b.consumo).sort((a, b) => new Date(a.periodo) - new Date(b.periodo)).map(b => ({ periodo: formatPeriodo(b.periodo), consumo: Number(b.consumo), unita: b.unita_misura }))
+  , [bollette])
+  const unitaConsumi = chartDataConsumi.length > 0 ? chartDataConsumi[0].unita : ''
   const cat = getCategoria(contratto.categoria)
   const categorieList = Array.isArray(contratto.categorie) && contratto.categorie.length > 0
     ? contratto.categorie
@@ -911,6 +915,21 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
         </Card>
       )}
 
+      {chartDataConsumi.length >= 2 && (
+        <Card className="p-4">
+          <h3 className="font-semibold text-gray-900 mb-3">Andamento consumi ({unitaConsumi})</h3>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={chartDataConsumi}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="periodo" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${v}`} />
+              <Tooltip formatter={v => [`${Number(v).toLocaleString('it-IT')} ${unitaConsumi}`, 'Consumo']} />
+              <Line type="monotone" dataKey="consumo" stroke="#3B82F6" strokeWidth={2.5} dot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
+
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-gray-900">Storico bollette</h3>
@@ -923,7 +942,12 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
               <Card key={b.id} className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-gray-900">{formatEuro(b.importo)}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-gray-900">{formatEuro(b.importo)}</p>
+                      {b.consumo && b.unita_misura && (
+                        <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{Number(b.consumo).toLocaleString('it-IT')} {b.unita_misura}</span>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-500">{b.periodo ? `${formatPeriodo(b.periodo)}${b.periodo_fine && b.periodo_fine !== b.periodo ? ' → ' + formatPeriodo(b.periodo_fine) : ''} · ` : ''}Scade {b.scadenza ? formatData(b.scadenza) : '—'}</p>
                     <div className="mt-1"><FonteBadge fonte={b.fonte} /></div>
                   </div>
@@ -1348,6 +1372,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
   const [form, setForm] = useState({
     contratto_id: contrattoId || (contratti[0]?.id || ''),
     importo: '', periodo: '', periodo_fine: '', emissione: '', scadenza: '', descrizione_libera: '', metodo_pagamento: null,
+    consumo: '', unita_misura: '',
   })
   const update = (f, v) => setForm(p => ({ ...p, [f]: v }))
 
@@ -1395,6 +1420,8 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
         scadenza: form.scadenza,
         metodo_pagamento: form.metodo_pagamento,
         stato_elaborazione: 'ok',
+        consumo: form.consumo ? parseFloat(form.consumo) : null,
+        unita_misura: form.consumo && form.unita_misura ? form.unita_misura : null,
       }
       // RID con scadenza passata → già addebitata automaticamente
       if (form.metodo_pagamento === 'rid' && form.scadenza && new Date(form.scadenza) < new Date()) {
@@ -1576,6 +1603,21 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
                       {m.l}
                     </button>
                   ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Consumo (opzionale)</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="number" step="0.01" value={form.consumo} onChange={e => update('consumo', e.target.value)} placeholder="es. 245"
+                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none" />
+                  <div className="flex gap-1">
+                    {['kWh', 'Smc', 'mc'].map(u => (
+                      <button key={u} onClick={() => update('unita_misura', u)}
+                        className={`flex-1 py-2 rounded-xl text-xs font-medium border transition-colors ${form.unita_misura === u ? 'bg-blue-50 border-blue-300 text-blue-600' : 'border-gray-200 text-gray-500'}`}>
+                        {u}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -3082,6 +3124,9 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-sm font-bold text-gray-900">{b.importo ? formatEuro(b.importo) : '—'}</p>
+                        {b.consumo && b.unita_misura && (
+                          <p className="text-xs font-medium text-blue-600 mt-0.5">{Number(b.consumo).toLocaleString('it-IT')} {b.unita_misura}</p>
+                        )}
                         {formatDataRicezione(b) && <p className="text-xs text-gray-400 mt-0.5">{formatDataRicezione(b)}</p>}
                       </div>
                     </div>

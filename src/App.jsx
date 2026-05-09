@@ -14,7 +14,7 @@ import {
   Trash2, ExternalLink, Pencil, Mail, Copy, User, Inbox, FileText, HelpCircle, MessageCircle,
   Menu, X, ChevronDown, Search,
   ShoppingCart, Car, Gamepad2, Heart, Shirt, UtensilsCrossed, MoreHorizontal, Wallet, Camera,
-  Banknote, Gift, RotateCcw, Building2, Umbrella, MapPin, TreePine
+  Banknote, Gift, RotateCcw, Building2, Sun, MapPin
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -22,9 +22,8 @@ const IconMap = { Zap, Flame, Droplets, Phone, Wifi, Shield, Package, Tv, Repeat
 
 const ICONE_ABITAZIONE = [
   { id: 'Home', icon: Home, label: 'Casa' },
-  { id: 'Building2', icon: Building2, label: 'Appartamento' },
-  { id: 'Umbrella', icon: Umbrella, label: 'Casa vacanze' },
-  { id: 'TreePine', icon: TreePine, label: 'Casa campagna' },
+  { id: 'Building2', icon: Building2, label: 'Ufficio' },
+  { id: 'Sun', icon: Sun, label: 'Casa vacanze' },
   { id: 'MapPin', icon: MapPin, label: 'Altro' },
 ]
 

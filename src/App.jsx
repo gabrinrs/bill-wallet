@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa } from './lib/database'
+import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione } from './lib/database'
 import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, CATEGORIE_SPESE, getCategoriaSpesa, CATEGORIE_ENTRATE, getCategoriaEntrata } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import Auth from './components/Auth'
@@ -13,11 +13,23 @@ import {
   Trash2, ExternalLink, Pencil, Mail, Copy, User, Inbox, FileText, HelpCircle, MessageCircle,
   Menu, X, ChevronDown, Search,
   ShoppingCart, Car, Gamepad2, Heart, Shirt, UtensilsCrossed, MoreHorizontal, Wallet, Camera,
-  Banknote, Gift, RotateCcw
+  Banknote, Gift, RotateCcw, Building2, Umbrella, MapPin, TreePine
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 const IconMap = { Zap, Flame, Droplets, Phone, Wifi, Shield, Package, Tv, Repeat, CreditCard, Landmark, ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
+
+const ICONE_ABITAZIONE = [
+  { id: 'Home', icon: Home, label: 'Casa' },
+  { id: 'Building2', icon: Building2, label: 'Appartamento' },
+  { id: 'Umbrella', icon: Umbrella, label: 'Casa vacanze' },
+  { id: 'TreePine', icon: TreePine, label: 'Casa campagna' },
+  { id: 'MapPin', icon: MapPin, label: 'Altro' },
+]
+
+function getIconaAbitazione(iconaId) {
+  return ICONE_ABITAZIONE.find(i => i.id === iconaId) || ICONE_ABITAZIONE[0]
+}
 
 // ============================================================
 // SHARED COMPONENTS
@@ -336,19 +348,34 @@ function SwipeableSpesa({ isOpen, onOpen, onClose, onEdit, onDelete, children })
 // DASHBOARD
 // ============================================================
 
-function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto, onDeleteSpesa, onEditSpesa }) {
+function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto, onDeleteSpesa, onEditSpesa, abitazioni, filtroAbitazione, onSetFiltroAbitazione }) {
   const [cardSwipedId, setCardSwipedId] = useState(null)
   const [spesaSwipedId, setSpesaSwipedId] = useState(null)
   const [deletingContratto, setDeletingContratto] = useState(null)
   const [deletingSpesa, setDeletingSpesa] = useState(null)
+
+  // Filtra contratti per abitazione selezionata
+  const contrattiFiltrati = useMemo(() => {
+    if (!filtroAbitazione) return contratti
+    if (filtroAbitazione === '__nessuna__') return contratti.filter(c => !c.abitazione_id)
+    return contratti.filter(c => c.abitazione_id === filtroAbitazione)
+  }, [contratti, filtroAbitazione])
+
+  // Filtra bollette in base ai contratti filtrati
+  const contrattiFiltratiIds = useMemo(() => new Set(contrattiFiltrati.map(c => c.id)), [contrattiFiltrati])
+  const bolletteFiltrate = useMemo(() => {
+    if (!filtroAbitazione) return bollette
+    return bollette.filter(b => contrattiFiltratiIds.has(b.contratto_id))
+  }, [bollette, filtroAbitazione, contrattiFiltratiIds])
+
   const bolletteProssime = useMemo(() => {
-    return bollette
+    return bolletteFiltrate
       .filter(b => !b.pagata && b.stato_elaborazione !== 'errore_parsing' && b.stato_elaborazione !== 'orfana' && b.stato_elaborazione !== 'incompleta' && b.stato_elaborazione !== 'comunicazione')
-      .map(b => ({ ...b, contratto: contratti.find(c => c.id === b.contratto_id), stato: getStatoBolletta(b) }))
+      .map(b => ({ ...b, contratto: contrattiFiltrati.find(c => c.id === b.contratto_id), stato: getStatoBolletta(b) }))
       .filter(b => b.contratto)
       .filter(b => b.scadenza)
       .sort((a, b) => new Date(a.scadenza) - new Date(b.scadenza))
-  }, [bollette, contratti])
+  }, [bolletteFiltrate, contrattiFiltrati])
 
   const bolletteOrfaneCount = useMemo(() =>
     bollette.filter(b => ['errore_parsing', 'orfana', 'incompleta'].includes(b.stato_elaborazione)).length
@@ -356,14 +383,14 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
 
   const totaleMesseCorrente = useMemo(() => {
     const now = new Date()
-    return bollette
+    return bolletteFiltrate
       .filter(b => { const d = new Date(b.scadenza); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() })
       .reduce((s, b) => s + Number(b.importo), 0)
-  }, [bollette])
+  }, [bolletteFiltrate])
 
   const totaleDaPagare = useMemo(() =>
-    bollette.filter(b => !b.pagata).reduce((s, b) => s + Number(b.importo), 0)
-  , [bollette])
+    bolletteFiltrate.filter(b => !b.pagata).reduce((s, b) => s + Number(b.importo), 0)
+  , [bolletteFiltrate])
 
   const totaleSpeseMese = useMemo(() => {
     const now = new Date()
@@ -384,7 +411,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
   }, [spese])
 
   const totaleRicorrentiMensili = useMemo(() => {
-    return contratti.filter(c => c.ricorrente).reduce((sum, c) => {
+    return contrattiFiltrati.filter(c => c.ricorrente).reduce((sum, c) => {
       const imp = Number(c.importo_ricorrente) || 0
       if (c.frequenza === 'mensile') return sum + imp
       if (c.frequenza === 'bimestrale') return sum + imp / 2
@@ -393,12 +420,12 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
       if (c.frequenza === 'annuale') return sum + imp / 12
       return sum
     }, 0)
-  }, [contratti])
+  }, [contrattiFiltrati])
 
   const alertTrend = useMemo(() => {
     const alerts = []
-    contratti.forEach(c => {
-      const bolContratto = bollette
+    contrattiFiltrati.forEach(c => {
+      const bolContratto = bolletteFiltrate
         .filter(b => b.contratto_id === c.id && b.periodo && b.importo)
         .sort((a, b) => new Date(a.periodo) - new Date(b.periodo))
       if (bolContratto.length < 2) return
@@ -417,7 +444,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
       }
     })
     return alerts.sort((a, b) => Number(b.variazione) - Number(a.variazione))
-  }, [contratti, bollette])
+  }, [contrattiFiltrati, bolletteFiltrate])
 
   return (
     <div className="space-y-6 pb-4">
@@ -429,6 +456,38 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
           <Menu size={22} />
         </button>
       </div>
+
+      {/* Filtro abitazione */}
+      {abitazioni && abitazioni.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+          <button
+            onClick={() => onSetFiltroAbitazione(null)}
+            className={`flex-shrink-0 py-1.5 px-3 rounded-full text-xs font-medium border transition-colors ${!filtroAbitazione ? 'bg-bolly-500 border-bolly-500 text-white' : 'border-gray-200 text-gray-600 bg-white'}`}
+          >
+            Tutte
+          </button>
+          {abitazioni.map(ab => {
+            const iconInfo = getIconaAbitazione(ab.icona)
+            const AbIcon = iconInfo.icon
+            return (
+              <button
+                key={ab.id}
+                onClick={() => onSetFiltroAbitazione(filtroAbitazione === ab.id ? null : ab.id)}
+                className={`flex-shrink-0 py-1.5 px-3 rounded-full text-xs font-medium border transition-colors flex items-center gap-1.5 ${filtroAbitazione === ab.id ? 'bg-bolly-500 border-bolly-500 text-white' : 'border-gray-200 text-gray-600 bg-white'}`}
+              >
+                <AbIcon size={12} />
+                {ab.nome}
+              </button>
+            )
+          })}
+          <button
+            onClick={() => onSetFiltroAbitazione(filtroAbitazione === '__nessuna__' ? null : '__nessuna__')}
+            className={`flex-shrink-0 py-1.5 px-3 rounded-full text-xs font-medium border transition-colors ${filtroAbitazione === '__nessuna__' ? 'bg-bolly-500 border-bolly-500 text-white' : 'border-gray-200 text-gray-600 bg-white'}`}
+          >
+            Senza abitazione
+          </button>
+        </div>
+      )}
 
       <h2 className="text-lg font-semibold text-gray-900">Riepilogo di questo mese</h2>
 
@@ -576,9 +635,10 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
           <h2 className="text-lg font-semibold text-gray-900">I tuoi contratti</h2>
         </div>
         <div className="space-y-2">
-          {contratti.map(c => {
-            const nonPagate = bollette.filter(b => b.contratto_id === c.id && !b.pagata).length
-            const totalBollette = bollette.filter(b => b.contratto_id === c.id).length
+          {contrattiFiltrati.map(c => {
+            const nonPagate = bolletteFiltrate.filter(b => b.contratto_id === c.id && !b.pagata).length
+            const totalBollette = bolletteFiltrate.filter(b => b.contratto_id === c.id).length
+            const abitazione = abitazioni?.find(ab => ab.id === c.abitazione_id)
             return (
               <SwipeableContratto
                 key={c.id}
@@ -597,6 +657,12 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
                       {getCategoria(c.categoria).label} · {c.domiciliazione ? 'Domiciliato' : 'Pagamento manuale'}
                       {c.ricorrente && ` · ${formatEuro(c.importo_ricorrente)}/${{ mensile: 'mese', bimestrale: '2 mesi', trimestrale: 'trim.', semestrale: '6 mesi', annuale: 'anno' }[c.frequenza] || c.frequenza}`}
                     </p>
+                    {abitazione && !filtroAbitazione && (
+                      <span className="inline-flex items-center gap-1 mt-1 text-xs text-bolly-600 bg-bolly-50 px-2 py-0.5 rounded-full">
+                        {(() => { const AbIcon = getIconaAbitazione(abitazione.icona).icon; return <AbIcon size={10} /> })()}
+                        {abitazione.nome}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     {c.ricorrente && <Repeat size={14} className="text-pink-400" />}
@@ -607,10 +673,10 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
               </SwipeableContratto>
             )
           })}
-          {contratti.length === 0 && (
-            <Card className="p-8 text-center" onClick={() => onNavigate('aggiungi-contratto')}>
+          {contrattiFiltrati.length === 0 && (
+            <Card className="p-8 text-center" onClick={filtroAbitazione ? () => onSetFiltroAbitazione(null) : () => onNavigate('aggiungi-contratto')}>
               <Plus size={32} className="text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-400">Aggiungi il tuo primo contratto</p>
+              <p className="text-gray-400">{filtroAbitazione ? 'Nessun contratto per questa abitazione' : 'Aggiungi il tuo primo contratto'}</p>
             </Card>
           )}
         </div>
@@ -733,7 +799,7 @@ const MESI_BREVI = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott',
 // DETTAGLIO CONTRATTO
 // ============================================================
 
-function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, onTogglePagata, onDeleteContratto, onEditContratto, onDeleteBolletta }) {
+function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, onTogglePagata, onDeleteContratto, onEditContratto, onDeleteBolletta, abitazioni }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deletingBollettaId, setDeletingBollettaId] = useState(null)
   const bolletteOrdinate = useMemo(() => [...bollette].sort((a, b) => new Date(b.periodo) - new Date(a.periodo)), [bollette])
@@ -760,6 +826,17 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
               </span>
             ))}
             {contratto.codice && <span className="text-xs text-gray-500">· {contratto.codice}</span>}
+            {(() => {
+              const ab = abitazioni?.find(a => a.id === contratto.abitazione_id)
+              if (!ab) return null
+              const AbIcon = getIconaAbitazione(ab.icona).icon
+              return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-bolly-50 text-bolly-600 border border-bolly-100">
+                  <AbIcon size={10} />
+                  {ab.nome}
+                </span>
+              )
+            })()}
           </div>
         </div>
         <button onClick={() => onEditContratto(contratto)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400"><Pencil size={20} /></button>
@@ -893,7 +970,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
 // FORM CONTRATTO
 // ============================================================
 
-function FormContratto({ onSave, onBack, session, onRefresh, onGoHome }) {
+function FormContratto({ onSave, onBack, session, onRefresh, onGoHome, abitazioni }) {
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
   const [customMode, setCustomMode] = useState(false)
@@ -907,6 +984,7 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome }) {
     categoria: '', fornitore: '', intestatario: '', codice: '',
     metodo_ricezione: 'email', domiciliazione: false, data_inizio: '', data_fine: '', note: '',
     ricorrente: false, importo_ricorrente: '', frequenza: 'mensile', prossimo_addebito: '',
+    abitazione_id: null,
   })
   const update = (f, v) => setForm(p => ({ ...p, [f]: v }))
 
@@ -917,6 +995,7 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome }) {
       // Converte stringhe vuote in null per campi data opzionali
       if (!data.data_fine) data.data_fine = null
       if (!data.data_inizio) data.data_inizio = null
+      if (!data.abitazione_id) data.abitazione_id = null
       if (data.ricorrente) data.importo_ricorrente = parseFloat(data.importo_ricorrente)
       else { delete data.importo_ricorrente; delete data.frequenza; delete data.prossimo_addebito; delete data.data_fine }
       await onSave(data)
@@ -1213,6 +1292,35 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome }) {
             </div>
           )}
         </div>
+
+        {/* Abitazione */}
+        {abitazioni && abitazioni.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Abitazione</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => update('abitazione_id', null)}
+                className={`py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${!form.abitazione_id ? 'bg-bolly-50 border-bolly-300 text-bolly-600' : 'border-gray-200 text-gray-600'}`}
+              >
+                Nessuna
+              </button>
+              {abitazioni.map(ab => {
+                const iconInfo = getIconaAbitazione(ab.icona)
+                const AbIcon = iconInfo.icon
+                return (
+                  <button
+                    key={ab.id}
+                    onClick={() => update('abitazione_id', ab.id)}
+                    className={`py-2 px-3 rounded-xl text-sm font-medium border transition-colors flex items-center gap-1.5 ${form.abitazione_id === ab.id ? 'bg-bolly-50 border-bolly-300 text-bolly-600' : 'border-gray-200 text-gray-600'}`}
+                  >
+                    <AbIcon size={14} />
+                    {ab.nome}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
@@ -1546,7 +1654,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
 // FORM MODIFICA CONTRATTO
 // ============================================================
 
-function FormModificaContratto({ contratto, onSave, onBack }) {
+function FormModificaContratto({ contratto, onSave, onBack, abitazioni }) {
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     categoria: contratto.categoria || '',
@@ -1562,6 +1670,7 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
     importo_ricorrente: contratto.importo_ricorrente || '',
     frequenza: contratto.frequenza || 'mensile',
     prossimo_addebito: contratto.prossimo_addebito || '',
+    abitazione_id: contratto.abitazione_id || null,
   })
   const update = (f, v) => setForm(p => ({ ...p, [f]: v }))
 
@@ -1572,6 +1681,7 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
       // Converte stringhe vuote in null per campi data opzionali
       if (!data.data_fine) data.data_fine = null
       if (!data.data_inizio) data.data_inizio = null
+      if (!data.abitazione_id) data.abitazione_id = null
       if (data.ricorrente) data.importo_ricorrente = parseFloat(data.importo_ricorrente)
       else { delete data.importo_ricorrente; delete data.frequenza; delete data.prossimo_addebito; delete data.data_fine }
       await onSave(data)
@@ -1674,6 +1784,35 @@ function FormModificaContratto({ contratto, onSave, onBack }) {
             </div>
           )}
         </div>
+        {/* Abitazione */}
+        {abitazioni && abitazioni.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Abitazione</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => update('abitazione_id', null)}
+                className={`py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${!form.abitazione_id ? 'bg-bolly-50 border-bolly-300 text-bolly-600' : 'border-gray-200 text-gray-600'}`}
+              >
+                Nessuna
+              </button>
+              {abitazioni.map(ab => {
+                const iconInfo = getIconaAbitazione(ab.icona)
+                const AbIcon = iconInfo.icon
+                return (
+                  <button
+                    key={ab.id}
+                    onClick={() => update('abitazione_id', ab.id)}
+                    className={`py-2 px-3 rounded-xl text-sm font-medium border transition-colors flex items-center gap-1.5 ${form.abitazione_id === ab.id ? 'bg-bolly-50 border-bolly-300 text-bolly-600' : 'border-gray-200 text-gray-600'}`}
+                  >
+                    <AbIcon size={14} />
+                    {ab.nome}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
           <textarea value={form.note} onChange={e => update('note', e.target.value)} rows={2} placeholder="Opzionale"
@@ -3028,13 +3167,64 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
 // PROFILO
 // ============================================================
 
-function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdateProfile }) {
+function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdateProfile, abitazioni, onRefreshAbitazioni }) {
   const [copied, setCopied] = useState(false)
   const [faqSectionOpen, setFaqSectionOpen] = useState(false)
   const [faqOpen, setFaqOpen] = useState(null)
   const [editingNome, setEditingNome] = useState(false)
   const [nomeValue, setNomeValue] = useState(profile?.nome || '')
   const [savingNome, setSavingNome] = useState(false)
+  const [showAbitazioneForm, setShowAbitazioneForm] = useState(false)
+  const [editingAbitazione, setEditingAbitazione] = useState(null)
+  const [abitazioneNome, setAbitazioneNome] = useState('')
+  const [abitazioneIcona, setAbitazioneIcona] = useState('Home')
+  const [abitazioneIndirizzo, setAbitazioneIndirizzo] = useState('')
+  const [savingAbitazione, setSavingAbitazione] = useState(false)
+  const [deletingAbitazione, setDeletingAbitazione] = useState(null)
+
+  const handleSaveAbitazione = async () => {
+    const trimmed = abitazioneNome.trim()
+    if (!trimmed) return
+    setSavingAbitazione(true)
+    try {
+      if (editingAbitazione) {
+        await updateAbitazione(editingAbitazione.id, { nome: trimmed, icona: abitazioneIcona, indirizzo: abitazioneIndirizzo.trim() || null })
+      } else {
+        await createAbitazione({ nome: trimmed, icona: abitazioneIcona, indirizzo: abitazioneIndirizzo.trim() || null })
+      }
+      setShowAbitazioneForm(false)
+      setEditingAbitazione(null)
+      setAbitazioneNome('')
+      setAbitazioneIcona('Home')
+      setAbitazioneIndirizzo('')
+      if (onRefreshAbitazioni) await onRefreshAbitazioni()
+    } catch (e) { console.error('Errore salvataggio abitazione:', e) }
+    setSavingAbitazione(false)
+  }
+
+  const handleDeleteAbitazione = async (id) => {
+    try {
+      await deleteAbitazione(id)
+      setDeletingAbitazione(null)
+      if (onRefreshAbitazioni) await onRefreshAbitazioni()
+    } catch (e) { console.error('Errore eliminazione abitazione:', e) }
+  }
+
+  const openEditAbitazione = (ab) => {
+    setEditingAbitazione(ab)
+    setAbitazioneNome(ab.nome)
+    setAbitazioneIcona(ab.icona || 'Home')
+    setAbitazioneIndirizzo(ab.indirizzo || '')
+    setShowAbitazioneForm(true)
+  }
+
+  const openNewAbitazione = () => {
+    setEditingAbitazione(null)
+    setAbitazioneNome('')
+    setAbitazioneIcona('Home')
+    setAbitazioneIndirizzo('')
+    setShowAbitazioneForm(true)
+  }
 
   const handleSaveNome = async () => {
     const trimmed = nomeValue.trim()
@@ -3143,6 +3333,128 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
             )}
           </button>
         </div>
+      </Card>
+
+      {/* Le mie abitazioni */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Building2 size={18} className="text-bolly-500" />
+            <h3 className="font-semibold text-gray-900 text-sm">Le mie abitazioni</h3>
+          </div>
+          <button
+            onClick={openNewAbitazione}
+            className="p-1.5 rounded-lg bg-bolly-50 text-bolly-600 hover:bg-bolly-100"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+
+        {(!abitazioni || abitazioni.length === 0) && !showAbitazioneForm && (
+          <div className="text-center py-4">
+            <Home size={28} className="text-gray-300 mx-auto mb-2" />
+            <p className="text-sm text-gray-400">Nessuna abitazione aggiunta</p>
+            <p className="text-xs text-gray-300 mt-1">Aggiungi le tue case per organizzare i contratti</p>
+          </div>
+        )}
+
+        {abitazioni && abitazioni.length > 0 && (
+          <div className="space-y-2 mb-2">
+            {abitazioni.map(ab => {
+              const iconInfo = getIconaAbitazione(ab.icona)
+              const AbIcon = iconInfo.icon
+              return (
+                <div key={ab.id} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
+                  <div className="w-10 h-10 rounded-xl bg-bolly-100 flex items-center justify-center flex-shrink-0">
+                    <AbIcon size={20} className="text-bolly-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{ab.nome}</p>
+                    {ab.indirizzo && <p className="text-xs text-gray-400 truncate">{ab.indirizzo}</p>}
+                  </div>
+                  <button onClick={() => openEditAbitazione(ab)} className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-400">
+                    <Pencil size={14} />
+                  </button>
+                  <button onClick={() => setDeletingAbitazione(ab)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Form nuova/modifica abitazione */}
+        {showAbitazioneForm && (
+          <div className="mt-2 p-3 rounded-xl bg-bolly-50 border border-bolly-100 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-bolly-700">{editingAbitazione ? 'Modifica abitazione' : 'Nuova abitazione'}</p>
+              <button onClick={() => { setShowAbitazioneForm(false); setEditingAbitazione(null) }} className="p-1 rounded-lg hover:bg-bolly-100 text-bolly-400">
+                <X size={16} />
+              </button>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Nome *</label>
+              <input
+                type="text"
+                value={abitazioneNome}
+                onChange={e => setAbitazioneNome(e.target.value)}
+                placeholder="es. Casa Milano, Casa al mare..."
+                autoFocus
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Icona</label>
+              <div className="flex gap-2">
+                {ICONE_ABITAZIONE.map(ic => {
+                  const IcIcon = ic.icon
+                  return (
+                    <button
+                      key={ic.id}
+                      onClick={() => setAbitazioneIcona(ic.id)}
+                      className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-xs border transition-colors ${abitazioneIcona === ic.id ? 'bg-bolly-100 border-bolly-300 text-bolly-700' : 'border-gray-200 text-gray-500 bg-white'}`}
+                    >
+                      <IcIcon size={18} />
+                      <span className="leading-tight">{ic.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Indirizzo (opzionale)</label>
+              <input
+                type="text"
+                value={abitazioneIndirizzo}
+                onChange={e => setAbitazioneIndirizzo(e.target.value)}
+                placeholder="es. Via Roma 1, Milano"
+                className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none text-sm"
+              />
+            </div>
+            <button
+              onClick={handleSaveAbitazione}
+              disabled={savingAbitazione || !abitazioneNome.trim()}
+              className="w-full py-2.5 bg-bolly-500 text-white font-semibold rounded-xl text-sm disabled:opacity-40"
+            >
+              {savingAbitazione ? 'Salvataggio...' : editingAbitazione ? 'Salva modifiche' : 'Aggiungi abitazione'}
+            </button>
+          </div>
+        )}
+
+        {/* Modale conferma eliminazione abitazione */}
+        {deletingAbitazione && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-6" onClick={() => setDeletingAbitazione(null)}>
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Eliminare "{deletingAbitazione.nome}"?</h3>
+              <p className="text-sm text-gray-500 mb-4">I contratti associati a questa abitazione non verranno eliminati, ma perderanno l'associazione.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setDeletingAbitazione(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 font-medium text-gray-700 text-sm">Annulla</button>
+                <button onClick={() => handleDeleteAbitazione(deletingAbitazione.id)} className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-medium text-sm">Elimina</button>
+              </div>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Informazioni e supporto */}
@@ -3471,6 +3783,8 @@ export default function App() {
   const [contratti, setContratti] = useState([])
   const [bollette, setBollette] = useState([])
   const [spese, setSpese] = useState([])
+  const [abitazioni, setAbitazioni] = useState([])
+  const [filtroAbitazione, setFiltroAbitazione] = useState(null) // null = tutte
   const [screen, setScreen] = useState('dashboard')
   const [selectedContrattoId, setSelectedContrattoId] = useState(null)
   const [editingContratto, setEditingContratto] = useState(null)
@@ -3577,10 +3891,11 @@ export default function App() {
     try {
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
       setProfile(prof)
-      const [c, b, s] = await Promise.all([getContratti(), getBollette(), getSpese()])
+      const [c, b, s, ab] = await Promise.all([getContratti(), getBollette(), getSpese(), getAbitazioni()])
       setContratti(c)
       setBollette(b)
       setSpese(s)
+      setAbitazioni(ab)
     } catch (e) { console.error('Errore caricamento dati:', e) }
   }, [session])
 
@@ -3721,11 +4036,11 @@ export default function App() {
 
   const renderScreen = () => {
     switch (screen) {
-      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} />
+      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} abitazioni={abitazioni} filtroAbitazione={filtroAbitazione} onSetFiltroAbitazione={setFiltroAbitazione} />
       case 'dettaglio': {
         const c = contratti.find(x => x.id === selectedContrattoId)
         if (!c) { setScreen('dashboard'); return null }
-        return <DettaglioContratto contratto={c} bollette={bollette.filter(b => b.contratto_id === c.id)} onBack={() => setScreen('dashboard')} onAggiungiBolletta={() => setScreen('aggiungi-bolletta')} onTogglePagata={handleTogglePagata} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteBolletta={handleDeleteBolletta} />
+        return <DettaglioContratto contratto={c} bollette={bollette.filter(b => b.contratto_id === c.id)} onBack={() => setScreen('dashboard')} onAggiungiBolletta={() => setScreen('aggiungi-bolletta')} onTogglePagata={handleTogglePagata} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteBolletta={handleDeleteBolletta} abitazioni={abitazioni} />
       }
       case 'aggiungi':
         return (
@@ -3761,8 +4076,8 @@ export default function App() {
             </Card>
           </div>
         )
-      case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} />
-      case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} /> : null
+      case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} abitazioni={abitazioni} />
+      case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} abitazioni={abitazioni} /> : null
       case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} />
       case 'aggiungi-spesa': return <FormSpesa onSave={handleSaveSpesa} onBack={() => { setSpesaDataPrecompilata(null); setScreen('dashboard') }} dataPrecompilata={spesaDataPrecompilata} />
       case 'aggiungi-entrata': return <FormEntrata onSave={handleSaveSpesa} onBack={() => setScreen('dashboard')} />
@@ -3771,7 +4086,7 @@ export default function App() {
       case 'calendario': return <Calendario bollette={bollette} contratti={contratti} spese={spese} onSelectContratto={handleSelectContratto} onAggiungiSpesa={(data) => { setScreen('aggiungi-spesa'); setSpesaDataPrecompilata(data) }} />
       case 'bollette': return <StoricoBollette bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />
       case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} />
-      case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} />
+      case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} abitazioni={abitazioni} onRefreshAbitazioni={async () => { const ab = await getAbitazioni(); setAbitazioni(ab) }} />
       case 'termini': return <TerminiCondizioni onBack={() => setScreen('menu')} />
       case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} />
       default: return null

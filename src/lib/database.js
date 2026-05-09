@@ -1,6 +1,47 @@
 import { supabase } from './supabase'
 
 // ============================================================
+// ABITAZIONI
+// ============================================================
+
+export async function getAbitazioni() {
+  const { data, error } = await supabase
+    .from('abitazioni')
+    .select('*')
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return data
+}
+
+export async function createAbitazione(abitazione) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('abitazioni')
+    .insert({ ...abitazione, user_id: user.id })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateAbitazione(id, updates) {
+  const { data, error } = await supabase
+    .from('abitazioni')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteAbitazione(id) {
+  // I contratti collegati avranno abitazione_id = null (ON DELETE SET NULL)
+  const { error } = await supabase.from('abitazioni').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ============================================================
 // PROFILO
 // ============================================================
 

@@ -388,6 +388,79 @@ export async function deleteContattoEsterno(id) {
   if (error) throw error
 }
 
+// ============================================================
+// SPLIT SPESE
+// ============================================================
+
+// Crea uno split con partecipanti
+export async function createSplit(split, partecipanti) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: splitData, error: splitError } = await supabase
+    .from('splits')
+    .insert({ ...split, user_id: user.id })
+    .select()
+    .single()
+  if (splitError) throw splitError
+
+  // Inserisci partecipanti
+  const partecipantiData = partecipanti.map(p => ({
+    split_id: splitData.id,
+    user_id: p.user_id || null,
+    contatto_esterno_id: p.contatto_esterno_id || null,
+    nome: p.nome,
+    importo: p.importo,
+  }))
+  const { error: partError } = await supabase
+    .from('split_partecipanti')
+    .insert(partecipantiData)
+  if (partError) throw partError
+
+  return splitData
+}
+
+// Recupera tutti gli split creati dall'utente con i partecipanti
+export async function getSplitsByUser() {
+  const { data, error } = await supabase
+    .from('splits')
+    .select('*, split_partecipanti(*)')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+// Recupera lo split collegato a una spesa o bolletta specifica
+export async function getSplitByRiferimento(tipo, riferimentoId) {
+  const { data, error } = await supabase
+    .from('splits')
+    .select('*, split_partecipanti(*)')
+    .eq('tipo', tipo)
+    .eq('riferimento_id', riferimentoId)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+// Segna un partecipante come pagato/non pagato
+export async function togglePartecipantePagato(partecipanteId, pagato) {
+  const { data, error } = await supabase
+    .from('split_partecipanti')
+    .update({
+      pagato,
+      pagato_at: pagato ? new Date().toISOString() : null,
+    })
+    .eq('id', partecipanteId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Elimina uno split (cascade elimina i partecipanti)
+export async function deleteSplit(splitId) {
+  const { error } = await supabase.from('splits').delete().eq('id', splitId)
+  if (error) throw error
+}
+
 // Aggiorna il profilo con il numero di telefono
 export async function updateProfileTelefono(telefono) {
   const { data: { user } } = await supabase.auth.getUser()

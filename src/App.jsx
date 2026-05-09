@@ -358,7 +358,6 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
   // Filtra contratti per abitazione selezionata
   const contrattiFiltrati = useMemo(() => {
     if (!filtroAbitazione) return contratti
-    if (filtroAbitazione === '__nessuna__') return contratti.filter(c => !c.abitazione_id)
     return contratti.filter(c => c.abitazione_id === filtroAbitazione)
   }, [contratti, filtroAbitazione])
 
@@ -482,12 +481,6 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
               </button>
             )
           })}
-          <button
-            onClick={() => onSetFiltroAbitazione(filtroAbitazione === '__nessuna__' ? null : '__nessuna__')}
-            className={`flex-shrink-0 py-1.5 px-3 rounded-full text-xs font-medium border transition-colors ${filtroAbitazione === '__nessuna__' ? 'bg-bolly-500 border-bolly-500 text-white' : 'border-gray-200 text-gray-600 bg-white'}`}
-          >
-            Senza abitazione
-          </button>
         </div>
       )}
 

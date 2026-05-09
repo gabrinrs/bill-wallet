@@ -375,6 +375,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
       .map(b => { const ct = contrattiFiltrati.find(c => c.id === b.contratto_id); return { ...b, contratto: ct, stato: getStatoBolletta(b, ct) } })
       .filter(b => b.contratto)
       .filter(b => b.scadenza)
+      .filter(b => b.stato === 'da_pagare' || b.stato === 'in_scadenza')
       .sort((a, b) => new Date(a.scadenza) - new Date(b.scadenza))
   }, [bolletteFiltrate, contrattiFiltrati])
 

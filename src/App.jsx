@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione } from './lib/database'
+import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione, getAmici, getRichiesteRicevute, getRichiesteInviate, cercaUtenteBolly, inviaRichiestaAmicizia, accettaAmicizia, rifiutaAmicizia, rimuoviAmico, getContattiEsterni, addContattoEsterno, deleteContattoEsterno } from './lib/database'
 import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, CATEGORIE_SPESE, getCategoriaSpesa, CATEGORIE_ENTRATE, getCategoriaEntrata } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import { subscribeToPush, isPushSubscribed } from './lib/pushNotifications'
@@ -14,7 +14,7 @@ import {
   Trash2, ExternalLink, Pencil, Mail, Copy, User, Inbox, FileText, HelpCircle, MessageCircle,
   Menu, X, ChevronDown, Search,
   ShoppingCart, Car, Gamepad2, Heart, Shirt, UtensilsCrossed, MoreHorizontal, Wallet, Camera,
-  Banknote, Gift, RotateCcw, Building2, Sun, MapPin, Warehouse
+  Banknote, Gift, RotateCcw, Building2, Sun, MapPin, Warehouse, Users, UserPlus, UserCheck, UserX, Clock, Send
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -3209,10 +3209,448 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
 // ============================================================
 
 // ============================================================
+// AMICI
+// ============================================================
+
+function SchermataAmici({ onBack, session }) {
+  const [amici, setAmici] = useState([])
+  const [richiesteRicevute, setRichiesteRicevute] = useState([])
+  const [richiesteInviate, setRichiesteInviate] = useState([])
+  const [contattiEsterni, setContattiEsterni] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showAggiungi, setShowAggiungi] = useState(false)
+  const [searchEmail, setSearchEmail] = useState('')
+  const [searchResult, setSearchResult] = useState(null) // null = non cercato, 'not_found', 'already_friend', 'already_sent', oggetto utente
+  const [searching, setSearching] = useState(false)
+  const [nomeEsterno, setNomeEsterno] = useState('')
+  const [emailEsterno, setEmailEsterno] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [actionLoading, setActionLoading] = useState(null) // id dell'amicizia/contatto in azione
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [tab, setTab] = useState('amici') // 'amici' | 'richieste'
+
+  const loadAmici = async () => {
+    try {
+      const [a, rr, ri, ce] = await Promise.all([
+        getAmici(), getRichiesteRicevute(), getRichiesteInviate(), getContattiEsterni()
+      ])
+      setAmici(a)
+      setRichiesteRicevute(rr)
+      setRichiesteInviate(ri)
+      setContattiEsterni(ce)
+    } catch (e) { console.error('Errore caricamento amici:', e) }
+    setLoading(false)
+  }
+
+  useEffect(() => { loadAmici() }, [])
+
+  const handleCercaUtente = async () => {
+    const email = searchEmail.trim().toLowerCase()
+    if (!email) return
+    setSearching(true)
+    setSearchResult(null)
+    try {
+      // Controlla se è la propria email
+      if (email === session?.user?.email?.toLowerCase()) {
+        setSearchResult('self')
+        setSearching(false)
+        return
+      }
+      const utente = await cercaUtenteBolly(email)
+      if (!utente) {
+        setSearchResult('not_found')
+      } else {
+        // Controlla se già amici o richiesta già inviata
+        const giàAmico = amici.find(a => a.amico_id === utente.user_id)
+        if (giàAmico) {
+          setSearchResult('already_friend')
+        } else {
+          const giàInviata = richiesteInviate.find(r => r.destinatario_id === utente.user_id)
+          if (giàInviata) {
+            setSearchResult('already_sent')
+          } else {
+            setSearchResult(utente)
+          }
+        }
+      }
+    } catch (e) { console.error('Errore ricerca:', e); setSearchResult('not_found') }
+    setSearching(false)
+  }
+
+  const handleInviaRichiesta = async (userId) => {
+    setSaving(true)
+    try {
+      await inviaRichiestaAmicizia(userId)
+      setSearchEmail('')
+      setSearchResult(null)
+      setShowAggiungi(false)
+      await loadAmici()
+    } catch (e) { console.error('Errore invio richiesta:', e) }
+    setSaving(false)
+  }
+
+  const handleAggiungiEsterno = async (emailOverride) => {
+    const nome = nomeEsterno.trim()
+    const email = (emailOverride || emailEsterno || searchEmail).trim().toLowerCase()
+    if (!nome || !email) return
+    setSaving(true)
+    try {
+      await addContattoEsterno({ nome, email })
+      setNomeEsterno('')
+      setEmailEsterno('')
+      setShowAggiungi(false)
+      await loadAmici()
+    } catch (e) { console.error('Errore aggiunta contatto:', e) }
+    setSaving(false)
+  }
+
+  const handleAccetta = async (id) => {
+    setActionLoading(id)
+    try {
+      await accettaAmicizia(id)
+      await loadAmici()
+    } catch (e) { console.error('Errore accettazione:', e) }
+    setActionLoading(null)
+  }
+
+  const handleRifiuta = async (id) => {
+    setActionLoading(id)
+    try {
+      await rifiutaAmicizia(id)
+      await loadAmici()
+    } catch (e) { console.error('Errore rifiuto:', e) }
+    setActionLoading(null)
+  }
+
+  const handleRimuoviAmico = async (amiciziaId) => {
+    setActionLoading(amiciziaId)
+    try {
+      await rimuoviAmico(amiciziaId)
+      setConfirmDelete(null)
+      await loadAmici()
+    } catch (e) { console.error('Errore rimozione:', e) }
+    setActionLoading(null)
+  }
+
+  const handleRimuoviEsterno = async (id) => {
+    setActionLoading(id)
+    try {
+      await deleteContattoEsterno(id)
+      setConfirmDelete(null)
+      await loadAmici()
+    } catch (e) { console.error('Errore rimozione contatto:', e) }
+    setActionLoading(null)
+  }
+
+  const totaleRichieste = richiesteRicevute.length
+
+  if (loading) return <Loading />
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-2 rounded-xl hover:bg-gray-100">
+            <ChevronLeft size={22} className="text-gray-500" />
+          </button>
+          <h1 className="text-xl font-bold text-gray-900">I miei amici</h1>
+        </div>
+        <button
+          onClick={() => { setShowAggiungi(true); setSearchEmail(''); setSearchResult(null); setNomeEsterno(''); setEmailEsterno('') }}
+          className="p-2.5 rounded-xl bg-bolly-500 text-white shadow-sm"
+        >
+          <UserPlus size={20} />
+        </button>
+      </div>
+
+      {/* Tab: Amici / Richieste */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setTab('amici')}
+          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${tab === 'amici' ? 'bg-bolly-500 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
+        >
+          Amici ({amici.length + contattiEsterni.length})
+        </button>
+        <button
+          onClick={() => setTab('richieste')}
+          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors relative ${tab === 'richieste' ? 'bg-bolly-500 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
+        >
+          Richieste
+          {totaleRichieste > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{totaleRichieste}</span>
+          )}
+        </button>
+      </div>
+
+      {/* Modale Aggiungi Amico */}
+      {showAggiungi && (
+        <Card className="p-4 border-2 border-bolly-200">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-900">Aggiungi amico</h3>
+            <button onClick={() => setShowAggiungi(false)} className="p-1 rounded-lg hover:bg-gray-100">
+              <X size={18} className="text-gray-400" />
+            </button>
+          </div>
+
+          {/* Cerca utente Bolly per email */}
+          <div className="space-y-3">
+            <p className="text-xs text-gray-500">Cerca per email per trovare chi è già su Bolly</p>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={searchEmail}
+                onChange={e => { setSearchEmail(e.target.value); setSearchResult(null) }}
+                onKeyDown={e => { if (e.key === 'Enter') handleCercaUtente() }}
+                placeholder="Email dell'amico..."
+                className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-bolly-400"
+              />
+              <button
+                onClick={handleCercaUtente}
+                disabled={searching || !searchEmail.trim()}
+                className="px-4 py-2.5 rounded-xl bg-bolly-500 text-white text-sm font-medium disabled:opacity-50"
+              >
+                {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+              </button>
+            </div>
+
+            {/* Risultato ricerca */}
+            {searchResult === 'self' && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <p className="text-sm text-amber-700">Non puoi aggiungere te stesso!</p>
+              </div>
+            )}
+            {searchResult === 'already_friend' && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                <p className="text-sm text-green-700">Siete già amici!</p>
+              </div>
+            )}
+            {searchResult === 'already_sent' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                <p className="text-sm text-blue-700">Richiesta già inviata, in attesa di risposta.</p>
+              </div>
+            )}
+            {searchResult && typeof searchResult === 'object' && searchResult.user_id && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(145deg, #00897B, #00695C)' }}>
+                      <span className="text-white font-pacifico text-lg">{searchResult.nome?.[0]?.toUpperCase() || 'U'}</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm">{searchResult.nome}</p>
+                      <p className="text-xs text-gray-500">Su Bolly</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleInviaRichiesta(searchResult.user_id)}
+                    disabled={saving}
+                    className="px-4 py-2 rounded-xl bg-bolly-500 text-white text-sm font-medium disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                    Invita
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Se non trovato: form contatto esterno */}
+            {searchResult === 'not_found' && (
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-3">
+                <p className="text-sm text-gray-600">Nessun utente Bolly con questa email. Aggiungilo come contatto esterno:</p>
+                <input
+                  type="text"
+                  value={nomeEsterno}
+                  onChange={e => setNomeEsterno(e.target.value)}
+                  placeholder="Nome dell'amico"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-bolly-400"
+                />
+                <div className="bg-white px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600">
+                  {searchEmail}
+                </div>
+                <button
+                  onClick={() => handleAggiungiEsterno(searchEmail)}
+                  disabled={saving || !nomeEsterno.trim()}
+                  className="w-full py-2.5 rounded-xl bg-bolly-500 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {saving ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
+                  Aggiungi contatto
+                </button>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* TAB: Lista amici */}
+      {tab === 'amici' && (
+        <div className="space-y-3">
+          {amici.length === 0 && contattiEsterni.length === 0 ? (
+            <Card className="p-8 text-center">
+              <Users size={40} className="text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 text-sm">Nessun amico ancora.</p>
+              <p className="text-gray-400 text-xs mt-1">Tocca + per aggiungere il primo!</p>
+            </Card>
+          ) : (
+            <>
+              {/* Amici Bolly */}
+              {amici.map(a => (
+                <Card key={a.id} className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(145deg, #00897B, #00695C)' }}>
+                        <span className="text-white font-pacifico text-lg">{a.amico_nome?.[0]?.toUpperCase() || 'U'}</span>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">{a.amico_nome}</p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span className="w-2 h-2 rounded-full bg-bolly-500" />
+                          <span className="text-xs text-bolly-600">Su Bolly</span>
+                        </div>
+                      </div>
+                    </div>
+                    {confirmDelete === a.id ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleRimuoviAmico(a.id)}
+                          disabled={actionLoading === a.id}
+                          className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-medium disabled:opacity-50"
+                        >
+                          {actionLoading === a.id ? <Loader2 size={12} className="animate-spin" /> : 'Conferma'}
+                        </button>
+                        <button onClick={() => setConfirmDelete(null)} className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-xs font-medium">
+                          Annulla
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setConfirmDelete(a.id)} className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
+                        <UserX size={18} />
+                      </button>
+                    )}
+                  </div>
+                </Card>
+              ))}
+
+              {/* Contatti esterni */}
+              {contattiEsterni.map(c => (
+                <Card key={c.id} className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-full bg-gray-200 flex items-center justify-center">
+                        <span className="text-gray-500 font-semibold text-lg">{c.nome?.[0]?.toUpperCase() || '?'}</span>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">{c.nome}</p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span className="w-2 h-2 rounded-full bg-gray-400" />
+                          <span className="text-xs text-gray-500">{c.email || c.telefono}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {confirmDelete === c.id ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleRimuoviEsterno(c.id)}
+                          disabled={actionLoading === c.id}
+                          className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-medium disabled:opacity-50"
+                        >
+                          {actionLoading === c.id ? <Loader2 size={12} className="animate-spin" /> : 'Conferma'}
+                        </button>
+                        <button onClick={() => setConfirmDelete(null)} className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-xs font-medium">
+                          Annulla
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setConfirmDelete(c.id)} className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
+                        <UserX size={18} />
+                      </button>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* TAB: Richieste */}
+      {tab === 'richieste' && (
+        <div className="space-y-3">
+          {/* Richieste ricevute */}
+          {richiesteRicevute.length > 0 && (
+            <>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-1">Ricevute</p>
+              {richiesteRicevute.map(r => (
+                <Card key={r.id} className="p-4 border-l-4 border-l-bolly-400">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(145deg, #00897B, #00695C)' }}>
+                        <span className="text-white font-pacifico text-lg">{r.richiedente_nome?.[0]?.toUpperCase() || 'U'}</span>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">{r.richiedente_nome}</p>
+                        <p className="text-xs text-gray-500">Vuole aggiungerti come amico</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleAccetta(r.id)}
+                        disabled={actionLoading === r.id}
+                        className="p-2 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 disabled:opacity-50"
+                      >
+                        {actionLoading === r.id ? <Loader2 size={18} className="animate-spin" /> : <UserCheck size={18} />}
+                      </button>
+                      <button
+                        onClick={() => handleRifiuta(r.id)}
+                        disabled={actionLoading === r.id}
+                        className="p-2 rounded-lg bg-red-100 text-red-500 hover:bg-red-200 disabled:opacity-50"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </>
+          )}
+
+          {/* Richieste inviate */}
+          {richiesteInviate.length > 0 && (
+            <>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-1 mt-4">Inviate</p>
+              {richiesteInviate.map(r => (
+                <Card key={r.id} className="p-4 opacity-75">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full flex items-center justify-center bg-gray-200">
+                      <Clock size={20} className="text-gray-400" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">{r.destinatario_nome}</p>
+                      <p className="text-xs text-gray-500">In attesa di risposta...</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </>
+          )}
+
+          {richiesteRicevute.length === 0 && richiesteInviate.length === 0 && (
+            <Card className="p-8 text-center">
+              <Mail size={40} className="text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 text-sm">Nessuna richiesta.</p>
+            </Card>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================================
 // PROFILO
 // ============================================================
 
-function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdateProfile, abitazioni, onRefreshAbitazioni }) {
+function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdateProfile, abitazioni, onRefreshAbitazioni, amiciCount, richiesteCount }) {
   const [copied, setCopied] = useState(false)
   const [faqSectionOpen, setFaqSectionOpen] = useState(false)
   const [faqOpen, setFaqOpen] = useState(null)
@@ -3395,6 +3833,27 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
               <Copy size={16} className="text-gray-600" />
             )}
           </button>
+        </div>
+      </Card>
+
+      {/* I miei amici */}
+      <Card className="p-4 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => onNavigate('amici')}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+              <Users size={20} className="text-purple-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900 text-sm">I miei amici</p>
+              <p className="text-xs text-gray-500">{amiciCount || 0} {amiciCount === 1 ? 'amico' : 'amici'}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {richiesteCount > 0 && (
+              <span className="w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{richiesteCount}</span>
+            )}
+            <ChevronRight size={20} className="text-gray-400" />
+          </div>
         </div>
       </Card>
 
@@ -3913,6 +4372,8 @@ export default function App() {
   const [bollette, setBollette] = useState([])
   const [spese, setSpese] = useState([])
   const [abitazioni, setAbitazioni] = useState([])
+  const [amiciCount, setAmiciCount] = useState(0)
+  const [richiesteCount, setRichiesteCount] = useState(0)
   const [filtroAbitazione, setFiltroAbitazione] = useState(null) // null = tutte
   const [screen, setScreen] = useState('dashboard')
   const [selectedContrattoId, setSelectedContrattoId] = useState(null)
@@ -4020,11 +4481,18 @@ export default function App() {
     try {
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
       setProfile(prof)
-      const [c, b, s, ab] = await Promise.all([getContratti(), getBollette(), getSpese(), getAbitazioni()])
+      const [c, b, s, ab, amici, richieste, esterni] = await Promise.all([
+        getContratti(), getBollette(), getSpese(), getAbitazioni(),
+        getAmici().catch(() => []),
+        getRichiesteRicevute().catch(() => []),
+        getContattiEsterni().catch(() => [])
+      ])
       setContratti(c)
       setBollette(b)
       setSpese(s)
       setAbitazioni(ab)
+      setAmiciCount(amici.length + esterni.length)
+      setRichiesteCount(richieste.length)
     } catch (e) { console.error('Errore caricamento dati:', e) }
   }, [session])
 
@@ -4215,7 +4683,8 @@ export default function App() {
       case 'calendario': return <Calendario bollette={bollette} contratti={contratti} spese={spese} onSelectContratto={handleSelectContratto} onAggiungiSpesa={(data) => { setScreen('aggiungi-spesa'); setSpesaDataPrecompilata(data) }} />
       case 'bollette': return <StoricoBollette bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />
       case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} />
-      case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} abitazioni={abitazioni} onRefreshAbitazioni={async () => { const ab = await getAbitazioni(); setAbitazioni(ab) }} />
+      case 'amici': return <SchermataAmici onBack={() => setScreen('menu')} session={session} />
+      case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} abitazioni={abitazioni} onRefreshAbitazioni={async () => { const ab = await getAbitazioni(); setAbitazioni(ab) }} amiciCount={amiciCount} richiesteCount={richiesteCount} />
       case 'termini': return <TerminiCondizioni onBack={() => setScreen('menu')} />
       case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} />
       default: return null

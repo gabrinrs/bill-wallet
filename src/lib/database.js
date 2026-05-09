@@ -210,3 +210,190 @@ export async function deleteSpesa(id) {
   const { error } = await supabase.from('spese').delete().eq('id', id)
   if (error) throw error
 }
+
+// ============================================================
+// AMICIZIE
+// ============================================================
+
+// Cerca un utente Bolly per email (tramite funzione DB sicura)
+export async function cercaUtenteBolly(email) {
+  const { data, error } = await supabase
+    .rpc('cerca_utente_bolly', { p_email: email, p_telefono: null })
+  if (error) throw error
+  return data?.[0] || null
+}
+
+// Lista amici accettati (sia come richiedente che destinatario)
+export async function getAmici() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const { data, error } = await supabase
+    .from('amicizie')
+    .select('*')
+    .eq('stato', 'accettata')
+    .or(`richiedente_id.eq.${user.id},destinatario_id.eq.${user.id}`)
+  if (error) throw error
+
+  // Per ogni amicizia, recupera il profilo dell'altro utente
+  const friendIds = data.map(a => a.richiedente_id === user.id ? a.destinatario_id : a.richiedente_id)
+  if (friendIds.length === 0) return []
+
+  const { data: profiles, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, nome')
+    .in('id', friendIds)
+  if (profileError) throw profileError
+
+  return data.map(a => {
+    const friendId = a.richiedente_id === user.id ? a.destinatario_id : a.richiedente_id
+    const profile = profiles.find(p => p.id === friendId)
+    return { ...a, amico_id: friendId, amico_nome: profile?.nome || 'Utente' }
+  })
+}
+
+// Richieste di amicizia ricevute (in attesa)
+export async function getRichiesteRicevute() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const { data, error } = await supabase
+    .from('amicizie')
+    .select('*')
+    .eq('destinatario_id', user.id)
+    .eq('stato', 'in_attesa')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+
+  // Recupera nomi dei richiedenti
+  const richiedentiIds = data.map(a => a.richiedente_id)
+  if (richiedentiIds.length === 0) return []
+
+  const { data: profiles, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, nome')
+    .in('id', richiedentiIds)
+  if (profileError) throw profileError
+
+  return data.map(a => {
+    const profile = profiles.find(p => p.id === a.richiedente_id)
+    return { ...a, richiedente_nome: profile?.nome || 'Utente' }
+  })
+}
+
+// Richieste di amicizia inviate (in attesa)
+export async function getRichiesteInviate() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const { data, error } = await supabase
+    .from('amicizie')
+    .select('*')
+    .eq('richiedente_id', user.id)
+    .eq('stato', 'in_attesa')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+
+  const destIds = data.map(a => a.destinatario_id)
+  if (destIds.length === 0) return []
+
+  const { data: profiles, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, nome')
+    .in('id', destIds)
+  if (profileError) throw profileError
+
+  return data.map(a => {
+    const profile = profiles.find(p => p.id === a.destinatario_id)
+    return { ...a, destinatario_nome: profile?.nome || 'Utente' }
+  })
+}
+
+// Invia richiesta di amicizia a un utente Bolly
+export async function inviaRichiestaAmicizia(destinatarioId) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('amicizie')
+    .insert({ richiedente_id: user.id, destinatario_id: destinatarioId })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Accetta richiesta di amicizia
+export async function accettaAmicizia(amiciziaId) {
+  const { data, error } = await supabase
+    .from('amicizie')
+    .update({ stato: 'accettata', updated_at: new Date().toISOString() })
+    .eq('id', amiciziaId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Rifiuta richiesta di amicizia
+export async function rifiutaAmicizia(amiciziaId) {
+  const { data, error } = await supabase
+    .from('amicizie')
+    .update({ stato: 'rifiutata', updated_at: new Date().toISOString() })
+    .eq('id', amiciziaId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Rimuovi amicizia
+export async function rimuoviAmico(amiciziaId) {
+  const { error } = await supabase.from('amicizie').delete().eq('id', amiciziaId)
+  if (error) throw error
+}
+
+// ============================================================
+// CONTATTI ESTERNI
+// ============================================================
+
+export async function getContattiEsterni() {
+  const { data, error } = await supabase
+    .from('contatti_esterni')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function addContattoEsterno(contatto) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('contatti_esterni')
+    .insert({ ...contatto, user_id: user.id })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateContattoEsterno(id, updates) {
+  const { data, error } = await supabase
+    .from('contatti_esterni')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteContattoEsterno(id) {
+  const { error } = await supabase.from('contatti_esterni').delete().eq('id', id)
+  if (error) throw error
+}
+
+// Aggiorna il profilo con il numero di telefono
+export async function updateProfileTelefono(telefono) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { error } = await supabase
+    .from('profiles')
+    .update({ telefono })
+    .eq('id', user.id)
+  if (error) throw error
+}

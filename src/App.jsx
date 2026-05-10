@@ -18,6 +18,17 @@ import {
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
+// Helper per inviare push notification a un utente
+async function sendPushToUser(userId, title, body, tag = 'bolly-social') {
+  try {
+    await fetch('https://getbolly.app/api/send-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': 'bolly-notif-2026-xyz' },
+      body: JSON.stringify({ user_id: userId, title, body, tag })
+    })
+  } catch (e) { console.error('Errore invio push:', e) }
+}
+
 const IconMap = { Zap, Flame, Droplets, Phone, Wifi, Shield, Package, Tv, Repeat, CreditCard, Landmark, ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
 
 const ICONE_ABITAZIONE = [
@@ -3288,7 +3299,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
 // SPLIT SPESE
 // ============================================================
 
-function FormSplit({ target, onBack, onSave }) {
+function FormSplit({ target, profile, onBack, onSave }) {
   // target = { tipo: 'spesa'|'bolletta', id, importo, descrizione }
   const [amici, setAmici] = useState([])
   const [contattiEsterni, setContattiEsterni] = useState([])
@@ -3346,6 +3357,11 @@ function FormSplit({ target, onBack, onSave }) {
         divisione,
         nota: nota.trim() || null,
       }, partecipanti)
+      // Invia push a ogni partecipante Bolly
+      const nomeUtente = profile?.nome || 'Qualcuno'
+      selected.filter(s => s.user_id).forEach(s => {
+        sendPushToUser(s.user_id, 'Nuova spesa divisa con te', `${nomeUtente} ha diviso ${formatEuro(target.importo)} — La tua parte: ${formatEuro(divisione === 'uguale' ? importoPerPersona : (parseFloat(importiCustom[s.tipo + '_' + s.id]) || 0))}`, 'bolly-split')
+      })
       await onSave()
     } catch (e) {
       console.error('Errore creazione split:', e)
@@ -3757,7 +3773,7 @@ function SplitsRicevutiScreen({ splitsRicevuti, onBack, onRefresh }) {
 // AMICI
 // ============================================================
 
-function SchermataAmici({ onBack, session }) {
+function SchermataAmici({ onBack, session, profile }) {
   const [amici, setAmici] = useState([])
   const [richiesteRicevute, setRichiesteRicevute] = useState([])
   const [richiesteInviate, setRichiesteInviate] = useState([])
@@ -3826,6 +3842,9 @@ function SchermataAmici({ onBack, session }) {
     setSaving(true)
     try {
       await inviaRichiestaAmicizia(userId)
+      // Invia push al destinatario
+      const nomeUtente = profile?.nome || 'Qualcuno'
+      sendPushToUser(userId, 'Nuova richiesta di amicizia', `${nomeUtente} vuole aggiungerti come amico su Bolly`, 'bolly-amicizia')
       setSearchEmail('')
       setSearchResult(null)
       setShowAggiungi(false)
@@ -5236,14 +5255,14 @@ export default function App() {
       case 'calendario': return <Calendario bollette={bollette} contratti={contratti} spese={spese} onSelectContratto={handleSelectContratto} onAggiungiSpesa={(data) => { setScreen('aggiungi-spesa'); setSpesaDataPrecompilata(data) }} />
       case 'bollette': return <StoricoBollette bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />
       case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} />
-      case 'form-split': return splitTarget ? <FormSplit target={splitTarget} onBack={() => { setSplitTarget(null); setScreen('dashboard') }} onSave={async () => { setSplitTarget(null); await loadData(); setScreen('dashboard') }} /> : null
+      case 'form-split': return splitTarget ? <FormSplit target={splitTarget} profile={profile} onBack={() => { setSplitTarget(null); setScreen('dashboard') }} onSave={async () => { setSplitTarget(null); await loadData(); setScreen('dashboard') }} /> : null
       case 'dettaglio-split': {
         const sp = splits.find(s => s.id === selectedSplitId)
         if (!sp) { setScreen('dashboard'); return null }
         return <DettaglioSplit split={sp} onBack={() => { setSelectedSplitId(null); setScreen('dashboard') }} onRefresh={loadData} />
       }
       case 'splits-ricevuti': return <SplitsRicevutiScreen splitsRicevuti={splitsRicevuti} onBack={() => setScreen('dashboard')} onRefresh={loadData} />
-      case 'amici': return <SchermataAmici onBack={() => setScreen('menu')} session={session} />
+      case 'amici': return <SchermataAmici onBack={() => setScreen('menu')} session={session} profile={profile} />
       case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} abitazioni={abitazioni} onRefreshAbitazioni={async () => { const ab = await getAbitazioni(); setAbitazioni(ab) }} amiciCount={amiciCount} richiesteCount={richiesteCount} />
       case 'termini': return <TerminiCondizioni onBack={() => setScreen('menu')} />
       case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} />

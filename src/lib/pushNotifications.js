@@ -53,8 +53,9 @@ export async function subscribeToPush(userId) {
     const subscriptionData = subscription.toJSON()
     console.log('🔔 Subscription ottenuta:', subscriptionData.endpoint?.slice(0, 50))
 
-    // 6. Salva su Supabase (rimuovi vecchie subscription di questo dispositivo, poi inserisci)
-    await supabase.from('push_subscriptions').delete().eq('user_id', userId)
+    // 6. Salva su Supabase (rimuovi solo la subscription di QUESTO browser/dispositivo, poi inserisci)
+    // Così l'utente può ricevere push su più dispositivi contemporaneamente
+    await supabase.from('push_subscriptions').delete().eq('endpoint', subscriptionData.endpoint)
     const { error } = await supabase.from('push_subscriptions').insert({
       user_id: userId,
       endpoint: subscriptionData.endpoint,

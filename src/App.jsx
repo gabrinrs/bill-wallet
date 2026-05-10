@@ -4311,10 +4311,16 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
   const handleActivatePush = async () => {
     setPushLoading(true)
     try {
+      console.log('🔔 Attivazione push per user:', session.user.id)
       const success = await subscribeToPush(session.user.id)
+      console.log('🔔 Risultato subscribeToPush:', success)
       setPushActive(success)
+      if (!success) {
+        alert('Non è stato possibile attivare le notifiche. Controlla i permessi del browser per questo sito.')
+      }
     } catch (e) {
       console.error('Errore attivazione push:', e)
+      alert('Errore attivazione: ' + e.message)
     }
     setPushLoading(false)
   }

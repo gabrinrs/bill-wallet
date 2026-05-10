@@ -26,21 +26,24 @@ export async function subscribeToPush(userId) {
   try {
     // 1. Controlla che il browser supporti le push
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      console.log('Push notifications non supportate da questo browser')
+      console.log('🔔 Push non supportate')
       return false
     }
 
-    // 2. Aspetta che il Service Worker (registrato da VitePWA) sia pronto
+    // 2. Aspetta che il Service Worker sia pronto
+    console.log('🔔 Aspetto SW ready...')
     const registration = await navigator.serviceWorker.ready
+    console.log('🔔 SW pronto:', registration.scope)
 
     // 3. Chiedi il permesso per le notifiche
     const permission = await Notification.requestPermission()
+    console.log('🔔 Permesso:', permission)
     if (permission !== 'granted') {
-      console.log('Permesso notifiche negato')
       return false
     }
 
     // 4. Sottoscrivi alle push
+    console.log('🔔 Sottoscrivo pushManager...')
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
@@ -48,6 +51,7 @@ export async function subscribeToPush(userId) {
 
     // 5. Estrai i dati della subscription
     const subscriptionData = subscription.toJSON()
+    console.log('🔔 Subscription ottenuta:', subscriptionData.endpoint?.slice(0, 50))
 
     // 6. Salva su Supabase
     const { error } = await supabase.from('push_subscriptions').upsert({
@@ -60,14 +64,14 @@ export async function subscribeToPush(userId) {
     })
 
     if (error) {
-      console.error('Errore salvataggio subscription:', error)
+      console.error('🔔 Errore salvataggio Supabase:', error)
       return false
     }
 
-    console.log('Push subscription attivata con successo!')
+    console.log('🔔 Push subscription salvata su Supabase!')
     return true
   } catch (err) {
-    console.error('Errore sottoscrizione push:', err)
+    console.error('🔔 Errore subscribeToPush:', err)
     return false
   }
 }

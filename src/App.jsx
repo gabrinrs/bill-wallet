@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione, getAmici, getRichiesteRicevute, getRichiesteInviate, cercaUtenteBolly, inviaRichiestaAmicizia, accettaAmicizia, rifiutaAmicizia, rimuoviAmico, getContattiEsterni, addContattoEsterno, deleteContattoEsterno, createSplit, getSplitsByUser, getSplitByRiferimento, togglePartecipantePagato, deleteSplit } from './lib/database'
+import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione, getAmici, getRichiesteRicevute, getRichiesteInviate, cercaUtenteBolly, inviaRichiestaAmicizia, accettaAmicizia, rifiutaAmicizia, rimuoviAmico, getContattiEsterni, addContattoEsterno, deleteContattoEsterno, createSplit, getSplitsByUser, getSplitsRicevuti, getSplitByRiferimento, togglePartecipantePagato, deleteSplit } from './lib/database'
 import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, CATEGORIE_SPESE, getCategoriaSpesa, CATEGORIE_ENTRATE, getCategoriaEntrata } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import { subscribeToPush, isPushSubscribed } from './lib/pushNotifications'
@@ -354,7 +354,7 @@ function SwipeableSpesa({ isOpen, onOpen, onClose, onEdit, onDelete, children })
 // DASHBOARD
 // ============================================================
 
-function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto, onDeleteSpesa, onEditSpesa, abitazioni, filtroAbitazione, onSetFiltroAbitazione, splits, onSplit, onViewSplit, richiesteCount }) {
+function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto, onDeleteSpesa, onEditSpesa, abitazioni, filtroAbitazione, onSetFiltroAbitazione, splits, onSplit, onViewSplit, richiesteCount, splitsRicevuti }) {
   const [cardSwipedId, setCardSwipedId] = useState(null)
   const [spesaSwipedId, setSpesaSwipedId] = useState(null)
   const [deletingContratto, setDeletingContratto] = useState(null)
@@ -484,6 +484,30 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
           <ChevronRight size={18} className="text-gray-400" />
         </button>
       )}
+
+      {/* Banner split ricevuti da saldare */}
+      {(() => {
+        const nonPagati = splitsRicevuti?.filter(s => !s.mio_pagato) || []
+        if (nonPagati.length === 0) return null
+        const totale = nonPagati.reduce((sum, s) => sum + Number(s.mia_parte), 0)
+        return (
+          <button
+            onClick={() => onNavigate('splits-ricevuti')}
+            className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 transition-all active:scale-[0.98]"
+          >
+            <div className="w-9 h-9 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
+              <CircleDollarSign size={18} className="text-white" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-sm font-semibold text-gray-900">
+                {nonPagati.length === 1 ? 'Hai uno split da saldare' : `Hai ${nonPagati.length} split da saldare`}
+              </p>
+              <p className="text-xs text-gray-500">Totale: {formatEuro(totale)}</p>
+            </div>
+            <ChevronRight size={18} className="text-gray-400" />
+          </button>
+        )
+      })()}
 
       {/* Filtro abitazione */}
       {abitazioni && abitazioni.length > 0 && (
@@ -3623,6 +3647,113 @@ function DettaglioSplit({ split, onBack, onRefresh }) {
 }
 
 // ============================================================
+// SPLITS RICEVUTI
+// ============================================================
+
+function SplitsRicevutiScreen({ splitsRicevuti, onBack, onRefresh }) {
+  const [actionLoading, setActionLoading] = useState(null)
+
+  const nonPagati = splitsRicevuti.filter(s => !s.mio_pagato)
+  const pagati = splitsRicevuti.filter(s => s.mio_pagato)
+
+  const handleSegnaConfermato = async (partecipanteId) => {
+    setActionLoading(partecipanteId)
+    try {
+      await togglePartecipantePagato(partecipanteId, true)
+      await onRefresh()
+    } catch (e) { console.error('Errore conferma pagamento:', e) }
+    setActionLoading(null)
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <button onClick={onBack} className="p-2 rounded-xl hover:bg-gray-100">
+          <ChevronLeft size={22} className="text-gray-500" />
+        </button>
+        <h1 className="text-xl font-bold text-gray-900">Split ricevuti</h1>
+      </div>
+
+      {nonPagati.length === 0 && pagati.length === 0 && (
+        <Card className="p-6 text-center">
+          <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Split size={28} className="text-gray-400" />
+          </div>
+          <p className="text-gray-500 text-sm">Nessuno split ricevuto</p>
+          <p className="text-gray-400 text-xs mt-1">Quando un amico divide una spesa con te, la vedrai qui.</p>
+        </Card>
+      )}
+
+      {/* Da saldare */}
+      {nonPagati.length > 0 && (
+        <div>
+          <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+            <CircleDollarSign size={16} className="text-orange-500" />
+            Da saldare ({nonPagati.length})
+          </p>
+          <div className="space-y-2.5">
+            {nonPagati.map(s => (
+              <Card key={s.id} className="p-4 border-orange-100">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(145deg, #00897B, #00695C)' }}>
+                      <span className="text-white font-pacifico text-sm">{s.creatore_nome?.[0]?.toUpperCase() || '?'}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{s.creatore_nome} ha diviso con te</p>
+                      <p className="text-xs text-gray-500">{s.nota || (s.tipo === 'spesa' ? 'Spesa' : 'Bolletta')} · {s.divisione === 'uguale' ? 'Parti uguali' : 'Personalizzata'}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{formatData(s.created_at)}</p>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-lg font-bold text-orange-600">{formatEuro(s.mia_parte)}</p>
+                    <button
+                      onClick={() => handleSegnaConfermato(s.mio_partecipante_id)}
+                      disabled={actionLoading === s.mio_partecipante_id}
+                      className="mt-1 px-3 py-1.5 rounded-lg bg-bolly-500 text-white text-xs font-semibold disabled:opacity-50"
+                    >
+                      {actionLoading === s.mio_partecipante_id ? <Loader2 size={12} className="animate-spin" /> : 'Ho pagato'}
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Già saldati */}
+      {pagati.length > 0 && (
+        <div>
+          <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+            <Check size={16} className="text-green-500" />
+            Già saldati ({pagati.length})
+          </p>
+          <div className="space-y-2">
+            {pagati.map(s => (
+              <Card key={s.id} className="p-3 opacity-70">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                      <Check size={16} className="text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">{s.creatore_nome}</p>
+                      <p className="text-xs text-gray-400">{s.nota || (s.tipo === 'spesa' ? 'Spesa' : 'Bolletta')}</p>
+                    </div>
+                  </div>
+                  <p className="text-sm font-semibold text-green-600 line-through">{formatEuro(s.mia_parte)}</p>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================================
 // AMICI
 // ============================================================
 
@@ -4789,6 +4920,7 @@ export default function App() {
   const [amiciCount, setAmiciCount] = useState(0)
   const [richiesteCount, setRichiesteCount] = useState(0)
   const [splits, setSplits] = useState([])
+  const [splitsRicevuti, setSplitsRicevuti] = useState([])
   const [splitTarget, setSplitTarget] = useState(null) // { tipo: 'spesa'|'bolletta', id, importo, descrizione }
   const [selectedSplitId, setSelectedSplitId] = useState(null)
   const [filtroAbitazione, setFiltroAbitazione] = useState(null) // null = tutte
@@ -4898,12 +5030,13 @@ export default function App() {
     try {
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
       setProfile(prof)
-      const [c, b, s, ab, amici, richieste, esterni, sp] = await Promise.all([
+      const [c, b, s, ab, amici, richieste, esterni, sp, spRicevuti] = await Promise.all([
         getContratti(), getBollette(), getSpese(), getAbitazioni(),
         getAmici().catch(() => []),
         getRichiesteRicevute().catch(() => []),
         getContattiEsterni().catch(() => []),
-        getSplitsByUser().catch(() => [])
+        getSplitsByUser().catch(() => []),
+        getSplitsRicevuti().catch(() => [])
       ])
       setContratti(c)
       setBollette(b)
@@ -4912,6 +5045,7 @@ export default function App() {
       setAmiciCount(amici.length + esterni.length)
       setRichiesteCount(richieste.length)
       setSplits(sp)
+      setSplitsRicevuti(spRicevuti)
     } catch (e) { console.error('Errore caricamento dati:', e) }
   }, [session])
 
@@ -5052,7 +5186,7 @@ export default function App() {
 
   const renderScreen = () => {
     switch (screen) {
-      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} abitazioni={abitazioni} filtroAbitazione={filtroAbitazione} onSetFiltroAbitazione={setFiltroAbitazione} splits={splits} onSplit={(target) => { setSplitTarget(target); setScreen('form-split') }} onViewSplit={(splitId) => { setSelectedSplitId(splitId); setScreen('dettaglio-split') }} richiesteCount={richiesteCount} />
+      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} abitazioni={abitazioni} filtroAbitazione={filtroAbitazione} onSetFiltroAbitazione={setFiltroAbitazione} splits={splits} onSplit={(target) => { setSplitTarget(target); setScreen('form-split') }} onViewSplit={(splitId) => { setSelectedSplitId(splitId); setScreen('dettaglio-split') }} richiesteCount={richiesteCount} splitsRicevuti={splitsRicevuti} />
       case 'dettaglio': {
         const c = contratti.find(x => x.id === selectedContrattoId)
         if (!c) { setScreen('dashboard'); return null }
@@ -5108,6 +5242,7 @@ export default function App() {
         if (!sp) { setScreen('dashboard'); return null }
         return <DettaglioSplit split={sp} onBack={() => { setSelectedSplitId(null); setScreen('dashboard') }} onRefresh={loadData} />
       }
+      case 'splits-ricevuti': return <SplitsRicevutiScreen splitsRicevuti={splitsRicevuti} onBack={() => setScreen('dashboard')} onRefresh={loadData} />
       case 'amici': return <SchermataAmici onBack={() => setScreen('menu')} session={session} />
       case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} abitazioni={abitazioni} onRefreshAbitazioni={async () => { const ab = await getAbitazioni(); setAbitazioni(ab) }} amiciCount={amiciCount} richiesteCount={richiesteCount} />
       case 'termini': return <TerminiCondizioni onBack={() => setScreen('menu')} />

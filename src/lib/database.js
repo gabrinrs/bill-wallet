@@ -449,6 +449,45 @@ export async function getSplitByRiferimento(tipo, riferimentoId) {
   return data
 }
 
+// Recupera gli split dove l'utente è PARTECIPANTE (non creatore)
+// Include info sul creatore e sullo stato del pagamento dell'utente
+export async function getSplitsRicevuti() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  // Prendi i record di split_partecipanti dove l'utente è partecipante
+  const { data: partecipazioni, error: partError } = await supabase
+    .from('split_partecipanti')
+    .select('*, splits:split_id(*, split_partecipanti(*))')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+  if (partError) throw partError
+
+  // Filtra: solo split NON creati dall'utente stesso
+  const ricevuti = (partecipazioni || [])
+    .filter(p => p.splits && p.splits.user_id !== user.id)
+    .map(p => ({
+      ...p.splits,
+      mia_parte: p.importo,
+      mio_pagato: p.pagato,
+      mio_partecipante_id: p.id,
+    }))
+
+  // Recupera nomi dei creatori
+  const creatorIds = [...new Set(ricevuti.map(s => s.user_id))]
+  if (creatorIds.length === 0) return []
+
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, nome')
+    .in('id', creatorIds)
+
+  return ricevuti.map(s => ({
+    ...s,
+    creatore_nome: profiles?.find(p => p.id === s.user_id)?.nome || 'Utente',
+  }))
+}
+
 // Segna un partecipante come pagato/non pagato
 export async function togglePartecipantePagato(partecipanteId, pagato) {
   const { data, error } = await supabase

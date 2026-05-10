@@ -3381,11 +3381,26 @@ function FormSplit({ target, profile, onBack, onSave }) {
         divisione,
         nota: nota.trim() || null,
       }, partecipanti)
-      // Invia push a ogni partecipante Bolly
+      // Invia push a ogni partecipante Bolly — AWAIT prima di navigare (iOS cancella fetch non completate)
       const nomeUtente = profile?.nome || 'Qualcuno'
-      selected.filter(s => s.user_id).forEach(s => {
-        sendPushToUser(s.user_id, 'Nuova spesa divisa con te', `${nomeUtente} ha diviso ${formatEuro(target.importo)} — La tua parte: ${formatEuro(divisione === 'uguale' ? importoPerPersona : (parseFloat(importiCustom[s.tipo + '_' + s.id]) || 0))}`, 'bolly-split')
-      })
+      const bollyPartecipanti = selected.filter(s => s.user_id)
+      if (bollyPartecipanti.length > 0) {
+        try {
+          await fetch('/api/send-push-batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              api_key: 'bolly-notif-2026-xyz',
+              notifications: bollyPartecipanti.map(s => ({
+                user_id: s.user_id,
+                title: 'Nuova spesa divisa con te',
+                body: `${nomeUtente} ha diviso ${formatEuro(target.importo)} — La tua parte: ${formatEuro(divisione === 'uguale' ? importoPerPersona : (parseFloat(importiCustom[s.tipo + '_' + s.id]) || 0))}`,
+                tag: 'bolly-split'
+              }))
+            })
+          })
+        } catch (e) { console.error('Errore push split:', e) }
+      }
       await onSave()
     } catch (e) {
       console.error('Errore creazione split:', e)
@@ -3700,9 +3715,18 @@ function SplitsRicevutiScreen({ splitsRicevuti, onBack, onRefresh, profile }) {
     setActionLoading(partecipanteId)
     try {
       await togglePartecipantePagato(partecipanteId, true)
-      // Notifica il creatore dello split che hai pagato
+      // Notifica il creatore dello split che hai pagato — await per iOS
       const nomeUtente = profile?.nome || 'Qualcuno'
-      sendPushToUser(split.user_id, 'Split saldato!', `${nomeUtente} ha saldato la sua parte di ${formatEuro(split.mia_parte)}`, 'bolly-split-pagato')
+      try {
+        await fetch('/api/send-push-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api_key: 'bolly-notif-2026-xyz',
+            notifications: [{ user_id: split.user_id, title: 'Split saldato!', body: `${nomeUtente} ha saldato la sua parte di ${formatEuro(split.mia_parte)}`, tag: 'bolly-split-pagato' }]
+          })
+        })
+      } catch (e) { console.error('Errore push pagamento:', e) }
       await onRefresh()
     } catch (e) { console.error('Errore conferma pagamento:', e) }
     setActionLoading(null)
@@ -3869,9 +3893,18 @@ function SchermataAmici({ onBack, session, profile }) {
     setSaving(true)
     try {
       await inviaRichiestaAmicizia(userId)
-      // Invia push al destinatario
+      // Invia push al destinatario — await per iOS
       const nomeUtente = profile?.nome || 'Qualcuno'
-      sendPushToUser(userId, 'Nuova richiesta di amicizia', `${nomeUtente} vuole aggiungerti come amico su Bolly`, 'bolly-amicizia')
+      try {
+        await fetch('/api/send-push-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api_key: 'bolly-notif-2026-xyz',
+            notifications: [{ user_id: userId, title: 'Nuova richiesta di amicizia', body: `${nomeUtente} vuole aggiungerti come amico su Bolly`, tag: 'bolly-amicizia' }]
+          })
+        })
+      } catch (e) { console.error('Errore push amicizia:', e) }
       setSearchEmail('')
       setSearchResult(null)
       setShowAggiungi(false)

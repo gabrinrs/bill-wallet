@@ -18,18 +18,39 @@ import {
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
-// Helper per inviare push notification a un utente
-async function sendPushToUser(userId, title, body, tag = 'bolly-social') {
-  try {
-    console.log('📤 Invio push a:', userId, { title, body, tag })
-    const res = await fetch('/api/send-push', {
+// Helper per inviare push notification a uno o più utenti
+// Usa sendBeacon come metodo principale: è affidabile anche su iOS PWA
+// quando la pagina sta cambiando stato (navigazione, re-render)
+function sendPushToUser(userId, title, body, tag = 'bolly-social') {
+  const payload = JSON.stringify({
+    api_key: 'bolly-notif-2026-xyz',
+    notifications: [{ user_id: userId, title, body, tag }]
+  })
+  const sent = navigator.sendBeacon?.('/api/send-push-batch', new Blob([payload], { type: 'application/json' }))
+  if (!sent) {
+    fetch('/api/send-push-batch', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': 'bolly-notif-2026-xyz' },
-      body: JSON.stringify({ user_id: userId, title, body, tag })
-    })
-    const data = await res.json()
-    console.log('📬 Risposta push:', res.status, data)
-  } catch (e) { console.error('❌ Errore invio push:', e) }
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+      keepalive: true
+    }).catch(e => console.error('❌ Errore invio push:', e))
+  }
+}
+
+function sendPushToUsers(notifications) {
+  const payload = JSON.stringify({
+    api_key: 'bolly-notif-2026-xyz',
+    notifications
+  })
+  const sent = navigator.sendBeacon?.('/api/send-push-batch', new Blob([payload], { type: 'application/json' }))
+  if (!sent) {
+    fetch('/api/send-push-batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+      keepalive: true
+    }).catch(e => console.error('❌ Errore invio push:', e))
+  }
 }
 
 const IconMap = { Zap, Flame, Droplets, Phone, Wifi, Shield, Package, Tv, Repeat, CreditCard, Landmark, ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }

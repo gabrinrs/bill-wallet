@@ -4589,9 +4589,18 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
             <span className="text-sm text-gray-400">Verifica in corso...</span>
           </div>
         ) : pushActive ? (
-          <div className="flex items-center gap-2 py-2">
-            <div className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-sm text-green-700">Notifiche attive su questo dispositivo</span>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 py-2">
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <span className="text-sm text-green-700">Notifiche attive su questo dispositivo</span>
+            </div>
+            <button
+              onClick={handleActivatePush}
+              disabled={pushLoading}
+              className="text-xs text-gray-400 underline"
+            >
+              {pushLoading ? 'Riattivazione...' : 'Problemi? Riattiva notifiche'}
+            </button>
           </div>
         ) : (
           <div>

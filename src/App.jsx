@@ -21,12 +21,15 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 // Helper per inviare push notification a un utente
 async function sendPushToUser(userId, title, body, tag = 'bolly-social') {
   try {
-    await fetch('https://getbolly.app/api/send-push', {
+    console.log('📤 Invio push a:', userId, { title, body, tag })
+    const res = await fetch('/api/send-push', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': 'bolly-notif-2026-xyz' },
       body: JSON.stringify({ user_id: userId, title, body, tag })
     })
-  } catch (e) { console.error('Errore invio push:', e) }
+    const data = await res.json()
+    console.log('📬 Risposta push:', res.status, data)
+  } catch (e) { console.error('❌ Errore invio push:', e) }
 }
 
 const IconMap = { Zap, Flame, Droplets, Phone, Wifi, Shield, Package, Tv, Repeat, CreditCard, Landmark, ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }

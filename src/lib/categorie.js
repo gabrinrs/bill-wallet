@@ -158,6 +158,7 @@ export const CATEGORIE_SPESE = [
   { id: 'casa', label: 'Casa', icon: 'Home', color: '#f59e0b' },
   { id: 'abbigliamento', label: 'Shopping', icon: 'Shirt', color: '#ec4899' },
   { id: 'ristorazione', label: 'Ristoranti', icon: 'UtensilsCrossed', color: '#f97316' },
+  { id: 'split', label: 'Split', icon: 'Split', color: '#f59e0b' },
   { id: 'altro_spesa', label: 'Altro', icon: 'MoreHorizontal', color: '#6b7280' },
 ]
 

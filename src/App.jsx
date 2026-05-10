@@ -744,7 +744,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
         })
         const totaleEntrateDelMese = entrateDelMese.reduce((sum, s) => sum + Number(s.importo), 0)
         const ultime5 = spese.slice(0, 5)
-        const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
+        const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, Split, MoreHorizontal }
         const EntrataIconMap = { Banknote, Home, RotateCcw, Gift, Landmark, MoreHorizontal }
         if (spese.length === 0) return null
         return (
@@ -2084,7 +2084,7 @@ function FormSpesa({ onSave, onBack, dataPrecompilata }) {
     setSaving(false)
   }
 
-  const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
+  const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, Split, MoreHorizontal }
 
   return (
     <div className="space-y-5">
@@ -2148,7 +2148,7 @@ function FormSpesa({ onSave, onBack, dataPrecompilata }) {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
           <div className="grid grid-cols-4 gap-2">
-            {CATEGORIE_SPESE.map(cat => {
+            {CATEGORIE_SPESE.filter(cat => cat.id !== 'split').map(cat => {
               const Icon = SpesaIconMap[cat.icon] || Package
               return (
                 <button
@@ -2225,7 +2225,7 @@ function FormModificaSpesa({ spesa, onSave, onBack }) {
     setSaving(false)
   }
 
-  const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
+  const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, Split, MoreHorizontal }
   const EntrataIconMap = { Banknote, Home, RotateCcw, Gift, Landmark, MoreHorizontal }
   const categorie = isEntrata ? CATEGORIE_ENTRATE : CATEGORIE_SPESE
   const iconMap = isEntrata ? EntrataIconMap : SpesaIconMap
@@ -2445,7 +2445,7 @@ function ListaSpese({ spese, onBack, onDelete }) {
     return Object.entries(mappa).sort((a, b) => b[0].localeCompare(a[0]))
   }, [spese])
 
-  const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
+  const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, Split, MoreHorizontal }
   const EntrataIconMap = { Banknote, Home, RotateCcw, Gift, Landmark, MoreHorizontal }
 
   return (
@@ -2802,7 +2802,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
               )}
               {speseGiornoSelezionato.map(s => {
                 const cat = getCategoriaSpesa(s.categoria)
-                const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
+                const SpesaIconMap = { ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, Split, MoreHorizontal }
                 const Icon = SpesaIconMap[cat.icon] || Package
                 return (
                   <div key={s.id} className="flex items-center gap-3">
@@ -3661,6 +3661,12 @@ function SplitsRicevutiScreen({ splitsRicevuti, onBack, onRefresh, profile }) {
     setActionLoading(partecipanteId)
     try {
       await togglePartecipantePagato(partecipanteId, true)
+      // Registra la spesa nelle spese giornaliere con categoria "split"
+      const oggi = new Date().toISOString().slice(0, 10)
+      const desc = split.nota
+        ? `Split: ${split.nota} (da ${split.creatore_nome})`
+        : `Split da ${split.creatore_nome}`
+      await createSpesa({ importo: Number(split.mia_parte), categoria: 'split', descrizione: desc, data: oggi })
       // Push notifications gestite automaticamente dal database trigger
       await onRefresh()
     } catch (e) { console.error('Errore conferma pagamento:', e) }

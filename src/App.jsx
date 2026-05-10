@@ -354,7 +354,7 @@ function SwipeableSpesa({ isOpen, onOpen, onClose, onEdit, onDelete, children })
 // DASHBOARD
 // ============================================================
 
-function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto, onDeleteSpesa, onEditSpesa, abitazioni, filtroAbitazione, onSetFiltroAbitazione, splits, onSplit, onViewSplit }) {
+function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto, onDeleteSpesa, onEditSpesa, abitazioni, filtroAbitazione, onSetFiltroAbitazione, splits, onSplit, onViewSplit, richiesteCount }) {
   const [cardSwipedId, setCardSwipedId] = useState(null)
   const [spesaSwipedId, setSpesaSwipedId] = useState(null)
   const [deletingContratto, setDeletingContratto] = useState(null)
@@ -458,10 +458,32 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Ciao {profile?.nome || 'utente'}</h1>
         </div>
-        <button onClick={() => onNavigate('menu')} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500">
+        <button onClick={() => onNavigate('menu')} className="relative p-2 rounded-xl hover:bg-gray-100 text-gray-500">
           <Menu size={22} />
+          {richiesteCount > 0 && (
+            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full" />
+          )}
         </button>
       </div>
+
+      {/* Banner richieste amicizia */}
+      {richiesteCount > 0 && (
+        <button
+          onClick={() => onNavigate('amici')}
+          className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 transition-all active:scale-[0.98]"
+        >
+          <div className="w-9 h-9 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+            <UserPlus size={18} className="text-white" />
+          </div>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-semibold text-gray-900">
+              {richiesteCount === 1 ? 'Hai una richiesta di amicizia' : `Hai ${richiesteCount} richieste di amicizia`}
+            </p>
+            <p className="text-xs text-gray-500">Tocca per vedere</p>
+          </div>
+          <ChevronRight size={18} className="text-gray-400" />
+        </button>
+      )}
 
       {/* Filtro abitazione */}
       {abitazioni && abitazioni.length > 0 && (
@@ -3252,6 +3274,7 @@ function FormSplit({ target, onBack, onSave }) {
   const [importiCustom, setImportiCustom] = useState({}) // { participantKey: importo }
   const [saving, setSaving] = useState(false)
   const [nota, setNota] = useState('')
+  const [errore, setErrore] = useState('')
 
   useEffect(() => {
     Promise.all([getAmici().catch(() => []), getContattiEsterni().catch(() => [])])
@@ -3280,6 +3303,7 @@ function FormSplit({ target, onBack, onSave }) {
   const handleSave = async () => {
     if (selected.length === 0) return
     setSaving(true)
+    setErrore('')
     try {
       const partecipanti = selected.map(s => {
         const key = s.tipo + '_' + s.id
@@ -3290,6 +3314,7 @@ function FormSplit({ target, onBack, onSave }) {
           importo: divisione === 'uguale' ? importoPerPersona : (parseFloat(importiCustom[key]) || 0),
         }
       })
+      console.log('Split payload:', { tipo: target.tipo, riferimento_id: target.id, importo_totale: target.importo, divisione, partecipanti })
       await createSplit({
         tipo: target.tipo,
         riferimento_id: target.id,
@@ -3298,7 +3323,10 @@ function FormSplit({ target, onBack, onSave }) {
         nota: nota.trim() || null,
       }, partecipanti)
       await onSave()
-    } catch (e) { console.error('Errore creazione split:', e) }
+    } catch (e) {
+      console.error('Errore creazione split:', e)
+      setErrore(e?.message || 'Errore durante la creazione dello split. Riprova.')
+    }
     setSaving(false)
   }
 
@@ -3452,6 +3480,13 @@ function FormSplit({ target, onBack, onSave }) {
             placeholder="Nota (opzionale)..."
             className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-bolly-400"
           />
+
+          {/* Errore */}
+          {errore && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200">
+              <p className="text-sm text-red-700">{errore}</p>
+            </div>
+          )}
 
           {/* Bottone salva */}
           <button
@@ -5017,7 +5052,7 @@ export default function App() {
 
   const renderScreen = () => {
     switch (screen) {
-      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} abitazioni={abitazioni} filtroAbitazione={filtroAbitazione} onSetFiltroAbitazione={setFiltroAbitazione} splits={splits} onSplit={(target) => { setSplitTarget(target); setScreen('form-split') }} onViewSplit={(splitId) => { setSelectedSplitId(splitId); setScreen('dettaglio-split') }} />
+      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} abitazioni={abitazioni} filtroAbitazione={filtroAbitazione} onSetFiltroAbitazione={setFiltroAbitazione} splits={splits} onSplit={(target) => { setSplitTarget(target); setScreen('form-split') }} onViewSplit={(splitId) => { setSelectedSplitId(splitId); setScreen('dettaglio-split') }} richiesteCount={richiesteCount} />
       case 'dettaglio': {
         const c = contratti.find(x => x.id === selectedContrattoId)
         if (!c) { setScreen('dashboard'); return null }

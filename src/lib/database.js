@@ -395,9 +395,18 @@ export async function deleteContattoEsterno(id) {
 // Crea uno split con partecipanti
 export async function createSplit(split, partecipanti) {
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Utente non autenticato')
+
   const { data: splitData, error: splitError } = await supabase
     .from('splits')
-    .insert({ ...split, user_id: user.id })
+    .insert({
+      user_id: user.id,
+      tipo: split.tipo,
+      riferimento_id: split.riferimento_id,
+      importo_totale: Number(split.importo_totale),
+      divisione: split.divisione,
+      nota: split.nota || null,
+    })
     .select()
     .single()
   if (splitError) throw splitError
@@ -408,7 +417,7 @@ export async function createSplit(split, partecipanti) {
     user_id: p.user_id || null,
     contatto_esterno_id: p.contatto_esterno_id || null,
     nome: p.nome,
-    importo: p.importo,
+    importo: Number(p.importo),
   }))
   const { error: partError } = await supabase
     .from('split_partecipanti')

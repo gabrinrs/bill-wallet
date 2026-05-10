@@ -53,14 +53,13 @@ export async function subscribeToPush(userId) {
     const subscriptionData = subscription.toJSON()
     console.log('🔔 Subscription ottenuta:', subscriptionData.endpoint?.slice(0, 50))
 
-    // 6. Salva su Supabase
-    const { error } = await supabase.from('push_subscriptions').upsert({
+    // 6. Salva su Supabase (rimuovi vecchie subscription di questo dispositivo, poi inserisci)
+    await supabase.from('push_subscriptions').delete().eq('user_id', userId)
+    const { error } = await supabase.from('push_subscriptions').insert({
       user_id: userId,
       endpoint: subscriptionData.endpoint,
       keys_p256dh: subscriptionData.keys.p256dh,
       keys_auth: subscriptionData.keys.auth
-    }, {
-      onConflict: 'user_id,endpoint'
     })
 
     if (error) {

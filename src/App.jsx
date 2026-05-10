@@ -3666,16 +3666,19 @@ function DettaglioSplit({ split, onBack, onRefresh }) {
 // SPLITS RICEVUTI
 // ============================================================
 
-function SplitsRicevutiScreen({ splitsRicevuti, onBack, onRefresh }) {
+function SplitsRicevutiScreen({ splitsRicevuti, onBack, onRefresh, profile }) {
   const [actionLoading, setActionLoading] = useState(null)
 
   const nonPagati = splitsRicevuti.filter(s => !s.mio_pagato)
   const pagati = splitsRicevuti.filter(s => s.mio_pagato)
 
-  const handleSegnaConfermato = async (partecipanteId) => {
+  const handleSegnaConfermato = async (partecipanteId, split) => {
     setActionLoading(partecipanteId)
     try {
       await togglePartecipantePagato(partecipanteId, true)
+      // Notifica il creatore dello split che hai pagato
+      const nomeUtente = profile?.nome || 'Qualcuno'
+      sendPushToUser(split.user_id, 'Split saldato!', `${nomeUtente} ha saldato la sua parte di ${formatEuro(split.mia_parte)}`, 'bolly-split-pagato')
       await onRefresh()
     } catch (e) { console.error('Errore conferma pagamento:', e) }
     setActionLoading(null)
@@ -3724,7 +3727,7 @@ function SplitsRicevutiScreen({ splitsRicevuti, onBack, onRefresh }) {
                   <div className="text-right flex-shrink-0">
                     <p className="text-lg font-bold text-orange-600">{formatEuro(s.mia_parte)}</p>
                     <button
-                      onClick={() => handleSegnaConfermato(s.mio_partecipante_id)}
+                      onClick={() => handleSegnaConfermato(s.mio_partecipante_id, s)}
                       disabled={actionLoading === s.mio_partecipante_id}
                       className="mt-1 px-3 py-1.5 rounded-lg bg-bolly-500 text-white text-xs font-semibold disabled:opacity-50"
                     >
@@ -5261,7 +5264,7 @@ export default function App() {
         if (!sp) { setScreen('dashboard'); return null }
         return <DettaglioSplit split={sp} onBack={() => { setSelectedSplitId(null); setScreen('dashboard') }} onRefresh={loadData} />
       }
-      case 'splits-ricevuti': return <SplitsRicevutiScreen splitsRicevuti={splitsRicevuti} onBack={() => setScreen('dashboard')} onRefresh={loadData} />
+      case 'splits-ricevuti': return <SplitsRicevutiScreen splitsRicevuti={splitsRicevuti} onBack={() => setScreen('dashboard')} onRefresh={loadData} profile={profile} />
       case 'amici': return <SchermataAmici onBack={() => setScreen('menu')} session={session} profile={profile} />
       case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} abitazioni={abitazioni} onRefreshAbitazioni={async () => { const ab = await getAbitazioni(); setAbitazioni(ab) }} amiciCount={amiciCount} richiesteCount={richiesteCount} />
       case 'termini': return <TerminiCondizioni onBack={() => setScreen('menu')} />

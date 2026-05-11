@@ -14,7 +14,8 @@ import {
   Trash2, ExternalLink, Pencil, Mail, Copy, User, Inbox, FileText, HelpCircle, MessageCircle,
   Menu, X, ChevronDown, Search,
   ShoppingCart, Car, Gamepad2, Heart, Shirt, UtensilsCrossed, MoreHorizontal, Wallet, Camera,
-  Banknote, Gift, RotateCcw, Building2, Sun, MapPin, Warehouse, Users, UserPlus, UserCheck, UserX, Clock, Send, Split, CircleDollarSign
+  Banknote, Gift, RotateCcw, Building2, Sun, MapPin, Warehouse, Users, UserPlus, UserCheck, UserX, Clock, Send, Split, CircleDollarSign,
+  ArrowUpRight, ArrowDownRight, Scale
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -2006,8 +2007,23 @@ function FormSpesa({ onSave, onBack, dataPrecompilata }) {
   const [scanError, setScanError] = useState('')
   const importoRef = useRef(null)
   const fileInputRef = useRef(null)
+  // Split inline
+  const [wantSplit, setWantSplit] = useState(false)
+  const [splitAmici, setSplitAmici] = useState([]) // lista amici caricati
+  const [splitContattiEsterni, setSplitContattiEsterni] = useState([])
+  const [splitSelected, setSplitSelected] = useState([]) // amici selezionati per lo split
+  const [splitLoading, setSplitLoading] = useState(false)
 
   useEffect(() => { if (!scanning) importoRef.current?.focus() }, [scanning])
+
+  // Carica amici quando attivi il toggle split
+  useEffect(() => {
+    if (wantSplit && splitAmici.length === 0 && splitContattiEsterni.length === 0) {
+      setSplitLoading(true)
+      Promise.all([getAmici().catch(() => []), getContattiEsterni().catch(() => [])])
+        .then(([a, ce]) => { setSplitAmici(a); setSplitContattiEsterni(ce); setSplitLoading(false) })
+    }
+  }, [wantSplit])
 
   const handleScanScontrino = async (e) => {
     const file = e.target.files?.[0]
@@ -2074,11 +2090,39 @@ function FormSpesa({ onSave, onBack, dataPrecompilata }) {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
+  const toggleSplitSelect = (p) => {
+    const key = p.tipo + '_' + p.id
+    if (splitSelected.find(s => s.tipo + '_' + s.id === key)) {
+      setSplitSelected(splitSelected.filter(s => s.tipo + '_' + s.id !== key))
+    } else {
+      setSplitSelected([...splitSelected, p])
+    }
+  }
+
   const handleSave = async () => {
     if (!importo || !categoria) return
     setSaving(true)
     try {
-      await onSave({ importo: parseFloat(importo), categoria, descrizione: descrizione || null, data })
+      const spesaSalvata = await onSave({ importo: parseFloat(importo), categoria, descrizione: descrizione || null, data })
+      // Se split attivo, crea lo split sulla spesa appena salvata
+      if (wantSplit && splitSelected.length > 0 && spesaSalvata?.id) {
+        const importoNum = parseFloat(importo)
+        const numPartecipanti = splitSelected.length + 1
+        const importoPerPersona = Math.round((importoNum / numPartecipanti) * 100) / 100
+        const partecipanti = splitSelected.map(s => ({
+          user_id: s.user_id || null,
+          contatto_esterno_id: s.contatto_esterno_id || null,
+          nome: s.nome,
+          importo: importoPerPersona,
+        }))
+        await createSplit({
+          tipo: 'spesa',
+          riferimento_id: spesaSalvata.id,
+          importo_totale: importoNum,
+          divisione: 'uguale',
+          nota: descrizione || null,
+        }, partecipanti)
+      }
       onBack()
     } catch (e) { console.error('Errore salvataggio spesa:', e) }
     setSaving(false)
@@ -2191,13 +2235,89 @@ function FormSpesa({ onSave, onBack, dataPrecompilata }) {
         </div>
       </Card>
 
+      {/* Toggle Dividi con amici */}
+      {importo && parseFloat(importo) > 0 && (
+        <Card className="p-4">
+          <button
+            onClick={() => { setWantSplit(!wantSplit); if (wantSplit) setSplitSelected([]) }}
+            className="w-full flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                <Split size={20} className="text-purple-600" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-gray-900">Dividi con amici</p>
+                <p className="text-xs text-gray-500">Crea uno split in parti uguali</p>
+              </div>
+            </div>
+            <div className={`w-12 h-7 rounded-full transition-colors flex items-center px-0.5 ${wantSplit ? 'bg-bolly-500' : 'bg-gray-200'}`}>
+              <div className={`w-6 h-6 bg-white rounded-full shadow transition-transform ${wantSplit ? 'translate-x-5' : ''}`} />
+            </div>
+          </button>
+
+          {wantSplit && (
+            <div className="mt-4 space-y-2">
+              {splitLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 size={20} className="animate-spin text-bolly-500" />
+                </div>
+              ) : (() => {
+                const tuttiSplitAmici = [
+                  ...splitAmici.map(a => ({ tipo: 'bolly', id: a.id, user_id: a.amico_id, contatto_esterno_id: null, nome: a.amico_nome })),
+                  ...splitContattiEsterni.map(c => ({ tipo: 'esterno', id: c.id, user_id: null, contatto_esterno_id: c.id, nome: c.nome })),
+                ]
+                if (tuttiSplitAmici.length === 0) return (
+                  <p className="text-xs text-gray-500 text-center py-2">Nessun amico. Aggiungine dal Menu → I miei amici.</p>
+                )
+                const numP = splitSelected.length + 1
+                const quota = numP > 1 ? Math.round((parseFloat(importo) / numP) * 100) / 100 : 0
+                return (
+                  <>
+                    {tuttiSplitAmici.map(a => {
+                      const key = a.tipo + '_' + a.id
+                      const isSel = splitSelected.find(s => s.tipo + '_' + s.id === key)
+                      return (
+                        <div
+                          key={key}
+                          onClick={() => toggleSplitSelect(a)}
+                          className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all ${isSel ? 'bg-bolly-50 ring-2 ring-bolly-400' : 'hover:bg-gray-50'}`}
+                        >
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center ${a.tipo === 'bolly' ? '' : 'bg-gray-200'}`}
+                            style={a.tipo === 'bolly' ? { background: 'linear-gradient(145deg, #00897B, #00695C)' } : {}}>
+                            <span className={`font-semibold ${a.tipo === 'bolly' ? 'text-white font-pacifico' : 'text-gray-500'}`}>
+                              {a.nome?.[0]?.toUpperCase() || '?'}
+                            </span>
+                          </div>
+                          <p className="flex-1 text-sm font-medium text-gray-900">{a.nome}</p>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSel ? 'bg-bolly-500 border-bolly-500' : 'border-gray-300'}`}>
+                            {isSel && <Check size={12} className="text-white" />}
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {splitSelected.length > 0 && (
+                      <div className="mt-2 p-3 bg-purple-50 rounded-xl">
+                        <p className="text-xs font-semibold text-purple-700">
+                          Diviso in {numP}: {formatEuro(quota)} a testa
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
+            </div>
+          )}
+        </Card>
+      )}
+
       <button
         onClick={handleSave}
         disabled={!importo || !categoria || saving}
         className="w-full py-3.5 bg-bolly-500 text-white font-semibold rounded-xl disabled:opacity-40 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
       >
         {saving ? <Loader2 size={20} className="animate-spin" /> : <Check size={20} />}
-        {saving ? 'Salvataggio...' : 'Salva spesa'}
+        {saving ? 'Salvataggio...' : wantSplit && splitSelected.length > 0 ? 'Salva e dividi' : 'Salva spesa'}
       </button>
     </div>
   )
@@ -3765,7 +3885,7 @@ function SplitsRicevutiScreen({ splitsRicevuti, onBack, onRefresh, profile }) {
 // AMICI
 // ============================================================
 
-function SchermataAmici({ onBack, session, profile }) {
+function SchermataAmici({ onBack, session, profile, splits = [], splitsRicevuti = [] }) {
   const [amici, setAmici] = useState([])
   const [richiesteRicevute, setRichiesteRicevute] = useState([])
   const [richiesteInviate, setRichiesteInviate] = useState([])
@@ -3780,7 +3900,7 @@ function SchermataAmici({ onBack, session, profile }) {
   const [saving, setSaving] = useState(false)
   const [actionLoading, setActionLoading] = useState(null) // id dell'amicizia/contatto in azione
   const [confirmDelete, setConfirmDelete] = useState(null)
-  const [tab, setTab] = useState('amici') // 'amici' | 'richieste'
+  const [tab, setTab] = useState('amici') // 'amici' | 'richieste' | 'saldi'
 
   const loadAmici = async () => {
     try {
@@ -3918,7 +4038,7 @@ function SchermataAmici({ onBack, session, profile }) {
         </button>
       </div>
 
-      {/* Tab: Amici / Richieste */}
+      {/* Tab: Amici / Richieste / Saldi */}
       <div className="flex gap-2">
         <button
           onClick={() => setTab('amici')}
@@ -3934,6 +4054,12 @@ function SchermataAmici({ onBack, session, profile }) {
           {totaleRichieste > 0 && (
             <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{totaleRichieste}</span>
           )}
+        </button>
+        <button
+          onClick={() => setTab('saldi')}
+          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${tab === 'saldi' ? 'bg-bolly-500 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
+        >
+          Saldi
         </button>
       </div>
 
@@ -4196,6 +4322,92 @@ function SchermataAmici({ onBack, session, profile }) {
           )}
         </div>
       )}
+
+      {/* TAB: Saldi netti */}
+      {tab === 'saldi' && (() => {
+        // Calcola saldi netti tra amici
+        const userId = session?.user?.id
+        const saldiMap = {} // { amicoId: { nome, saldo } } — positivo = ti devono, negativo = devi tu
+
+        // Split creati da me → partecipanti non pagati mi devono
+        splits.forEach(s => {
+          (s.split_partecipanti || []).forEach(p => {
+            if (!p.user_id || p.user_id === userId) return
+            if (!saldiMap[p.user_id]) saldiMap[p.user_id] = { nome: p.nome, saldo: 0 }
+            if (!p.pagato) saldiMap[p.user_id].saldo += Number(p.importo)
+          })
+        })
+
+        // Split ricevuti da me → se non pagato, devo al creatore
+        splitsRicevuti.forEach(s => {
+          if (!s.user_id || s.user_id === userId) return
+          if (!saldiMap[s.user_id]) saldiMap[s.user_id] = { nome: s.creatore_nome || 'Utente', saldo: 0 }
+          if (!s.mio_pagato) saldiMap[s.user_id].saldo -= Number(s.mia_parte)
+        })
+
+        const saldiArray = Object.entries(saldiMap)
+          .map(([id, v]) => ({ id, nome: v.nome, saldo: Math.round(v.saldo * 100) / 100 }))
+          .filter(s => s.saldo !== 0)
+          .sort((a, b) => b.saldo - a.saldo) // prima chi ti deve di più
+
+        const totaleCredito = saldiArray.filter(s => s.saldo > 0).reduce((a, s) => a + s.saldo, 0)
+        const totaleDebito = saldiArray.filter(s => s.saldo < 0).reduce((a, s) => a + Math.abs(s.saldo), 0)
+
+        return (
+          <div className="space-y-4">
+            {/* Riepilogo totale */}
+            <div className="grid grid-cols-2 gap-3">
+              <Card className="p-4 bg-green-50 border-green-200">
+                <div className="flex items-center gap-2 mb-1">
+                  <ArrowDownRight size={16} className="text-green-600" />
+                  <p className="text-xs font-semibold text-green-700">Ti devono</p>
+                </div>
+                <p className="text-xl font-bold text-green-700">{formatEuro(totaleCredito)}</p>
+              </Card>
+              <Card className="p-4 bg-orange-50 border-orange-200">
+                <div className="flex items-center gap-2 mb-1">
+                  <ArrowUpRight size={16} className="text-orange-600" />
+                  <p className="text-xs font-semibold text-orange-700">Devi</p>
+                </div>
+                <p className="text-xl font-bold text-orange-700">{formatEuro(totaleDebito)}</p>
+              </Card>
+            </div>
+
+            {saldiArray.length === 0 ? (
+              <Card className="p-8 text-center">
+                <Scale size={40} className="text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm">Tutti i conti sono in pari!</p>
+                <p className="text-gray-400 text-xs mt-1">I saldi si aggiornano in base agli split aperti.</p>
+              </Card>
+            ) : (
+              <div className="space-y-2.5">
+                {saldiArray.map(s => (
+                  <Card key={s.id} className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(145deg, #00897B, #00695C)' }}>
+                          <span className="text-white font-pacifico text-lg">{s.nome?.[0]?.toUpperCase() || '?'}</span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{s.nome}</p>
+                          <p className="text-xs text-gray-500">
+                            {s.saldo > 0 ? 'Ti deve' : 'Gli devi'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`text-right`}>
+                        <p className={`text-lg font-bold ${s.saldo > 0 ? 'text-green-600' : 'text-orange-600'}`}>
+                          {s.saldo > 0 ? '+' : '-'}{formatEuro(Math.abs(s.saldo))}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })()}
     </div>
   )
 }
@@ -5185,8 +5397,9 @@ export default function App() {
   }
 
   const handleSaveSpesa = async (spesa) => {
-    await createSpesa(spesa)
+    const result = await createSpesa(spesa)
     await loadData()
+    return result
   }
 
   const handleUpdateSpesa = async (id, updates) => {
@@ -5267,7 +5480,7 @@ export default function App() {
         return <DettaglioSplit split={sp} onBack={() => { setSelectedSplitId(null); setScreen('dashboard') }} onRefresh={loadData} />
       }
       case 'splits-ricevuti': return <SplitsRicevutiScreen splitsRicevuti={splitsRicevuti} onBack={() => setScreen('dashboard')} onRefresh={loadData} profile={profile} />
-      case 'amici': return <SchermataAmici onBack={() => setScreen('menu')} session={session} profile={profile} />
+      case 'amici': return <SchermataAmici onBack={() => setScreen('menu')} session={session} profile={profile} splits={splits} splitsRicevuti={splitsRicevuti} />
       case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} abitazioni={abitazioni} onRefreshAbitazioni={async () => { const ab = await getAbitazioni(); setAbitazioni(ab) }} amiciCount={amiciCount} richiesteCount={richiesteCount} />
       case 'termini': return <TerminiCondizioni onBack={() => setScreen('menu')} />
       case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} />

@@ -5294,6 +5294,19 @@ export default function App() {
     }
   }, [])
 
+  // Reset badge icona PWA quando l'app viene aperta o torna visibile
+  useEffect(() => {
+    const resetBadge = () => {
+      if (document.visibilityState === 'visible' && navigator.clearAppBadge) {
+        navigator.clearAppBadge().catch(() => {})
+      }
+    }
+    // Reset immediato al caricamento
+    if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {})
+    document.addEventListener('visibilitychange', resetBadge)
+    return () => document.removeEventListener('visibilitychange', resetBadge)
+  }, [])
+
   // Mostra onboarding al primo accesso
   useEffect(() => {
     if (session && profile && !profile.onboarding_done) {

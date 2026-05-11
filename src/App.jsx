@@ -4,6 +4,7 @@ import { getContratti, getBollette, createContratto, createBolletta, togglePagat
 import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, CATEGORIE_SPESE, getCategoriaSpesa, CATEGORIE_ENTRATE, getCategoriaEntrata } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import { subscribeToPush, isPushSubscribed } from './lib/pushNotifications'
+import { identifyUser, track, trackScreen, resetAnalytics, setUserProperties } from './lib/analytics'
 import Auth from './components/Auth'
 import Onboarding from './components/Onboarding'
 import LandingPage from './components/LandingPage'
@@ -1129,6 +1130,7 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome, abitazion
       if (!webhookRes.ok) throw new Error('Errore nell\'invio al sistema di elaborazione')
 
       setUploadStatus('success')
+      if (window.posthog) window.posthog.capture('pdf_upload', { fonte: 'form_contratto' })
       setTimeout(async () => { if (onRefresh) await onRefresh(); if (onGoHome) onGoHome(); else onBack() }, 5000)
     } catch (e) {
       console.error('Upload PDF error:', e)
@@ -1478,6 +1480,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
       if (!webhookRes.ok) throw new Error('Errore nell\'invio al sistema di elaborazione')
 
       setUploadStatus('success')
+      if (window.posthog) window.posthog.capture('pdf_upload', { fonte: 'form_bolletta' })
       setTimeout(async () => { if (onRefresh) await onRefresh(); if (onGoHome) onGoHome(); else onBack() }, 5000)
     } catch (e) {
       console.error('Upload PDF error:', e)
@@ -2079,6 +2082,7 @@ function FormSpesa({ onSave, onBack, dataPrecompilata }) {
       if (result.categoria_suggerita) setCategoria(result.categoria_suggerita)
       if (result.descrizione_suggerita) setDescrizione(result.descrizione_suggerita)
       if (result.data) setData(result.data)
+      if (window.posthog) window.posthog.capture('ocr_scontrino', { successo: true })
 
     } catch (err) {
       console.error('Errore OCR:', err)
@@ -2122,6 +2126,7 @@ function FormSpesa({ onSave, onBack, dataPrecompilata }) {
           divisione: 'uguale',
           nota: descrizione || null,
         }, partecipanti)
+        if (window.posthog) window.posthog.capture('split_creato', { tipo: 'spesa', divisione: 'uguale', partecipanti: partecipanti.length, fonte: 'form_spesa' })
       }
       onBack()
     } catch (e) { console.error('Errore salvataggio spesa:', e) }
@@ -3466,6 +3471,7 @@ function FormSplit({ target, profile, onBack, onSave }) {
         divisione,
         nota: nota.trim() || null,
       }, partecipanti)
+      if (window.posthog) window.posthog.capture('split_creato', { tipo: target.tipo, divisione, partecipanti: partecipanti.length, fonte: 'form_split' })
       // Push notifications gestite automaticamente dal database trigger
       await onSave()
     } catch (e) {
@@ -4510,6 +4516,7 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
       console.log('🔔 Attivazione push per user:', session.user.id)
       const success = await subscribeToPush(session.user.id)
       console.log('🔔 Risultato subscribeToPush:', success)
+      if (success && window.posthog) window.posthog.capture('push_attivate')
       setPushActive(success)
       if (!success) {
         alert('Non è stato possibile attivare le notifiche. Controlla i permessi del browser per questo sito.')
@@ -5178,7 +5185,10 @@ export default function App() {
   const [sharedPdfStatus, setSharedPdfStatus] = useState(null) // null, 'uploading', 'processing', 'success', 'error'
   const [sharedPdfError, setSharedPdfError] = useState(null)
 
-  useEffect(() => { requestAnimationFrame(() => scrollRef.current?.scrollTo(0, 0)) }, [screen])
+  useEffect(() => {
+    requestAnimationFrame(() => scrollRef.current?.scrollTo(0, 0))
+    if (screen) trackScreen(screen)
+  }, [screen])
 
   // Web Share Target: gestisce PDF condiviso da altre app
   useEffect(() => {
@@ -5219,6 +5229,7 @@ export default function App() {
         if (!webhookRes.ok) throw new Error('Errore nell\'elaborazione')
 
         setSharedPdfStatus('success')
+        track('pdf_condiviso', { fonte: 'web_share_target' })
         setTimeout(async () => { setSharedPdfStatus(null); await loadData() }, 4000)
       } catch (e) {
         console.error('Shared PDF error:', e)
@@ -5266,6 +5277,13 @@ export default function App() {
     try {
       const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
       setProfile(prof)
+      // Analytics: identifica utente
+      identifyUser(session.user.id, {
+        email: session.user.email,
+        nome: prof?.nome || '',
+        piano: prof?.piano || 'free',
+        onboarding_done: prof?.onboarding_done || false
+      })
       const [c, b, s, ab, amici, richieste, esterni, sp, spRicevuti] = await Promise.all([
         getContratti(), getBollette(), getSpese(), getAbitazioni(),
         getAmici().catch(() => []),
@@ -5329,6 +5347,7 @@ export default function App() {
       userId={session.user.id}
       onComplete={async () => {
         await supabase.from('profiles').update({ onboarding_done: true }).eq('id', session.user.id)
+        track('onboarding_completato')
         setShowOnboarding(false)
         await loadData()
       }}
@@ -5343,6 +5362,7 @@ export default function App() {
   )
 
   const handleLogout = async () => {
+    resetAnalytics()
     await supabase.auth.signOut()
     setContratti([])
     setBollette([])
@@ -5353,6 +5373,7 @@ export default function App() {
 
   const handleSaveContratto = async (form) => {
     await createContratto(form)
+    track('contratto_creato', { categoria: form.categoria, fornitore: form.fornitore })
     await loadData()
     setScreen('dashboard')
   }
@@ -5370,6 +5391,7 @@ export default function App() {
     const bollettaData = { ...form }
     delete bollettaData.descrizione_libera
     await createBolletta(bollettaData)
+    track('bolletta_creata', { fonte: 'manuale' })
     await loadData()
     setScreen(selectedContrattoId ? 'dettaglio' : 'dashboard')
   }
@@ -5411,6 +5433,7 @@ export default function App() {
 
   const handleSaveSpesa = async (spesa) => {
     const result = await createSpesa(spesa)
+    track('spesa_creata', { categoria: spesa.categoria, importo: spesa.importo })
     await loadData()
     return result
   }

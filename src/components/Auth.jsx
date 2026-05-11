@@ -70,6 +70,7 @@ export default function Auth({ onBack }) {
           })
         }
         setSuccess('Registrazione completata! Controlla la tua email per confermare.')
+        if (window.posthog) window.posthog.capture('registrazione')
       }
     }
     setLoading(false)

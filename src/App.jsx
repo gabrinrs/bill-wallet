@@ -5369,7 +5369,8 @@ export default function App() {
 
   // Badge Notifiche e Inbox: conteggi attuali
   const nonLetteDb = dbNotifiche.filter(n => !n.letta).length
-  const currentNotificheCount = bollette.filter(b => !b.pagata && b.scadenza && b.stato_elaborazione === 'ok' && giorniDa(b.scadenza) <= 7).length + nonLetteDb
+  const scadenzeCount = bollette.filter(b => !b.pagata && b.scadenza && b.stato_elaborazione === 'ok' && giorniDa(b.scadenza) <= 7).length
+  const currentNotificheCount = scadenzeCount + nonLetteDb
   // Inbox badge: mostra pallino solo se ci sono bollette arrivate DOPO l'ultima apertura di Inbox
   const nuoveBolletteInbox = bollette.filter(b => b.fonte !== 'manuale' && b.created_at && new Date(b.created_at) > new Date(lastSeenInboxTime)).length
 
@@ -5489,8 +5490,9 @@ export default function App() {
     setScreen('modifica-spesa')
   }
 
-  const notificheCount = currentNotificheCount
-  const showBadgeNotifiche = currentNotificheCount > 0 && currentNotificheCount > lastSeenNotificheCount
+  const nuoveScadenze = scadenzeCount > 0 && scadenzeCount > lastSeenNotificheCount
+  const notificheCount = nuoveScadenze ? (scadenzeCount - lastSeenNotificheCount + nonLetteDb) : nonLetteDb
+  const showBadgeNotifiche = notificheCount > 0
   const showBadgeInbox = nuoveBolletteInbox > 0
 
   const renderScreen = () => {

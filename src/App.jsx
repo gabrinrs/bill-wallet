@@ -872,7 +872,11 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
     [...bollette].filter(b => b.periodo).sort((a, b) => new Date(a.periodo) - new Date(b.periodo)).map(b => ({ periodo: formatPeriodo(b.periodo), importo: Number(b.importo) }))
   , [bollette])
   const chartDataConsumi = useMemo(() =>
-    [...bollette].filter(b => b.periodo && b.consumo).sort((a, b) => new Date(a.periodo) - new Date(b.periodo)).map(b => ({ periodo: formatPeriodo(b.periodo), consumo: Number(b.consumo), unita: b.unita_misura }))
+    [...bollette].filter(b => b.periodo && b.consumo).sort((a, b) => new Date(a.periodo) - new Date(b.periodo)).map(b => {
+      const consumo = Number(b.consumo)
+      const costoUnitario = consumo > 0 ? Number((Number(b.importo) / consumo).toFixed(4)) : null
+      return { periodo: formatPeriodo(b.periodo), consumo, costoUnitario, unita: b.unita_misura }
+    })
   , [bollette])
   const unitaConsumi = chartDataConsumi.length > 0 ? chartDataConsumi[0].unita : ''
   const cat = getCategoria(contratto.categoria)
@@ -995,6 +999,21 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
         </Card>
       )}
 
+      {chartDataConsumi.filter(d => d.costoUnitario != null).length >= 2 && (
+        <Card className="p-4">
+          <h3 className="font-semibold text-gray-900 mb-3">Costo unitario (€/{unitaConsumi})</h3>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={chartDataConsumi.filter(d => d.costoUnitario != null)}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="periodo" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${v}€`} />
+              <Tooltip formatter={v => [`${Number(v).toFixed(4)} €/${unitaConsumi}`, 'Costo unitario']} />
+              <Line type="monotone" dataKey="costoUnitario" stroke="#F59E0B" strokeWidth={2.5} dot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
+
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-gray-900">Storico bollette</h3>
@@ -1012,6 +1031,9 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
                       <p className="font-medium text-gray-900">{formatEuro(b.importo)}</p>
                       {b.consumo && b.unita_misura && (
                         <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{Number(b.consumo).toLocaleString('it-IT')} {b.unita_misura}</span>
+                      )}
+                      {b.consumo && b.unita_misura && Number(b.consumo) > 0 && (
+                        <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{(Number(b.importo) / Number(b.consumo)).toFixed(2)} €/{b.unita_misura}</span>
                       )}
                       {bollettaSplit && (
                         <button onClick={() => onViewSplit(bollettaSplit.id)}>

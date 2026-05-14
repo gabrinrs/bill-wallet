@@ -171,6 +171,14 @@ export async function segnaNotificaLetta(id) {
   if (error) throw error
 }
 
+export async function deleteNotifica(id) {
+  const { error } = await supabase
+    .from('notifiche')
+    .delete()
+    .eq('id', id)
+  if (error) throw error
+}
+
 // ============================================================
 // SPESE GIORNALIERE
 // ============================================================

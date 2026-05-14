@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione, getAmici, getRichiesteRicevute, getRichiesteInviate, cercaUtenteBolly, inviaRichiestaAmicizia, accettaAmicizia, rifiutaAmicizia, rimuoviAmico, getContattiEsterni, addContattoEsterno, deleteContattoEsterno, createSplit, getSplitsByUser, getSplitsRicevuti, getSplitByRiferimento, togglePartecipantePagato, deleteSplit, getNotifiche, segnaNotificaLetta } from './lib/database'
+import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione, getAmici, getRichiesteRicevute, getRichiesteInviate, cercaUtenteBolly, inviaRichiestaAmicizia, accettaAmicizia, rifiutaAmicizia, rimuoviAmico, getContattiEsterni, addContattoEsterno, deleteContattoEsterno, createSplit, getSplitsByUser, getSplitsRicevuti, getSplitByRiferimento, togglePartecipantePagato, deleteSplit, getNotifiche, segnaNotificaLetta, deleteNotifica } from './lib/database'
 import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, CATEGORIE_SPESE, getCategoriaSpesa, CATEGORIE_ENTRATE, getCategoriaEntrata } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import { subscribeToPush, isPushSubscribed } from './lib/pushNotifications'
@@ -1982,6 +1982,14 @@ function Notifiche({ contratti, bollette, dbNotifiche = [], onNotificheLette }) 
     }
   }
 
+  const handleDeleteNotifica = (e, id) => {
+    e.stopPropagation()
+    deleteNotifica(id).then(() => {
+      const updated = dbNotifiche.filter(x => x.id !== id)
+      if (onNotificheLette) onNotificheLette(updated)
+    }).catch(() => {})
+  }
+
   const tutteNotifiche = [
     ...dbNotifiche.map(n => ({
       id: n.id,
@@ -2012,7 +2020,7 @@ function Notifiche({ contratti, bollette, dbNotifiche = [], onNotificheLette }) 
                   <p className="text-sm text-gray-600 mt-0.5">{n.desc}</p>
                   {n.url && <p className="text-xs text-blue-500 mt-1 font-medium">Tocca per aprire →</p>}
                 </div>
-                {n.letta === false && <span className="w-2.5 h-2.5 bg-blue-500 rounded-full mt-1.5 shrink-0" />}
+                {n.id && <button onClick={(e) => handleDeleteNotifica(e, n.id)} className="p-1 rounded-lg hover:bg-black/10 shrink-0"><X size={16} className="text-gray-400" /></button>}
               </div>
             </Card>
           ))}

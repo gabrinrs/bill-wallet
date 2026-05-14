@@ -27,9 +27,9 @@ self.addEventListener('push', (event) => {
 
   event.waitUntil(
     self.registration.showNotification(data.title, options).then(() => {
-      // Mostra pallino sull'icona della PWA (senza numero)
+      // Mostra badge "1" sull'icona della PWA
       if (navigator.setAppBadge) {
-        navigator.setAppBadge().catch(() => {})
+        return navigator.setAppBadge(1)
       }
     })
   )

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione, getAmici, getRichiesteRicevute, getRichiesteInviate, cercaUtenteBolly, inviaRichiestaAmicizia, accettaAmicizia, rifiutaAmicizia, rimuoviAmico, getContattiEsterni, addContattoEsterno, deleteContattoEsterno, createSplit, getSplitsByUser, getSplitsRicevuti, getSplitByRiferimento, togglePartecipantePagato, deleteSplit } from './lib/database'
+import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione, getAmici, getRichiesteRicevute, getRichiesteInviate, cercaUtenteBolly, inviaRichiestaAmicizia, accettaAmicizia, rifiutaAmicizia, rimuoviAmico, getContattiEsterni, addContattoEsterno, deleteContattoEsterno, createSplit, getSplitsByUser, getSplitsRicevuti, getSplitByRiferimento, togglePartecipantePagato, deleteSplit, getNotifiche, segnaNotificaLetta } from './lib/database'
 import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, CATEGORIE_SPESE, getCategoriaSpesa, CATEGORIE_ENTRATE, getCategoriaEntrata } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import { subscribeToPush, isPushSubscribed } from './lib/pushNotifications'
@@ -1952,7 +1952,13 @@ function FormModificaContratto({ contratto, onSave, onBack, abitazioni }) {
 // ============================================================
 
 function Notifiche({ contratti, bollette }) {
-  const notifiche = useMemo(() => {
+  const [dbNotifiche, setDbNotifiche] = useState([])
+
+  useEffect(() => {
+    getNotifiche().then(setDbNotifiche).catch(() => {})
+  }, [])
+
+  const scadenzeNotifiche = useMemo(() => {
     const list = []
     bollette.filter(b => !b.pagata && b.scadenza && b.stato_elaborazione !== 'comunicazione' && b.stato_elaborazione !== 'errore_parsing').forEach(b => {
       const c = contratti.find(ct => ct.id === b.contratto_id)
@@ -1967,20 +1973,50 @@ function Notifiche({ contratti, bollette }) {
     return list.sort((a, b) => { const p = { scaduta: 0, urgente: 1, promemoria: 2 }; return (p[a.tipo] ?? 9) - (p[b.tipo] ?? 9) })
   }, [contratti, bollette])
 
-  const cfg = { urgente: 'bg-amber-50 border-amber-200 text-amber-600', scaduta: 'bg-red-50 border-red-200 text-red-600', promemoria: 'bg-bolly-50 border-bolly-200 text-bolly-500' }
+  const cfg = { urgente: 'bg-amber-50 border-amber-200 text-amber-600', scaduta: 'bg-red-50 border-red-200 text-red-600', promemoria: 'bg-bolly-50 border-bolly-200 text-bolly-500', broadcast: 'bg-blue-50 border-blue-200 text-blue-600' }
+
+  const handleNotificaClick = (n) => {
+    if (n.url) {
+      window.open(n.url, '_blank')
+      if (n.id && !n.letta) {
+        segnaNotificaLetta(n.id).then(() => {
+          setDbNotifiche(prev => prev.map(x => x.id === n.id ? { ...x, letta: true } : x))
+        }).catch(() => {})
+      }
+    }
+  }
+
+  const tutteNotifiche = [
+    ...dbNotifiche.map(n => ({
+      id: n.id,
+      tipo: n.tipo === 'broadcast' ? 'broadcast' : (n.tipo || 'promemoria'),
+      titolo: n.titolo,
+      desc: n.messaggio,
+      url: n.url,
+      letta: n.letta,
+      created_at: n.created_at
+    })),
+    ...scadenzeNotifiche
+  ]
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Notifiche</h1>
-      {notifiche.length === 0 ? (
+      {tutteNotifiche.length === 0 ? (
         <div className="text-center py-12"><Bell size={40} className="text-gray-300 mx-auto mb-3" /><p className="text-gray-400">Nessuna notifica</p></div>
       ) : (
         <div className="space-y-2">
-          {notifiche.map((n, i) => (
-            <Card key={i} className={`p-4 ${cfg[n.tipo]}`}>
+          {tutteNotifiche.map((n, i) => (
+            <Card key={n.id || `scad-${i}`} className={`p-4 ${cfg[n.tipo] || cfg.promemoria} ${n.url ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''} ${n.letta === false ? 'ring-2 ring-blue-300' : ''}`}
+              onClick={() => handleNotificaClick(n)}>
               <div className="flex items-start gap-3">
-                <AlertTriangle size={20} className="mt-0.5" />
-                <div><p className="font-medium text-gray-900">{n.titolo}</p><p className="text-sm text-gray-600 mt-0.5">{n.desc}</p></div>
+                {n.tipo === 'broadcast' ? <MessageCircle size={20} className="mt-0.5" /> : <AlertTriangle size={20} className="mt-0.5" />}
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">{n.titolo}</p>
+                  <p className="text-sm text-gray-600 mt-0.5">{n.desc}</p>
+                  {n.url && <p className="text-xs text-blue-500 mt-1 font-medium">Tocca per aprire →</p>}
+                </div>
+                {n.letta === false && <span className="w-2.5 h-2.5 bg-blue-500 rounded-full mt-1.5 shrink-0" />}
               </div>
             </Card>
           ))}

@@ -41,12 +41,9 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
-  // Rimuove o aggiorna il badge sull'icona
-  if (navigator.setAppBadge) {
-    self.registration.getNotifications().then(notifications => {
-      if (notifications.length === 0) navigator.clearAppBadge()
-      else navigator.setAppBadge(notifications.length)
-    })
+  // Azzera sempre il badge quando l'utente interagisce con una notifica
+  if (navigator.clearAppBadge) {
+    navigator.clearAppBadge().catch(() => {})
   }
 
   const url = event.notification.data?.url || '/'

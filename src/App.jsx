@@ -5490,9 +5490,8 @@ export default function App() {
     setScreen('modifica-spesa')
   }
 
-  const nuoveScadenze = scadenzeCount > 0 && scadenzeCount > lastSeenNotificheCount
-  const notificheCount = nuoveScadenze ? (scadenzeCount - lastSeenNotificheCount + nonLetteDb) : nonLetteDb
-  const showBadgeNotifiche = notificheCount > 0
+  const notificheCount = nonLetteDb
+  const showBadgeNotifiche = nonLetteDb > 0
   const showBadgeInbox = nuoveBolletteInbox > 0
 
   const renderScreen = () => {
@@ -5594,7 +5593,7 @@ export default function App() {
             {showBadgeInbox && <span className="absolute -top-0.5 right-1 w-2.5 h-2.5 bg-bolly-500 rounded-full" />}
             <span className="text-xs font-medium">Inbox</span>
           </button>
-          <button onClick={() => { setScreen('notifiche'); setLastSeenNotificheCount(currentNotificheCount); try { localStorage.setItem('bolly_seen_notifiche_count', String(currentNotificheCount)) } catch(e) {} if (navigator.clearAppBadge) navigator.clearAppBadge() }} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'notifiche' ? 'text-bolly-500' : 'text-gray-400'}`}>
+          <button onClick={() => { setScreen('notifiche'); if (navigator.clearAppBadge) navigator.clearAppBadge(); dbNotifiche.filter(n => !n.letta).forEach(n => segnaNotificaLetta(n.id).catch(() => {})); setDbNotifiche(prev => prev.map(n => ({ ...n, letta: true }))) }} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'notifiche' ? 'text-bolly-500' : 'text-gray-400'}`}>
             <Bell size={22} />
             {showBadgeNotifiche && <span className="absolute -top-0.5 right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{notificheCount}</span>}
             <span className="text-xs font-medium">Notifiche</span>

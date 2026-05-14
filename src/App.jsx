@@ -1951,12 +1951,7 @@ function FormModificaContratto({ contratto, onSave, onBack, abitazioni }) {
 // NOTIFICHE (calcolate lato client)
 // ============================================================
 
-function Notifiche({ contratti, bollette }) {
-  const [dbNotifiche, setDbNotifiche] = useState([])
-
-  useEffect(() => {
-    getNotifiche().then(setDbNotifiche).catch(() => {})
-  }, [])
+function Notifiche({ contratti, bollette, dbNotifiche = [], onNotificheLette }) {
 
   const scadenzeNotifiche = useMemo(() => {
     const list = []
@@ -1980,7 +1975,8 @@ function Notifiche({ contratti, bollette }) {
       window.open(n.url, '_blank')
       if (n.id && !n.letta) {
         segnaNotificaLetta(n.id).then(() => {
-          setDbNotifiche(prev => prev.map(x => x.id === n.id ? { ...x, letta: true } : x))
+          const updated = dbNotifiche.map(x => x.id === n.id ? { ...x, letta: true } : x)
+          if (onNotificheLette) onNotificheLette(updated)
         }).catch(() => {})
       }
     }
@@ -5200,6 +5196,7 @@ export default function App() {
   const [richiesteCount, setRichiesteCount] = useState(0)
   const [splits, setSplits] = useState([])
   const [splitsRicevuti, setSplitsRicevuti] = useState([])
+  const [dbNotifiche, setDbNotifiche] = useState([])
   const [splitTarget, setSplitTarget] = useState(null) // { tipo: 'spesa'|'bolletta', id, importo, descrizione }
   const [selectedSplitId, setSelectedSplitId] = useState(null)
   const [filtroAbitazione, setFiltroAbitazione] = useState(null) // null = tutte
@@ -5320,13 +5317,14 @@ export default function App() {
         piano: prof?.piano || 'free',
         onboarding_done: prof?.onboarding_done || false
       })
-      const [c, b, s, ab, amici, richieste, esterni, sp, spRicevuti] = await Promise.all([
+      const [c, b, s, ab, amici, richieste, esterni, sp, spRicevuti, notifDb] = await Promise.all([
         getContratti(), getBollette(), getSpese(), getAbitazioni(),
         getAmici().catch(() => []),
         getRichiesteRicevute().catch(() => []),
         getContattiEsterni().catch(() => []),
         getSplitsByUser().catch(() => []),
-        getSplitsRicevuti().catch(() => [])
+        getSplitsRicevuti().catch(() => []),
+        getNotifiche().catch(() => [])
       ])
       setContratti(c)
       setBollette(b)
@@ -5336,6 +5334,7 @@ export default function App() {
       setRichiesteCount(richieste.length)
       setSplits(sp)
       setSplitsRicevuti(spRicevuti)
+      setDbNotifiche(notifDb)
     } catch (e) { console.error('Errore caricamento dati:', e) }
   }, [session])
 
@@ -5369,7 +5368,8 @@ export default function App() {
   }, [session, profile])
 
   // Badge Notifiche e Inbox: conteggi attuali
-  const currentNotificheCount = bollette.filter(b => !b.pagata && b.scadenza && b.stato_elaborazione === 'ok' && giorniDa(b.scadenza) <= 7).length
+  const nonLetteDb = dbNotifiche.filter(n => !n.letta).length
+  const currentNotificheCount = bollette.filter(b => !b.pagata && b.scadenza && b.stato_elaborazione === 'ok' && giorniDa(b.scadenza) <= 7).length + nonLetteDb
   // Inbox badge: mostra pallino solo se ci sono bollette arrivate DOPO l'ultima apertura di Inbox
   const nuoveBolletteInbox = bollette.filter(b => b.fonte !== 'manuale' && b.created_at && new Date(b.created_at) > new Date(lastSeenInboxTime)).length
 
@@ -5544,7 +5544,7 @@ export default function App() {
       case 'spese-lista': return <ListaSpese spese={spese} onBack={() => setScreen('dashboard')} onDelete={handleDeleteSpesa} />
       case 'calendario': return <Calendario bollette={bollette} contratti={contratti} spese={spese} onSelectContratto={handleSelectContratto} onAggiungiSpesa={(data) => { setScreen('aggiungi-spesa'); setSpesaDataPrecompilata(data) }} />
       case 'bollette': return <StoricoBollette bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />
-      case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} />
+      case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} dbNotifiche={dbNotifiche} onNotificheLette={(updated) => setDbNotifiche(updated)} />
       case 'form-split': return splitTarget ? <FormSplit target={splitTarget} profile={profile} onBack={() => { setSplitTarget(null); setScreen('dashboard') }} onSave={async () => { setSplitTarget(null); await loadData(); setScreen('dashboard') }} /> : null
       case 'dettaglio-split': {
         const sp = splits.find(s => s.id === selectedSplitId)

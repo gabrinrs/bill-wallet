@@ -16,7 +16,7 @@ import {
   Menu, X, ChevronDown, Search,
   ShoppingCart, Car, Gamepad2, Heart, Shirt, UtensilsCrossed, MoreHorizontal, Wallet, Camera,
   Banknote, Gift, RotateCcw, Building2, Sun, MapPin, Warehouse, Users, UserPlus, UserCheck, UserX, Clock, Send, Split, CircleDollarSign,
-  ArrowUpRight, ArrowDownRight, Scale
+  ArrowUpRight, ArrowDownRight, Scale, ScanLine
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -1470,6 +1470,10 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
   const [uploadStatus, setUploadStatus] = useState('idle') // idle, uploading, processing, success, error
   const [uploadError, setUploadError] = useState(null)
   const fileInputRef = useRef(null)
+  const [scanning, setScanning] = useState(false)
+  const [scanError, setScanError] = useState('')
+  const [scanSuccess, setScanSuccess] = useState(false)
+  const scanFileInputRef = useRef(null)
   const [form, setForm] = useState({
     contratto_id: contrattoId || (contratti[0]?.id || ''),
     importo: '', periodo: '', periodo_fine: '', emissione: '', scadenza: '', descrizione_libera: '', metodo_pagamento: null,
@@ -1511,6 +1515,101 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
     }
   }
 
+  const handleScanBolletta = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setScanning(true)
+    setScanError('')
+    try {
+      // Comprimi immagine
+      const compressedBase64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = (ev) => {
+          const img = new Image()
+          img.onload = () => {
+            const canvas = document.createElement('canvas')
+            const MAX_SIZE = 1024
+            let w = img.width, h = img.height
+            if (w > h && w > MAX_SIZE) { h = h * MAX_SIZE / w; w = MAX_SIZE }
+            else if (h > MAX_SIZE) { w = w * MAX_SIZE / h; h = MAX_SIZE }
+            canvas.width = w
+            canvas.height = h
+            const ctx = canvas.getContext('2d')
+            ctx.drawImage(img, 0, 0, w, h)
+            resolve(canvas.toDataURL('image/jpeg', 0.8))
+          }
+          img.onerror = reject
+          img.src = ev.target.result
+        }
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+
+      // Chiama Edge Function OCR
+      const { data: { session: authSession } } = await supabase.auth.getSession()
+      const res = await fetch('https://iimzetvymamadclfblgy.supabase.co/functions/v1/ocr-bolletta', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authSession?.access_token}`,
+        },
+        body: JSON.stringify({ image_base64: compressedBase64 }),
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || 'Errore nella scansione')
+      if (!result.importo_euro) throw new Error('Non ho trovato l\'importo nella bolletta')
+
+      // Cerca contratto esistente per fornitore
+      let contrattoIdToUse = null
+      if (result.fornitore) {
+        const { data: matchContratti } = await supabase
+          .from('contratti')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .ilike('fornitore', `%${result.fornitore}%`)
+        if (matchContratti?.length > 0) {
+          contrattoIdToUse = matchContratti[0].id
+        } else {
+          // Crea nuovo contratto
+          const nuovoContratto = await createContratto({
+            fornitore: result.fornitore,
+            categoria: result.categoria || 'altro',
+            metodo_pagamento: result.metodo_pagamento || 'manuale',
+          })
+          contrattoIdToUse = nuovoContratto.id
+        }
+      }
+
+      // Crea bolletta
+      const bollettaData = {
+        contratto_id: contrattoIdToUse,
+        importo: result.importo_euro,
+        scadenza: result.data_scadenza,
+        emissione: result.data_emissione || null,
+        periodo: result.periodo ? result.periodo + '-01' : null,
+        periodo_fine: result.periodo_fine ? result.periodo_fine + '-01' : null,
+        stato_elaborazione: 'ok',
+        fonte: 'scan',
+        consumo: result.consumo || null,
+        unita_misura: result.unita_misura || null,
+      }
+      // RID con scadenza passata → già pagata
+      if (result.metodo_pagamento === 'rid' && result.data_scadenza && new Date(result.data_scadenza) < new Date()) {
+        bollettaData.pagata = true
+      }
+      await createBolletta(bollettaData)
+
+      setScanSuccess(true)
+      if (window.posthog) window.posthog.capture('bolletta_scan', { fornitore: result.fornitore })
+      setTimeout(async () => { if (onRefresh) await onRefresh(); if (onGoHome) onGoHome(); else onBack() }, 3000)
+    } catch (err) {
+      console.error('Errore OCR bolletta:', err)
+      setScanError(err.message || 'Non sono riuscito a leggere la bolletta. Riprova con una foto più nitida.')
+    }
+    setScanning(false)
+    if (scanFileInputRef.current) scanFileInputRef.current.value = ''
+  }
+
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -1549,10 +1648,13 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
         <h1 className="text-xl font-bold text-gray-900">Nuova bolletta</h1>
       </div>
 
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
-        {[{ id: 'contratto', l: 'Da contratto' }, { id: 'libero', l: 'Manuale' }, { id: 'pdf', l: 'Carica PDF' }].map(m => (
+      <div className="grid grid-cols-2 gap-1 bg-gray-100 p-1 rounded-xl">
+        {[{ id: 'contratto', l: 'Da contratto' }, { id: 'libero', l: 'Manuale' }, { id: 'pdf', l: 'Carica PDF' }, { id: 'scan', l: 'Scansiona', icon: true }].map(m => (
           <button key={m.id} onClick={() => setMode(m.id)}
-            className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${mode === m.id ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}>{m.l}</button>
+            className={`py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${mode === m.id ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}>
+            {m.icon && <ScanLine size={14} />}
+            {m.l}
+          </button>
         ))}
       </div>
 
@@ -1613,6 +1715,52 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
                   <p className="text-sm text-gray-600">
                     {uploadStatus === 'uploading' ? 'Caricamento PDF...' : 'Analisi in corso...'}
                   </p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {mode === 'scan' && (
+        <div className="space-y-4">
+          <input
+            ref={scanFileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleScanBolletta}
+            className="hidden"
+          />
+          {scanSuccess ? (
+            <Card className="p-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+                <Check size={24} className="text-green-600" />
+              </div>
+              <p className="text-sm font-medium text-gray-900 mt-3">Bolletta registrata!</p>
+              <p className="text-xs text-gray-500 mt-1">I dati sono stati estratti e salvati automaticamente.</p>
+            </Card>
+          ) : scanning ? (
+            <Card className="p-6 text-center">
+              <Loader2 size={32} className="animate-spin text-bolly-500 mx-auto" />
+              <p className="text-sm font-medium text-gray-900 mt-3">Analizzo la bolletta...</p>
+              <p className="text-xs text-gray-400 mt-1">Sto leggendo fornitore, importo, scadenza e altri dati</p>
+            </Card>
+          ) : (
+            <>
+              <Card
+                className="p-6 border-dashed border-2 border-gray-300 hover:border-gray-400 text-center cursor-pointer transition-colors"
+                onClick={() => scanFileInputRef.current?.click()}
+              >
+                <ScanLine size={32} className="text-gray-400 mx-auto" />
+                <p className="text-sm font-medium text-gray-700 mt-3">Tocca per scattare una foto alla bolletta</p>
+                <p className="text-xs text-gray-400 mt-1">L'AI riconosce automaticamente fornitore, importo, scadenza e la salva per te</p>
+              </Card>
+
+              {scanError && (
+                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                  <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />
+                  {scanError}
                 </div>
               )}
             </>

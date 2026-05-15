@@ -71,6 +71,61 @@ function Card({ children, className = '', onClick }) {
   )
 }
 
+function SwipeableCard({ children, className = '', actions = [], onClick }) {
+  const containerRef = useRef(null)
+  const startXRef = useRef(0)
+  const currentXRef = useRef(0)
+  const [offsetX, setOffsetX] = useState(0)
+  const [swiped, setSwiped] = useState(false)
+  const THRESHOLD = 60
+  const ACTION_WIDTH = actions.length * 72
+
+  const handleTouchStart = (e) => {
+    startXRef.current = e.touches[0].clientX
+    currentXRef.current = offsetX
+  }
+  const handleTouchMove = (e) => {
+    const diff = startXRef.current - e.touches[0].clientX
+    const newOffset = Math.max(0, Math.min(ACTION_WIDTH, currentXRef.current + diff))
+    setOffsetX(newOffset)
+  }
+  const handleTouchEnd = () => {
+    if (offsetX > THRESHOLD) {
+      setOffsetX(ACTION_WIDTH)
+      setSwiped(true)
+    } else {
+      setOffsetX(0)
+      setSwiped(false)
+    }
+  }
+  const close = () => { setOffsetX(0); setSwiped(false) }
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl" ref={containerRef}>
+      <div className="absolute right-0 top-0 bottom-0 flex items-stretch" style={{ width: ACTION_WIDTH }}>
+        {actions.map((action, i) => (
+          <button key={i} onClick={(e) => { e.stopPropagation(); close(); action.onPress() }}
+            className={`flex flex-col items-center justify-center gap-1 ${action.className || ''}`}
+            style={{ width: 72 }}>
+            {action.icon}
+            <span className="text-xs font-medium">{action.label}</span>
+          </button>
+        ))}
+      </div>
+      <div
+        className={`relative bg-white rounded-2xl border border-gray-100 shadow-sm ${onClick && !swiped ? 'cursor-pointer' : ''} ${className}`}
+        style={{ transform: `translateX(-${offsetX}px)`, transition: offsetX === 0 || offsetX === ACTION_WIDTH ? 'transform 0.25s ease' : 'none' }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onClick={() => { if (swiped) { close() } else if (onClick) { onClick() } }}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
 function Loading() {
   return (
     <div className="flex items-center justify-center py-12">
@@ -1024,10 +1079,12 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
             const stato = getStatoBolletta(b, contratto)
             const bollettaSplit = splits?.find(sp => sp.tipo === 'bolletta' && sp.riferimento_id === b.id)
             return (
-              <Card key={b.id} className="p-4">
+              <SwipeableCard key={b.id} className="p-4" actions={[
+                { icon: <Trash2 size={18} className="text-white" />, label: 'Elimina', className: 'bg-red-500 text-white', onPress: () => onDeleteBolletta(b.id) },
+              ]}>
                 <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-medium text-gray-900">{formatEuro(b.importo)}</p>
                       {b.consumo && b.unita_misura && (
                         <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{Number(b.consumo).toLocaleString('it-IT')} {b.unita_misura}</span>
@@ -1046,7 +1103,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
                     <p className="text-sm text-gray-500">{b.periodo ? `${formatPeriodo(b.periodo)}${b.periodo_fine && b.periodo_fine !== b.periodo ? ' → ' + formatPeriodo(b.periodo_fine) : ''} · ` : ''}Scade {b.scadenza ? formatData(b.scadenza) : '—'}</p>
                     <div className="mt-1"><FonteBadge fonte={b.fonte} /></div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <Badge stato={stato} />
                     {!bollettaSplit && (
                       <button onClick={() => onSplit({ tipo: 'bolletta', id: b.id, importo: b.importo, descrizione: `${contratto.fornitore} — ${b.periodo ? formatPeriodo(b.periodo) : 'bolletta'}` })} className="p-1.5 rounded-lg hover:bg-purple-50 text-gray-300 hover:text-purple-500" title="Dividi">
@@ -1068,19 +1125,9 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
                         <Check size={18} />
                       </button>
                     )}
-                    {deletingBollettaId === b.id ? (
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => setDeletingBollettaId(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 text-xs">No</button>
-                        <button onClick={() => { onDeleteBolletta(b.id); setDeletingBollettaId(null) }} className="p-1.5 rounded-lg bg-red-100 text-red-600 text-xs font-medium">Elimina</button>
-                      </div>
-                    ) : (
-                      <button onClick={e => { e.stopPropagation(); setDeletingBollettaId(b.id) }} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300" title="Elimina bolletta">
-                        <Trash2 size={18} />
-                      </button>
-                    )}
                   </div>
                 </div>
-              </Card>
+              </SwipeableCard>
             )
           })}
           {bolletteOrdinate.length === 0 && <p className="text-gray-400 text-sm text-center py-6">Nessuna bolletta registrata</p>}
@@ -3379,7 +3426,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
 // STORICO BOLLETTE
 // ============================================================
 
-function StoricoBollette({ bollette, contratti, onSelectContratto }) {
+function StoricoBollette({ bollette, contratti, onSelectContratto, onDeleteBolletta }) {
   const [tab, setTab] = useState('bollette')
   const [expandedComm, setExpandedComm] = useState(null)
 
@@ -3530,7 +3577,10 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
                 const IconComp = cat ? (IconMap[cat.icon] || Package) : Package
                 const iconColor = cat?.color || '#6B7280'
                 return (
-                  <Card key={b.id} className="p-3" onClick={() => { if (b.contratto_id && onSelectContratto) onSelectContratto(b.contratto_id) }}>
+                  <SwipeableCard key={b.id} className="p-3" onClick={() => { if (b.contratto_id && onSelectContratto) onSelectContratto(b.contratto_id) }}
+                    actions={onDeleteBolletta ? [
+                      { icon: <Trash2 size={18} className="text-white" />, label: 'Elimina', className: 'bg-red-500 text-white', onPress: () => onDeleteBolletta(b.id) },
+                    ] : []}>
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: iconColor + '18' }}>
                         <IconComp size={20} style={{ color: iconColor }} />
@@ -3550,7 +3600,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto }) {
                         {formatDataRicezione(b) && <p className="text-xs text-gray-400 mt-0.5">{formatDataRicezione(b)}</p>}
                       </div>
                     </div>
-                  </Card>
+                  </SwipeableCard>
                 )
               })}
             </div>
@@ -5731,7 +5781,7 @@ export default function App() {
       case 'modifica-spesa': return editingSpesa ? <FormModificaSpesa spesa={editingSpesa} onSave={handleUpdateSpesa} onBack={() => { setEditingSpesa(null); setScreen('dashboard') }} /> : null
       case 'spese-lista': return <ListaSpese spese={spese} onBack={() => setScreen('dashboard')} onDelete={handleDeleteSpesa} />
       case 'calendario': return <Calendario bollette={bollette} contratti={contratti} spese={spese} onSelectContratto={handleSelectContratto} onAggiungiSpesa={(data) => { setScreen('aggiungi-spesa'); setSpesaDataPrecompilata(data) }} />
-      case 'bollette': return <StoricoBollette bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} />
+      case 'bollette': return <StoricoBollette bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} onDeleteBolletta={handleDeleteBolletta} />
       case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} dbNotifiche={dbNotifiche} onNotificheLette={(updated) => setDbNotifiche(updated)} />
       case 'form-split': return splitTarget ? <FormSplit target={splitTarget} profile={profile} onBack={() => { setSplitTarget(null); setScreen('dashboard') }} onSave={async () => { setSplitTarget(null); await loadData(); setScreen('dashboard') }} /> : null
       case 'dettaglio-split': {

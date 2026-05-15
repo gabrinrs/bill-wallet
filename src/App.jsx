@@ -1648,11 +1648,20 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
         <h1 className="text-xl font-bold text-gray-900">Nuova bolletta</h1>
       </div>
 
-      <div className="grid grid-cols-2 gap-1 bg-gray-100 p-1 rounded-xl">
-        {[{ id: 'contratto', l: 'Da contratto' }, { id: 'libero', l: 'Manuale' }, { id: 'pdf', l: 'Carica PDF' }, { id: 'scan', l: 'Scansiona', icon: true }].map(m => (
+      <div className="grid grid-cols-2 gap-2">
+        {[
+          { id: 'contratto', l: 'Da contratto', Icon: FileText },
+          { id: 'libero', l: 'Manuale', Icon: PenLine },
+          { id: 'pdf', l: 'Carica PDF', Icon: Upload },
+          { id: 'scan', l: 'Scansiona', Icon: ScanLine },
+        ].map(m => (
           <button key={m.id} onClick={() => setMode(m.id)}
-            className={`py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${mode === m.id ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}>
-            {m.icon && <ScanLine size={14} />}
+            className={`py-3 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 ${
+              mode === m.id
+                ? 'bg-bolly-50 border-2 border-bolly-400 text-bolly-700 shadow-sm'
+                : 'bg-gray-50 border-2 border-gray-200 text-gray-600 hover:border-gray-300'
+            }`}>
+            <m.Icon size={16} />
             {m.l}
           </button>
         ))}

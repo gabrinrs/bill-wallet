@@ -526,3 +526,88 @@ export async function updateProfileTelefono(telefono) {
     .eq('id', user.id)
   if (error) throw error
 }
+
+// ============================================================
+// SALVADANAI
+// ============================================================
+
+export async function getSalvadanai() {
+  const { data, error } = await supabase
+    .from('salvadanai')
+    .select('*')
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return data
+}
+
+export async function createSalvadanaio(salvadanaio) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('salvadanai')
+    .insert({ ...salvadanaio, user_id: user.id })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateSalvadanaio(id, updates) {
+  const { data, error } = await supabase
+    .from('salvadanai')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteSalvadanaio(id) {
+  const { error } = await supabase
+    .from('salvadanai')
+    .delete()
+    .eq('id', id)
+  if (error) throw error
+}
+
+// ============================================================
+// VERSAMENTI SALVADANAIO
+// ============================================================
+
+export async function getVersamentiSalvadanaio(salvadanaiId) {
+  const { data, error } = await supabase
+    .from('versamenti_salvadanaio')
+    .select('*')
+    .eq('salvadanaio_id', salvadanaiId)
+    .order('data', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function getAllVersamenti() {
+  const { data, error } = await supabase
+    .from('versamenti_salvadanaio')
+    .select('*')
+    .order('data', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createVersamento(versamento) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('versamenti_salvadanaio')
+    .insert({ ...versamento, user_id: user.id })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteVersamento(id) {
+  const { error } = await supabase
+    .from('versamenti_salvadanaio')
+    .delete()
+    .eq('id', id)
+  if (error) throw error
+}

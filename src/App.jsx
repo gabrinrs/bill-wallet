@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione, getAmici, getRichiesteRicevute, getRichiesteInviate, cercaUtenteBolly, inviaRichiestaAmicizia, accettaAmicizia, rifiutaAmicizia, rimuoviAmico, getContattiEsterni, addContattoEsterno, deleteContattoEsterno, createSplit, getSplitsByUser, getSplitsRicevuti, getSplitByRiferimento, togglePartecipantePagato, deleteSplit, getNotifiche, segnaNotificaLetta, deleteNotifica } from './lib/database'
+import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione, getAmici, getRichiesteRicevute, getRichiesteInviate, cercaUtenteBolly, inviaRichiestaAmicizia, accettaAmicizia, rifiutaAmicizia, rimuoviAmico, getContattiEsterni, addContattoEsterno, deleteContattoEsterno, createSplit, getSplitsByUser, getSplitsRicevuti, getSplitByRiferimento, togglePartecipantePagato, deleteSplit, getNotifiche, segnaNotificaLetta, deleteNotifica, getSalvadanai, createSalvadanaio, updateSalvadanaio, deleteSalvadanaio, getAllVersamenti, getVersamentiSalvadanaio, createVersamento, deleteVersamento } from './lib/database'
 import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, CATEGORIE_SPESE, getCategoriaSpesa, CATEGORIE_ENTRATE, getCategoriaEntrata } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import { subscribeToPush, isPushSubscribed } from './lib/pushNotifications'
@@ -16,7 +16,7 @@ import {
   Menu, X, ChevronDown, Search,
   ShoppingCart, Car, Gamepad2, Heart, Shirt, UtensilsCrossed, MoreHorizontal, Wallet, Camera,
   Banknote, Gift, RotateCcw, Building2, Sun, MapPin, Warehouse, Users, UserPlus, UserCheck, UserX, Clock, Send, Split, CircleDollarSign,
-  ArrowUpRight, ArrowDownRight, Scale, ScanLine
+  ArrowUpRight, ArrowDownRight, Scale, ScanLine, PiggyBank, Target, Archive
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -411,7 +411,7 @@ function SwipeableSpesa({ isOpen, onOpen, onClose, onEdit, onDelete, children })
 // DASHBOARD
 // ============================================================
 
-function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto, onDeleteSpesa, onEditSpesa, abitazioni, filtroAbitazione, onSetFiltroAbitazione, splits, onSplit, onViewSplit, richiesteCount, splitsRicevuti }) {
+function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto, onDeleteSpesa, onEditSpesa, abitazioni, filtroAbitazione, onSetFiltroAbitazione, splits, onSplit, onViewSplit, richiesteCount, splitsRicevuti, salvadanai, versamenti }) {
   const [cardSwipedId, setCardSwipedId] = useState(null)
   const [spesaSwipedId, setSpesaSwipedId] = useState(null)
   const [deletingContratto, setDeletingContratto] = useState(null)
@@ -652,6 +652,47 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
                 <p className="text-xs text-green-600">Entrate: +{formatEuro(totaleEntrateMese)}</p>
                 <p className="text-xs text-red-600 mt-0.5">Uscite: -{formatEuro(totaleUscite)}</p>
               </div>
+            </div>
+          </Card>
+        )
+      })()}
+
+      {/* Widget salvadanai */}
+      {(() => {
+        const attivi = (salvadanai || []).filter(s => !s.archiviato)
+        if (attivi.length === 0) return null
+        const getTot = (id) => (versamenti || []).filter(v => v.salvadanaio_id === id).reduce((s, v) => s + Number(v.importo), 0)
+        const totaleRisparmiato = attivi.reduce((s, sal) => s + getTot(sal.id), 0)
+        return (
+          <Card className="p-4 active:scale-[0.98] transition-transform" onClick={() => onNavigate('salvadanai')}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <PiggyBank size={18} className="text-amber-600" />
+                <p className="font-semibold text-gray-900 text-sm">I tuoi salvadanai</p>
+              </div>
+              <p className="text-sm font-bold text-amber-600">{formatEuro(totaleRisparmiato)}</p>
+            </div>
+            <div className="space-y-2.5">
+              {attivi.slice(0, 3).map(s => {
+                const tot = getTot(s.id)
+                const perc = Math.min(100, Math.round((tot / Number(s.obiettivo)) * 100))
+                const done = tot >= Number(s.obiettivo)
+                return (
+                  <div key={s.id} className="flex items-center gap-2.5">
+                    <span className="text-base flex-shrink-0">{s.icona}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <p className="text-xs font-medium text-gray-700 truncate">{s.nome}</p>
+                        <p className="text-xs text-gray-400 flex-shrink-0">{formatEuro(tot)}/{formatEuro(s.obiettivo)}</p>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${done ? 'bg-green-500' : 'bg-amber-500'}`} style={{ width: `${perc}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+              {attivi.length > 3 && <p className="text-xs text-gray-400 text-center">+{attivi.length - 3} {attivi.length - 3 === 1 ? 'altro' : 'altri'}</p>}
             </div>
           </Card>
         )
@@ -4691,6 +4732,347 @@ function SchermataAmici({ onBack, session, profile, splits = [], splitsRicevuti 
 // PROFILO
 // ============================================================
 
+// ============================================================
+// SALVADANAI
+// ============================================================
+
+const ICONE_SALVADANAIO = ['🐷', '🏖️', '🚗', '🏠', '🎓', '💻', '✈️', '🎁', '💍', '🏥', '🎯', '💰']
+
+function FormSalvadanaio({ onSave, onBack, editData }) {
+  const [nome, setNome] = useState(editData?.nome || '')
+  const [obiettivo, setObiettivo] = useState(editData?.obiettivo || '')
+  const [dataTarget, setDataTarget] = useState(editData?.data_target || '')
+  const [icona, setIcona] = useState(editData?.icona || '🐷')
+  const [saving, setSaving] = useState(false)
+
+  const handleSubmit = async () => {
+    if (!nome.trim() || !obiettivo) return
+    setSaving(true)
+    try {
+      await onSave({
+        nome: nome.trim(),
+        obiettivo: Number(obiettivo),
+        data_target: dataTarget || null,
+        icona
+      })
+    } catch (e) { console.error('Errore salvataggio salvadanaio:', e) }
+    setSaving(false)
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <button onClick={onBack} className="p-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-500" /></button>
+        <h1 className="text-xl font-bold text-gray-900">{editData ? 'Modifica salvadanaio' : 'Nuovo salvadanaio'}</h1>
+      </div>
+
+      <Card className="p-4 space-y-4">
+        {/* Icona */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-2 block">Scegli un'icona</label>
+          <div className="flex flex-wrap gap-2">
+            {ICONE_SALVADANAIO.map(e => (
+              <button key={e} onClick={() => setIcona(e)} className={`w-11 h-11 rounded-xl text-xl flex items-center justify-center transition-all ${icona === e ? 'bg-amber-100 ring-2 ring-amber-400 scale-110' : 'bg-gray-50 hover:bg-gray-100'}`}>{e}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Nome */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-1 block">Nome del fondo</label>
+          <input type="text" value={nome} onChange={e => setNome(e.target.value)} placeholder="Es. Ferie estive, Auto nuova..." className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-300 focus:border-bolly-500 outline-none" />
+        </div>
+
+        {/* Obiettivo */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-1 block">Obiettivo (€)</label>
+          <input type="number" inputMode="decimal" value={obiettivo} onChange={e => setObiettivo(e.target.value)} placeholder="0,00" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-300 focus:border-bolly-500 outline-none" />
+        </div>
+
+        {/* Data target */}
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-1 block">Data obiettivo <span className="text-gray-400 font-normal">(opzionale)</span></label>
+          <input type="date" value={dataTarget} onChange={e => setDataTarget(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-300 focus:border-bolly-500 outline-none" />
+        </div>
+      </Card>
+
+      <button onClick={handleSubmit} disabled={!nome.trim() || !obiettivo || saving} className="w-full py-3.5 bg-bolly-500 text-white rounded-xl font-semibold disabled:opacity-50 flex items-center justify-center gap-2">
+        {saving ? <Loader2 size={20} className="animate-spin" /> : <PiggyBank size={20} />}
+        {editData ? 'Salva modifiche' : 'Crea salvadanaio'}
+      </button>
+    </div>
+  )
+}
+
+function SchermataSalvadanai({ salvadanai, versamenti, onBack, onNavigate, onRefresh }) {
+  const [deletingId, setDeletingId] = useState(null)
+
+  const getTotaleVersamenti = (salvadanaiId) => {
+    return (versamenti || []).filter(v => v.salvadanaio_id === salvadanaiId).reduce((sum, v) => sum + Number(v.importo), 0)
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await deleteSalvadanaio(id)
+      setDeletingId(null)
+      if (onRefresh) await onRefresh()
+    } catch (e) { console.error('Errore eliminazione salvadanaio:', e) }
+  }
+
+  const attivi = (salvadanai || []).filter(s => !s.archiviato)
+  const archiviati = (salvadanai || []).filter(s => s.archiviato)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-500" /></button>
+          <h1 className="text-xl font-bold text-gray-900">I miei salvadanai</h1>
+        </div>
+        <button onClick={() => onNavigate('aggiungi-salvadanaio')} className="p-2 rounded-xl bg-bolly-50 text-bolly-600 hover:bg-bolly-100"><Plus size={20} /></button>
+      </div>
+
+      {attivi.length === 0 && archiviati.length === 0 && (
+        <div className="text-center py-12">
+          <PiggyBank size={48} className="text-gray-200 mx-auto mb-3" />
+          <p className="text-gray-400 font-medium">Nessun salvadanaio ancora</p>
+          <p className="text-sm text-gray-300 mt-1">Crea il tuo primo fondo risparmio!</p>
+          <button onClick={() => onNavigate('aggiungi-salvadanaio')} className="mt-4 px-5 py-2.5 bg-bolly-500 text-white rounded-xl font-medium text-sm">Crea salvadanaio</button>
+        </div>
+      )}
+
+      {attivi.map(s => {
+        const totale = getTotaleVersamenti(s.id)
+        const percentuale = Math.min(100, Math.round((totale / Number(s.obiettivo)) * 100))
+        const completato = totale >= Number(s.obiettivo)
+        return (
+          <Card key={s.id} className={`p-4 active:scale-[0.98] transition-transform ${completato ? 'bg-green-50 border-green-200' : ''}`} onClick={() => onNavigate('dettaglio-salvadanaio', s.id)}>
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl ${completato ? 'bg-green-100' : 'bg-amber-50'}`}>{s.icona}</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-gray-900 truncate">{s.nome}</p>
+                  {completato && <Check size={16} className="text-green-600 flex-shrink-0" />}
+                </div>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${completato ? 'bg-green-500' : 'bg-amber-500'}`} style={{ width: `${percentuale}%` }} />
+                  </div>
+                  <span className="text-xs font-medium text-gray-500 flex-shrink-0">{percentuale}%</span>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-gray-500">{formatEuro(totale)} / {formatEuro(s.obiettivo)}</p>
+                  {s.data_target && <p className="text-xs text-gray-400">Entro il {formatData(s.data_target)}</p>}
+                </div>
+              </div>
+              <ChevronRight size={18} className="text-gray-400 flex-shrink-0" />
+            </div>
+          </Card>
+        )
+      })}
+
+      {archiviati.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">Archiviati</h2>
+          {archiviati.map(s => {
+            const totale = getTotaleVersamenti(s.id)
+            return (
+              <Card key={s.id} className="p-4 opacity-60 mb-2" onClick={() => onNavigate('dettaglio-salvadanaio', s.id)}>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{s.icona}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-600 truncate">{s.nome}</p>
+                    <p className="text-xs text-gray-400">{formatEuro(totale)} raccolti · Completato</p>
+                  </div>
+                  <Archive size={16} className="text-gray-400" />
+                </div>
+              </Card>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Conferma eliminazione */}
+      {deletingId && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-6">
+          <Card className="p-6 w-full max-w-sm">
+            <p className="font-semibold text-gray-900 mb-2">Eliminare questo salvadanaio?</p>
+            <p className="text-sm text-gray-500 mb-4">Verranno eliminati anche tutti i versamenti associati.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeletingId(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl font-medium text-gray-700">Annulla</button>
+              <button onClick={() => handleDelete(deletingId)} className="flex-1 py-2.5 bg-red-500 text-white rounded-xl font-medium">Elimina</button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DettaglioSalvadanaio({ salvadanaio, versamenti, onBack, onRefresh, onNavigateEdit }) {
+  const [importo, setImporto] = useState('')
+  const [nota, setNota] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [deletingVersamento, setDeletingVersamento] = useState(null)
+  const [showArchiviaConfirm, setShowArchiviaConfirm] = useState(false)
+
+  const versamentiSalvadanaio = (versamenti || []).filter(v => v.salvadanaio_id === salvadanaio.id)
+  const totale = versamentiSalvadanaio.reduce((sum, v) => sum + Number(v.importo), 0)
+  const percentuale = Math.min(100, Math.round((totale / Number(salvadanaio.obiettivo)) * 100))
+  const completato = totale >= Number(salvadanaio.obiettivo)
+  const mancante = Math.max(0, Number(salvadanaio.obiettivo) - totale)
+
+  // Calcola media mensile e stima mesi rimanenti
+  const giorniMesi = (() => {
+    if (versamentiSalvadanaio.length === 0) return null
+    const primo = new Date(versamentiSalvadanaio[versamentiSalvadanaio.length - 1].data)
+    const oggi = new Date()
+    const diffMesi = Math.max(1, (oggi.getFullYear() - primo.getFullYear()) * 12 + oggi.getMonth() - primo.getMonth())
+    const mediaMensile = totale / diffMesi
+    const mesiRimanenti = mediaMensile > 0 ? Math.ceil(mancante / mediaMensile) : null
+    return { mediaMensile, mesiRimanenti }
+  })()
+
+  const handleVersamento = async () => {
+    if (!importo || Number(importo) <= 0) return
+    setSaving(true)
+    try {
+      await createVersamento({ salvadanaio_id: salvadanaio.id, importo: Number(importo), nota: nota.trim() || null, data: new Date().toISOString().slice(0, 10) })
+      setImporto('')
+      setNota('')
+      if (onRefresh) await onRefresh()
+    } catch (e) { console.error('Errore versamento:', e) }
+    setSaving(false)
+  }
+
+  const handleDeleteVersamento = async (id) => {
+    try {
+      await deleteVersamento(id)
+      setDeletingVersamento(null)
+      if (onRefresh) await onRefresh()
+    } catch (e) { console.error('Errore eliminazione versamento:', e) }
+  }
+
+  const handleArchivia = async () => {
+    try {
+      await updateSalvadanaio(salvadanaio.id, { archiviato: !salvadanaio.archiviato })
+      setShowArchiviaConfirm(false)
+      if (onRefresh) await onRefresh()
+    } catch (e) { console.error('Errore archiviazione:', e) }
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-500" /></button>
+          <span className="text-2xl">{salvadanaio.icona}</span>
+          <h1 className="text-xl font-bold text-gray-900">{salvadanaio.nome}</h1>
+        </div>
+        <button onClick={onNavigateEdit} className="p-2 rounded-xl hover:bg-gray-100"><Pencil size={18} className="text-gray-400" /></button>
+      </div>
+
+      {/* Progresso principale */}
+      <Card className={`p-5 ${completato ? 'bg-green-50 border-green-200' : ''}`}>
+        <div className="text-center mb-4">
+          <p className={`text-3xl font-bold ${completato ? 'text-green-600' : 'text-gray-900'}`}>{formatEuro(totale)}</p>
+          <p className="text-sm text-gray-500 mt-1">su {formatEuro(salvadanaio.obiettivo)}</p>
+        </div>
+        <div className="h-3 bg-gray-100 rounded-full overflow-hidden mb-2">
+          <div className={`h-full rounded-full transition-all ${completato ? 'bg-green-500' : 'bg-amber-500'}`} style={{ width: `${percentuale}%` }} />
+        </div>
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span>{percentuale}% raggiunto</span>
+          {!completato && <span>Mancano {formatEuro(mancante)}</span>}
+          {completato && <span className="text-green-600 font-semibold">Obiettivo raggiunto! 🎉</span>}
+        </div>
+        {salvadanaio.data_target && (
+          <p className="text-xs text-gray-400 text-center mt-2">Obiettivo entro il {formatData(salvadanaio.data_target)}</p>
+        )}
+        {!completato && giorniMesi?.mesiRimanenti && (
+          <p className="text-xs text-bolly-600 text-center mt-1">
+            Media {formatEuro(giorniMesi.mediaMensile)}/mese · ~{giorniMesi.mesiRimanenti} {giorniMesi.mesiRimanenti === 1 ? 'mese' : 'mesi'} al traguardo
+          </p>
+        )}
+      </Card>
+
+      {/* Form versamento rapido */}
+      {!salvadanaio.archiviato && (
+        <Card className="p-4">
+          <p className="font-semibold text-gray-900 text-sm mb-3">Aggiungi versamento</p>
+          <div className="flex gap-2 mb-2">
+            <div className="flex-1">
+              <input type="number" inputMode="decimal" value={importo} onChange={e => setImporto(e.target.value)} placeholder="Importo €" className="w-full p-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-300 focus:border-bolly-500 outline-none text-sm" />
+            </div>
+            <button onClick={handleVersamento} disabled={!importo || saving} className="px-4 py-2.5 bg-bolly-500 text-white rounded-xl font-medium text-sm disabled:opacity-50 flex items-center gap-1.5">
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+              Versa
+            </button>
+          </div>
+          <input type="text" value={nota} onChange={e => setNota(e.target.value)} placeholder="Nota (opzionale)" className="w-full p-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-300 focus:border-bolly-500 outline-none text-sm" />
+        </Card>
+      )}
+
+      {/* Storico versamenti */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-900 mb-2">Storico versamenti</h2>
+        {versamentiSalvadanaio.length === 0 && <p className="text-sm text-gray-400 text-center py-6">Nessun versamento ancora</p>}
+        <div className="space-y-2">
+          {versamentiSalvadanaio.map(v => (
+            <Card key={v.id} className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-green-600">+{formatEuro(v.importo)}</p>
+                    <p className="text-xs text-gray-400">{formatData(v.data)}</p>
+                  </div>
+                  {v.nota && <p className="text-xs text-gray-500 mt-0.5 truncate">{v.nota}</p>}
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); setDeletingVersamento(v.id) }} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Azioni: Archivia / Riattiva */}
+      <button onClick={() => setShowArchiviaConfirm(true)} className={`w-full py-3 rounded-xl font-medium text-sm border ${salvadanaio.archiviato ? 'border-bolly-200 text-bolly-600' : 'border-gray-200 text-gray-500'}`}>
+        {salvadanaio.archiviato ? 'Riattiva salvadanaio' : 'Archivia salvadanaio'}
+      </button>
+
+      {/* Modali */}
+      {deletingVersamento && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-6">
+          <Card className="p-6 w-full max-w-sm">
+            <p className="font-semibold text-gray-900 mb-2">Eliminare questo versamento?</p>
+            <p className="text-sm text-gray-500 mb-4">L'importo verrà rimosso dal totale del salvadanaio.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeletingVersamento(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl font-medium text-gray-700">Annulla</button>
+              <button onClick={() => handleDeleteVersamento(deletingVersamento)} className="flex-1 py-2.5 bg-red-500 text-white rounded-xl font-medium">Elimina</button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {showArchiviaConfirm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-6">
+          <Card className="p-6 w-full max-w-sm">
+            <p className="font-semibold text-gray-900 mb-2">{salvadanaio.archiviato ? 'Riattivare il salvadanaio?' : 'Archiviare il salvadanaio?'}</p>
+            <p className="text-sm text-gray-500 mb-4">{salvadanaio.archiviato ? 'Potrai aggiungere nuovi versamenti.' : 'Non potrai aggiungere versamenti. Potrai riattivarlo in qualsiasi momento.'}</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowArchiviaConfirm(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl font-medium text-gray-700">Annulla</button>
+              <button onClick={handleArchivia} className="flex-1 py-2.5 bg-bolly-500 text-white rounded-xl font-medium">{salvadanaio.archiviato ? 'Riattiva' : 'Archivia'}</button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdateProfile, abitazioni, onRefreshAbitazioni, amiciCount, richiesteCount }) {
   const [copied, setCopied] = useState(false)
   const [faqSectionOpen, setFaqSectionOpen] = useState(false)
@@ -4902,6 +5284,22 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
             )}
             <ChevronRight size={20} className="text-gray-400" />
           </div>
+        </div>
+      </Card>
+
+      {/* I miei salvadanai */}
+      <Card className="p-4 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => onNavigate('salvadanai')}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+              <PiggyBank size={20} className="text-amber-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900 text-sm">I miei salvadanai</p>
+              <p className="text-xs text-gray-500">Fondi di risparmio</p>
+            </div>
+          </div>
+          <ChevronRight size={20} className="text-gray-400" />
         </div>
       </Card>
 
@@ -5434,6 +5832,10 @@ export default function App() {
   const [splits, setSplits] = useState([])
   const [splitsRicevuti, setSplitsRicevuti] = useState([])
   const [dbNotifiche, setDbNotifiche] = useState([])
+  const [salvadanai, setSalvadanai] = useState([])
+  const [versamenti, setVersamenti] = useState([])
+  const [selectedSalvadanaiId, setSelectedSalvadanaiId] = useState(null)
+  const [editingSalvadanaio, setEditingSalvadanaio] = useState(null)
   const [splitTarget, setSplitTarget] = useState(null) // { tipo: 'spesa'|'bolletta', id, importo, descrizione }
   const [selectedSplitId, setSelectedSplitId] = useState(null)
   const [filtroAbitazione, setFiltroAbitazione] = useState(null) // null = tutte
@@ -5554,14 +5956,16 @@ export default function App() {
         piano: prof?.piano || 'free',
         onboarding_done: prof?.onboarding_done || false
       })
-      const [c, b, s, ab, amici, richieste, esterni, sp, spRicevuti, notifDb] = await Promise.all([
+      const [c, b, s, ab, amici, richieste, esterni, sp, spRicevuti, notifDb, sal, vers] = await Promise.all([
         getContratti(), getBollette(), getSpese(), getAbitazioni(),
         getAmici().catch(() => []),
         getRichiesteRicevute().catch(() => []),
         getContattiEsterni().catch(() => []),
         getSplitsByUser().catch(() => []),
         getSplitsRicevuti().catch(() => []),
-        getNotifiche().catch(() => [])
+        getNotifiche().catch(() => []),
+        getSalvadanai().catch(() => []),
+        getAllVersamenti().catch(() => [])
       ])
       setContratti(c)
       setBollette(b)
@@ -5572,6 +5976,8 @@ export default function App() {
       setSplits(sp)
       setSplitsRicevuti(spRicevuti)
       setDbNotifiche(notifDb)
+      setSalvadanai(sal)
+      setVersamenti(vers)
     } catch (e) { console.error('Errore caricamento dati:', e) }
   }, [session])
 
@@ -5733,7 +6139,7 @@ export default function App() {
 
   const renderScreen = () => {
     switch (screen) {
-      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} abitazioni={abitazioni} filtroAbitazione={filtroAbitazione} onSetFiltroAbitazione={setFiltroAbitazione} splits={splits} onSplit={(target) => { setSplitTarget(target); setScreen('form-split') }} onViewSplit={(splitId) => { setSelectedSplitId(splitId); setScreen('dettaglio-split') }} richiesteCount={richiesteCount} splitsRicevuti={splitsRicevuti} />
+      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} abitazioni={abitazioni} filtroAbitazione={filtroAbitazione} onSetFiltroAbitazione={setFiltroAbitazione} splits={splits} onSplit={(target) => { setSplitTarget(target); setScreen('form-split') }} onViewSplit={(splitId) => { setSelectedSplitId(splitId); setScreen('dettaglio-split') }} richiesteCount={richiesteCount} splitsRicevuti={splitsRicevuti} salvadanai={salvadanai} versamenti={versamenti} />
       case 'dettaglio': {
         const c = contratti.find(x => x.id === selectedContrattoId)
         if (!c) { setScreen('dashboard'); return null }
@@ -5743,34 +6149,35 @@ export default function App() {
         return (
           <div className="space-y-6">
             <h1 className="text-xl font-bold text-gray-900">Cosa vuoi aggiungere?</h1>
-            <Card className="p-5" onClick={() => setScreen('aggiungi-contratto')}>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-bolly-100 rounded-xl flex items-center justify-center"><Repeat size={24} className="text-bolly-500" /></div>
-                <div><p className="font-semibold text-gray-900">Nuovo contratto</p><p className="text-sm text-gray-500 mt-0.5">Luce, gas, telefono, internet, assicurazione...</p></div>
-                <ChevronRight size={20} className="text-gray-400 ml-auto" />
-              </div>
-            </Card>
-            <Card className="p-5" onClick={() => { setSelectedContrattoId(null); setScreen('aggiungi-bolletta') }}>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center"><CreditCard size={24} className="text-green-600" /></div>
-                <div><p className="font-semibold text-gray-900">Nuova bolletta / pagamento</p><p className="text-sm text-gray-500 mt-0.5">Aggiungi un importo a un contratto esistente</p></div>
-                <ChevronRight size={20} className="text-gray-400 ml-auto" />
-              </div>
-            </Card>
-            <Card className="p-5" onClick={() => setScreen('aggiungi-spesa')}>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center"><Wallet size={24} className="text-purple-600" /></div>
-                <div><p className="font-semibold text-gray-900">Registra spesa</p><p className="text-sm text-gray-500 mt-0.5">Spese quotidiane: cibo, trasporti, svago...</p></div>
-                <ChevronRight size={20} className="text-gray-400 ml-auto" />
-              </div>
-            </Card>
-            <Card className="p-5" onClick={() => setScreen('aggiungi-entrata')}>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center"><Banknote size={24} className="text-green-600" /></div>
-                <div><p className="font-semibold text-gray-900">Registra entrata</p><p className="text-sm text-gray-500 mt-0.5">Stipendio, affitto, rimborsi, pensione...</p></div>
-                <ChevronRight size={20} className="text-gray-400 ml-auto" />
-              </div>
-            </Card>
+            <div className="grid grid-cols-3 gap-3">
+              <Card className="p-4 text-center active:scale-[0.97] transition-transform" onClick={() => setScreen('aggiungi-contratto')}>
+                <div className="w-12 h-12 bg-bolly-100 rounded-xl flex items-center justify-center mx-auto mb-2"><Repeat size={22} className="text-bolly-500" /></div>
+                <p className="font-semibold text-gray-900 text-sm">Contratto</p>
+                <p className="text-xs text-gray-400 mt-0.5">Utenze, abbonamenti</p>
+              </Card>
+              <Card className="p-4 text-center active:scale-[0.97] transition-transform" onClick={() => { setSelectedContrattoId(null); setScreen('aggiungi-bolletta') }}>
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-2"><CreditCard size={22} className="text-green-600" /></div>
+                <p className="font-semibold text-gray-900 text-sm">Bolletta</p>
+                <p className="text-xs text-gray-400 mt-0.5">Pagamento</p>
+              </Card>
+              <Card className="p-4 text-center active:scale-[0.97] transition-transform" onClick={() => setScreen('aggiungi-spesa')}>
+                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-2"><Wallet size={22} className="text-purple-600" /></div>
+                <p className="font-semibold text-gray-900 text-sm">Spesa</p>
+                <p className="text-xs text-gray-400 mt-0.5">Quotidiana</p>
+              </Card>
+            </div>
+            <div className="grid grid-cols-2 gap-3 -mt-3">
+              <Card className="p-4 text-center active:scale-[0.97] transition-transform" onClick={() => setScreen('aggiungi-entrata')}>
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-2"><Banknote size={22} className="text-green-600" /></div>
+                <p className="font-semibold text-gray-900 text-sm">Entrata</p>
+                <p className="text-xs text-gray-400 mt-0.5">Stipendio, rimborsi</p>
+              </Card>
+              <Card className="p-4 text-center active:scale-[0.97] transition-transform" onClick={() => setScreen('salvadanai')}>
+                <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center mx-auto mb-2"><PiggyBank size={22} className="text-amber-600" /></div>
+                <p className="font-semibold text-gray-900 text-sm">Salvadanaio</p>
+                <p className="text-xs text-gray-400 mt-0.5">Fondi risparmio</p>
+              </Card>
+            </div>
           </div>
         )
       case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} abitazioni={abitazioni} />
@@ -5794,6 +6201,17 @@ export default function App() {
       case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} abitazioni={abitazioni} onRefreshAbitazioni={async () => { const ab = await getAbitazioni(); setAbitazioni(ab) }} amiciCount={amiciCount} richiesteCount={richiesteCount} />
       case 'termini': return <TerminiCondizioni onBack={() => setScreen('menu')} />
       case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} />
+      case 'salvadanai': return <SchermataSalvadanai salvadanai={salvadanai} versamenti={versamenti} onBack={() => setScreen('menu')} onNavigate={(s, id) => { if (id) setSelectedSalvadanaiId(id); setScreen(s) }} onRefresh={loadData} />
+      case 'aggiungi-salvadanaio': return <FormSalvadanaio onSave={async (data) => { await createSalvadanaio(data); await loadData(); setScreen('salvadanai') }} onBack={() => setScreen('salvadanai')} editData={editingSalvadanaio} />
+      case 'modifica-salvadanaio': {
+        const salEd = salvadanai.find(s => s.id === selectedSalvadanaiId)
+        return salEd ? <FormSalvadanaio onSave={async (data) => { await updateSalvadanaio(salEd.id, data); setEditingSalvadanaio(null); await loadData(); setScreen('dettaglio-salvadanaio') }} onBack={() => { setEditingSalvadanaio(null); setScreen('dettaglio-salvadanaio') }} editData={salEd} /> : null
+      }
+      case 'dettaglio-salvadanaio': {
+        const salDet = salvadanai.find(s => s.id === selectedSalvadanaiId)
+        if (!salDet) { setScreen('salvadanai'); return null }
+        return <DettaglioSalvadanaio salvadanaio={salDet} versamenti={versamenti} onBack={() => { setSelectedSalvadanaiId(null); setScreen('salvadanai') }} onRefresh={loadData} onNavigateEdit={() => { setEditingSalvadanaio(salDet); setScreen('modifica-salvadanaio') }} />
+      }
       default: return null
     }
   }

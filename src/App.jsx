@@ -4792,7 +4792,7 @@ function FormSalvadanaio({ onSave, onBack, editData }) {
         {/* Data target */}
         <div>
           <label className="text-sm font-medium text-gray-700 mb-1 block">Data obiettivo <span className="text-gray-400 font-normal">(opzionale)</span></label>
-          <input type="date" value={dataTarget} onChange={e => setDataTarget(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-300 focus:border-bolly-500 outline-none" />
+          <input type="date" value={dataTarget} onChange={e => setDataTarget(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-300 focus:border-bolly-500 outline-none" style={{ maxWidth: '100%', boxSizing: 'border-box', WebkitAppearance: 'none' }} />
         </div>
       </Card>
 

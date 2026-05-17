@@ -6149,20 +6149,32 @@ export default function App() {
         return (
           <div className="space-y-6">
             <h1 className="text-xl font-bold text-gray-900">Cosa vuoi aggiungere?</h1>
-            <div className="flex flex-wrap justify-center gap-3">
-              {[
-                { icon: <Repeat size={22} className="text-bolly-500" />, bg: 'bg-bolly-100', label: 'Contratto', sub: 'Utenze, abbonamenti', action: () => setScreen('aggiungi-contratto') },
-                { icon: <CreditCard size={22} className="text-green-600" />, bg: 'bg-green-100', label: 'Bolletta', sub: 'Pagamento', action: () => { setSelectedContrattoId(null); setScreen('aggiungi-bolletta') } },
-                { icon: <Wallet size={22} className="text-purple-600" />, bg: 'bg-purple-100', label: 'Spesa', sub: 'Quotidiana', action: () => setScreen('aggiungi-spesa') },
-                { icon: <Banknote size={22} className="text-green-600" />, bg: 'bg-green-100', label: 'Entrata', sub: 'Stipendio, rimborsi', action: () => setScreen('aggiungi-entrata') },
-                { icon: <PiggyBank size={22} className="text-amber-600" />, bg: 'bg-amber-100', label: 'Salvadanaio', sub: 'Fondi risparmio', action: () => setScreen('salvadanai') },
-              ].map(item => (
-                <Card key={item.label} className="p-4 text-center active:scale-[0.97] transition-transform" style={{ width: 'calc(33.333% - 8px)', minWidth: 100 }} onClick={item.action}>
-                  <div className={`w-12 h-12 ${item.bg} rounded-xl flex items-center justify-center mx-auto mb-2`}>{item.icon}</div>
-                  <p className="font-semibold text-gray-900 text-sm">{item.label}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{item.sub}</p>
-                </Card>
-              ))}
+            <div className="grid grid-cols-3 gap-3">
+              <Card className="p-4 text-center active:scale-[0.97] transition-transform" onClick={() => setScreen('aggiungi-contratto')}>
+                <div className="w-12 h-12 bg-bolly-100 rounded-xl flex items-center justify-center mx-auto mb-2"><Repeat size={22} className="text-bolly-500" /></div>
+                <p className="font-semibold text-gray-900 text-sm">Contratto</p>
+                <p className="text-xs text-gray-400 mt-0.5">Utenze</p>
+              </Card>
+              <Card className="p-4 text-center active:scale-[0.97] transition-transform" onClick={() => { setSelectedContrattoId(null); setScreen('aggiungi-bolletta') }}>
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-2"><CreditCard size={22} className="text-green-600" /></div>
+                <p className="font-semibold text-gray-900 text-sm">Bolletta</p>
+                <p className="text-xs text-gray-400 mt-0.5">Pagamento</p>
+              </Card>
+              <Card className="p-4 text-center active:scale-[0.97] transition-transform" onClick={() => setScreen('aggiungi-spesa')}>
+                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-2"><Wallet size={22} className="text-purple-600" /></div>
+                <p className="font-semibold text-gray-900 text-sm">Spesa</p>
+                <p className="text-xs text-gray-400 mt-0.5">Quotidiana</p>
+              </Card>
+              <Card className="p-4 text-center active:scale-[0.97] transition-transform" onClick={() => setScreen('aggiungi-entrata')}>
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-2"><Banknote size={22} className="text-green-600" /></div>
+                <p className="font-semibold text-gray-900 text-sm">Entrata</p>
+                <p className="text-xs text-gray-400 mt-0.5">Rimborsi</p>
+              </Card>
+              <Card className="p-4 text-center active:scale-[0.97] transition-transform" onClick={() => setScreen('salvadanai')}>
+                <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center mx-auto mb-2"><PiggyBank size={22} className="text-amber-600" /></div>
+                <p className="font-semibold text-gray-900 text-sm">Salvadanaio</p>
+                <p className="text-xs text-gray-400 mt-0.5">Risparmio</p>
+              </Card>
             </div>
           </div>
         )

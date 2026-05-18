@@ -167,13 +167,27 @@ export default function LandingPage({ onGoToAuth }) {
         </div>
       </nav>
 
-      {/* ── HERO — gradiente teal ── */}
+      {/* ── HERO — mesh gradient teal ── */}
       <section className="relative overflow-hidden" style={{
-        background: 'linear-gradient(160deg, #004D40 0%, #00695C 40%, #00897B 100%)'
+        background: '#003D33'
       }}>
-        {/* Decorative circles */}
-        <div className="absolute top-[-120px] right-[-80px] w-[300px] h-[300px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(178,223,219,0.12) 0%, transparent 70%)' }} />
-        <div className="absolute bottom-[-60px] left-[-60px] w-[250px] h-[250px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(178,223,219,0.08) 0%, transparent 70%)' }} />
+        {/* Mesh gradient blobs */}
+        <div className="absolute inset-0" style={{
+          background: `
+            radial-gradient(ellipse 80% 60% at 20% 10%, rgba(0,137,123,0.6) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 80% at 80% 30%, rgba(0,105,92,0.5) 0%, transparent 55%),
+            radial-gradient(ellipse 70% 50% at 50% 80%, rgba(0,150,136,0.4) 0%, transparent 50%),
+            radial-gradient(ellipse 50% 40% at 10% 60%, rgba(38,166,154,0.25) 0%, transparent 50%),
+            radial-gradient(ellipse 40% 50% at 90% 70%, rgba(0,77,64,0.5) 0%, transparent 50%),
+            radial-gradient(ellipse 90% 40% at 50% 0%, rgba(0,137,123,0.35) 0%, transparent 50%)
+          `
+        }} />
+        {/* Subtle noise overlay for texture */}
+        <div className="absolute inset-0" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E")`,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '128px 128px'
+        }} />
 
         <div className="relative max-w-5xl mx-auto px-5 pt-16 pb-14 text-center">
           <FadeIn>
@@ -356,11 +370,17 @@ export default function LandingPage({ onGoToAuth }) {
         </div>
       </section>
 
-      {/* ── CTA FINALE — gradiente teal ── */}
+      {/* ── CTA FINALE — mesh gradient teal ── */}
       <section className="relative overflow-hidden py-16" style={{
-        background: 'linear-gradient(160deg, #004D40 0%, #00695C 40%, #00897B 100%)'
+        background: '#003D33'
       }}>
-        <div className="absolute top-[-80px] left-[-40px] w-[200px] h-[200px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(178,223,219,0.1) 0%, transparent 70%)' }} />
+        <div className="absolute inset-0" style={{
+          background: `
+            radial-gradient(ellipse 70% 70% at 70% 20%, rgba(0,137,123,0.5) 0%, transparent 55%),
+            radial-gradient(ellipse 60% 60% at 20% 70%, rgba(0,105,92,0.45) 0%, transparent 50%),
+            radial-gradient(ellipse 80% 50% at 50% 50%, rgba(0,150,136,0.3) 0%, transparent 55%)
+          `
+        }} />
         <div className="max-w-5xl mx-auto px-5 text-center relative">
           <FadeIn>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3">

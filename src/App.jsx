@@ -16,7 +16,7 @@ import {
   Menu, X, ChevronDown, Search,
   ShoppingCart, Car, Gamepad2, Heart, Shirt, UtensilsCrossed, MoreHorizontal, Wallet, Camera,
   Banknote, Gift, RotateCcw, Building2, Sun, MapPin, Warehouse, Users, UserPlus, UserCheck, UserX, Clock, Send, Split, CircleDollarSign,
-  ArrowUpRight, ArrowDownRight, Scale, ScanLine, PiggyBank, Target, Archive
+  ArrowUpRight, ArrowDownRight, Scale, ScanLine, PiggyBank, Target, Archive, Download, AlertOctagon
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -5089,6 +5089,62 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
   const [abitazioneIndirizzo, setAbitazioneIndirizzo] = useState('')
   const [savingAbitazione, setSavingAbitazione] = useState(false)
   const [deletingAbitazione, setDeletingAbitazione] = useState(null)
+  const [exportingData, setExportingData] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
+  const [deleteStep, setDeleteStep] = useState(0) // 0=niente, 1=primo alert, 2=conferma finale
+
+  const handleExportData = async () => {
+    setExportingData(true)
+    try {
+      const { data: { session: s } } = await supabase.auth.getSession()
+      if (!s?.access_token) { alert('Sessione scaduta. Effettua di nuovo il login.'); return }
+      const resp = await fetch('/api/export-data', {
+        headers: { 'Authorization': `Bearer ${s.access_token}` }
+      })
+      if (!resp.ok) throw new Error('Errore server')
+      const blob = await resp.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `bolly-export-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Errore export:', e)
+      alert('Errore durante l\'esportazione. Riprova.')
+    }
+    setExportingData(false)
+  }
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true)
+    try {
+      const { data: { session: s } } = await supabase.auth.getSession()
+      if (!s?.access_token) { alert('Sessione scaduta. Effettua di nuovo il login.'); return }
+      const resp = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${s.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ conferma: 'ELIMINA' })
+      })
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}))
+        throw new Error(err.error || 'Errore server')
+      }
+      // Account eliminato — logout forzato
+      await supabase.auth.signOut()
+      window.location.reload()
+    } catch (e) {
+      console.error('Errore eliminazione account:', e)
+      alert('Errore: ' + e.message)
+      setDeletingAccount(false)
+      setDeleteStep(0)
+    }
+  }
 
   const handleSaveAbitazione = async () => {
     const trimmed = abitazioneNome.trim()
@@ -5185,7 +5241,7 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
     { q: 'Quanti contratti posso aggiungere?', a: 'Con il piano gratuito puoi gestire fino a 3 contratti attivi. In futuro saranno disponibili piani premium con contratti illimitati e funzionalità aggiuntive.' },
     { q: 'I miei dati sono al sicuro?', a: 'Sì. Bolly non accede ai contenuti delle tue bollette per finalità diverse dall\'erogazione del servizio e non condivide i tuoi dati con terze parti per finalità commerciali. I dati sono protetti e archiviati in modo sicuro.' },
     { q: 'Bolly effettua pagamenti per me?', a: 'No. Bolly è uno strumento di gestione e promemoria. Non ha accesso ai tuoi conti correnti e non effettua pagamenti. Ti aiuta a ricordare le scadenze e a tenere tutto organizzato.' },
-    { q: 'Come cancello il mio account?', a: 'Puoi richiedere la cancellazione scrivendo a support@getbolly.app. Tutti i tuoi dati (contratti, bollette, PDF) verranno eliminati definitivamente entro 30 giorni.' },
+    { q: 'Come cancello il mio account?', a: 'Scorri in fondo a questa pagina e tocca "Elimina il mio account". Dopo una doppia conferma, tutti i tuoi dati (contratti, bollette, PDF, spese) verranno eliminati definitivamente.' },
   ]
 
   return (
@@ -5562,6 +5618,94 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
           </a>
         </div>
       </Card>
+
+      {/* I miei dati */}
+      <Card className="p-4">
+        <h3 className="font-semibold text-gray-900 text-sm mb-3">I miei dati</h3>
+        <button
+          onClick={handleExportData}
+          disabled={exportingData}
+          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          {exportingData ? <Loader2 size={18} className="text-bolly-500 animate-spin" /> : <Download size={18} className="text-bolly-500" />}
+          <span className="text-sm text-gray-700">{exportingData ? 'Esportazione in corso...' : 'Esporta i miei dati'}</span>
+        </button>
+        <button
+          onClick={() => setDeleteStep(1)}
+          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 transition-colors mt-1"
+        >
+          <AlertOctagon size={18} className="text-red-500" />
+          <span className="text-sm text-red-600 font-medium">Elimina il mio account</span>
+        </button>
+      </Card>
+
+      {/* Modale eliminazione account — Step 1 */}
+      {deleteStep === 1 && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeleteStep(0)}>
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertOctagon size={24} className="text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">Elimina account</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-2">Stai per eliminare definitivamente il tuo account Bolly. Verranno cancellati:</p>
+            <ul className="text-sm text-gray-600 mb-4 space-y-1 ml-4">
+              <li>- Tutti i tuoi contratti e bollette</li>
+              <li>- Spese, salvadanai e versamenti</li>
+              <li>- Amicizie e split condivisi</li>
+              <li>- PDF caricati e notifiche</li>
+              <li>- Il tuo account di accesso</li>
+            </ul>
+            <p className="text-sm font-semibold text-red-600 mb-5">Questa operazione non può essere annullata.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteStep(0)}
+                className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={() => setDeleteStep(2)}
+                className="flex-1 py-2.5 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors"
+              >
+                Continua
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modale eliminazione account — Step 2 (conferma finale) */}
+      {deleteStep === 2 && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeleteStep(0)}>
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="text-center mb-5">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <AlertOctagon size={32} className="text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Sei sicuro?</h3>
+              <p className="text-sm text-gray-600">Questa è l'ultima conferma. Tutti i tuoi dati verranno eliminati per sempre.</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteStep(0)}
+                disabled={deletingAccount}
+                className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                No, torna indietro
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount}
+                className="flex-1 py-2.5 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deletingAccount ? <><Loader2 size={16} className="animate-spin" /> Eliminazione...</> : 'Elimina tutto'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Logout */}
       <button

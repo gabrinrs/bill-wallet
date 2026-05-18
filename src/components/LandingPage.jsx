@@ -179,7 +179,7 @@ export default function LandingPage({ onGoToAuth }) {
           <FadeIn>
             <p className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-6" style={{ background: 'rgba(255,255,255,0.12)', color: '#B2DFDB', backdropFilter: 'blur(8px)' }}>
               <Zap size={14} />
-              Gratis per sempre — fino a 3 contratti
+              Piano gratuito incluso — nessuna carta richiesta
             </p>
           </FadeIn>
 
@@ -206,7 +206,6 @@ export default function LandingPage({ onGoToAuth }) {
                 Provalo gratis
                 <ArrowRight size={20} />
               </button>
-              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>Nessuna carta richiesta</p>
             </div>
           </FadeIn>
 

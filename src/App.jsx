@@ -4743,18 +4743,38 @@ function FormSalvadanaio({ onSave, onBack, editData }) {
   const [obiettivo, setObiettivo] = useState(editData?.obiettivo || '')
   const [dataTarget, setDataTarget] = useState(editData?.data_target || '')
   const [icona, setIcona] = useState(editData?.icona || '🐷')
+  const [ricorrente, setRicorrente] = useState(editData?.versamento_ricorrente ? true : false)
+  const [importoRicorrente, setImportoRicorrente] = useState(editData?.versamento_ricorrente || '')
+  const [frequenza, setFrequenza] = useState(editData?.frequenza_versamento || 'mensile')
   const [saving, setSaving] = useState(false)
 
   const handleSubmit = async () => {
     if (!nome.trim() || !obiettivo) return
     setSaving(true)
     try {
-      await onSave({
+      const data = {
         nome: nome.trim(),
         obiettivo: Number(obiettivo),
         data_target: dataTarget || null,
         icona
-      })
+      }
+      if (ricorrente && importoRicorrente && Number(importoRicorrente) > 0) {
+        data.versamento_ricorrente = Number(importoRicorrente)
+        data.frequenza_versamento = frequenza
+        // Se è un nuovo salvadanaio o non ha ancora prossimo_versamento, calcola la prima data
+        if (!editData?.prossimo_versamento) {
+          const oggi = new Date()
+          if (frequenza === 'settimanale') oggi.setDate(oggi.getDate() + 7)
+          else if (frequenza === 'bisettimanale') oggi.setDate(oggi.getDate() + 14)
+          else oggi.setMonth(oggi.getMonth() + 1)
+          data.prossimo_versamento = oggi.toISOString().slice(0, 10)
+        }
+      } else {
+        data.versamento_ricorrente = null
+        data.frequenza_versamento = null
+        data.prossimo_versamento = null
+      }
+      await onSave(data)
     } catch (e) { console.error('Errore salvataggio salvadanaio:', e) }
     setSaving(false)
   }
@@ -4793,6 +4813,35 @@ function FormSalvadanaio({ onSave, onBack, editData }) {
         <div>
           <label className="text-sm font-medium text-gray-700 mb-1 block">Data obiettivo <span className="text-gray-400 font-normal">(opzionale)</span></label>
           <input type="date" value={dataTarget} onChange={e => setDataTarget(e.target.value)} className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-300 focus:border-bolly-500 outline-none" style={{ maxWidth: '100%', boxSizing: 'border-box', WebkitAppearance: 'none' }} />
+        </div>
+
+        {/* Versamento ricorrente */}
+        <div className="border-t border-gray-100 pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <label className="text-sm font-medium text-gray-700">Versamento automatico</label>
+              <p className="text-xs text-gray-400">Versa una cifra fissa in automatico</p>
+            </div>
+            <button onClick={() => setRicorrente(!ricorrente)} className={`relative w-11 h-6 rounded-full transition-colors ${ricorrente ? 'bg-bolly-500' : 'bg-gray-200'}`}>
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${ricorrente ? 'translate-x-5' : ''}`} />
+            </button>
+          </div>
+          {ricorrente && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Importo (€)</label>
+                <input type="number" inputMode="decimal" value={importoRicorrente} onChange={e => setImportoRicorrente(e.target.value)} placeholder="0,00" className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-300 focus:border-bolly-500 outline-none" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Frequenza</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[{ value: 'settimanale', label: 'Settimana' }, { value: 'bisettimanale', label: '2 settimane' }, { value: 'mensile', label: 'Mese' }].map(f => (
+                    <button key={f.value} onClick={() => setFrequenza(f.value)} className={`py-2.5 px-2 rounded-xl text-xs font-medium border transition-colors ${frequenza === f.value ? 'bg-bolly-500 border-bolly-500 text-white' : 'border-gray-200 text-gray-600 bg-white'}`}>{f.label}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -4884,7 +4933,9 @@ function SchermataSalvadanai({ salvadanai, versamenti, onBack, onNavigate, onRef
                     <p className="font-medium text-gray-600 truncate">{s.nome}</p>
                     <p className="text-xs text-gray-400">{formatEuro(totale)} raccolti · Completato</p>
                   </div>
-                  <Archive size={16} className="text-gray-400" />
+                  <button onClick={(e) => { e.stopPropagation(); setDeletingId(s.id) }} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500">
+                    <X size={18} />
+                  </button>
                 </div>
               </Card>
             )
@@ -4994,6 +5045,15 @@ function DettaglioSalvadanaio({ salvadanaio, versamenti, onBack, onRefresh, onNa
           <p className="text-xs text-bolly-600 text-center mt-1">
             Media {formatEuro(giorniMesi.mediaMensile)}/mese · ~{giorniMesi.mesiRimanenti} {giorniMesi.mesiRimanenti === 1 ? 'mese' : 'mesi'} al traguardo
           </p>
+        )}
+        {salvadanaio.versamento_ricorrente && !salvadanaio.archiviato && (
+          <div className="flex items-center justify-center gap-2 mt-2 py-1.5 px-3 bg-bolly-50 rounded-lg mx-auto w-fit">
+            <Repeat size={12} className="text-bolly-500" />
+            <p className="text-xs font-medium text-bolly-600">
+              {formatEuro(salvadanaio.versamento_ricorrente)}/{salvadanaio.frequenza_versamento === 'settimanale' ? 'settimana' : salvadanaio.frequenza_versamento === 'bisettimanale' ? '2 sett.' : 'mese'}
+              {salvadanaio.prossimo_versamento && ` · Prossimo: ${formatData(salvadanaio.prossimo_versamento)}`}
+            </p>
+          </div>
         )}
       </Card>
 

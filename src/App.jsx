@@ -6149,32 +6149,38 @@ export default function App() {
         return (
           <div className="space-y-6">
             <h1 className="text-xl font-bold text-gray-900">Cosa vuoi aggiungere?</h1>
-            <div className="grid grid-cols-3 gap-3">
-              <Card className="p-4 text-center active:scale-[0.97] transition-transform" onClick={() => setScreen('aggiungi-contratto')}>
-                <div className="w-12 h-12 bg-bolly-100 rounded-xl flex items-center justify-center mx-auto mb-2"><Repeat size={22} className="text-bolly-500" /></div>
-                <p className="font-semibold text-gray-900 text-sm">Contratto</p>
-                <p className="text-xs text-gray-400 mt-0.5">Utenze</p>
-              </Card>
-              <Card className="p-4 text-center active:scale-[0.97] transition-transform" onClick={() => { setSelectedContrattoId(null); setScreen('aggiungi-bolletta') }}>
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-2"><CreditCard size={22} className="text-green-600" /></div>
-                <p className="font-semibold text-gray-900 text-sm">Bolletta</p>
-                <p className="text-xs text-gray-400 mt-0.5">Pagamento</p>
-              </Card>
-              <Card className="p-4 text-center active:scale-[0.97] transition-transform" onClick={() => setScreen('aggiungi-spesa')}>
-                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-2"><Wallet size={22} className="text-purple-600" /></div>
-                <p className="font-semibold text-gray-900 text-sm">Spesa</p>
-                <p className="text-xs text-gray-400 mt-0.5">Quotidiana</p>
-              </Card>
-              <Card className="p-4 text-center active:scale-[0.97] transition-transform" onClick={() => setScreen('aggiungi-entrata')}>
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-2"><Banknote size={22} className="text-green-600" /></div>
-                <p className="font-semibold text-gray-900 text-sm">Entrata</p>
-                <p className="text-xs text-gray-400 mt-0.5">Rimborsi</p>
-              </Card>
-              <Card className="p-4 text-center active:scale-[0.97] transition-transform" onClick={() => setScreen('salvadanai')}>
-                <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center mx-auto mb-2"><PiggyBank size={22} className="text-amber-600" /></div>
-                <p className="font-semibold text-gray-900 text-sm">Salvadanaio</p>
-                <p className="text-xs text-gray-400 mt-0.5">Risparmio</p>
-              </Card>
+            <div className="flex flex-col gap-3" style={{ minHeight: 'calc(75vh - 120px)' }}>
+              <div className="grid grid-cols-2 gap-3 flex-1">
+                <Card className="flex flex-col items-center justify-center text-center active:scale-[0.97] transition-transform" onClick={() => setScreen('aggiungi-contratto')}>
+                  <div className="w-14 h-14 bg-bolly-100 rounded-xl flex items-center justify-center mb-2"><Repeat size={26} className="text-bolly-500" /></div>
+                  <p className="font-semibold text-gray-900">Contratto</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Utenze, abbonamenti</p>
+                </Card>
+                <Card className="flex flex-col items-center justify-center text-center active:scale-[0.97] transition-transform" onClick={() => { setSelectedContrattoId(null); setScreen('aggiungi-bolletta') }}>
+                  <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center mb-2"><CreditCard size={26} className="text-green-600" /></div>
+                  <p className="font-semibold text-gray-900">Bolletta</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Pagamento</p>
+                </Card>
+              </div>
+              <div className="grid grid-cols-2 gap-3 flex-1">
+                <Card className="flex flex-col items-center justify-center text-center active:scale-[0.97] transition-transform" onClick={() => setScreen('aggiungi-spesa')}>
+                  <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mb-2"><Wallet size={26} className="text-purple-600" /></div>
+                  <p className="font-semibold text-gray-900">Spesa</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Quotidiana</p>
+                </Card>
+                <Card className="flex flex-col items-center justify-center text-center active:scale-[0.97] transition-transform" onClick={() => setScreen('aggiungi-entrata')}>
+                  <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center mb-2"><Banknote size={26} className="text-green-600" /></div>
+                  <p className="font-semibold text-gray-900">Entrata</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Stipendio, rimborsi</p>
+                </Card>
+              </div>
+              <div className="flex justify-center flex-1">
+                <Card className="flex flex-col items-center justify-center text-center active:scale-[0.97] transition-transform w-1/2" onClick={() => setScreen('salvadanai')}>
+                  <div className="w-14 h-14 bg-amber-100 rounded-xl flex items-center justify-center mb-2"><PiggyBank size={26} className="text-amber-600" /></div>
+                  <p className="font-semibold text-gray-900">Salvadanaio</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Fondi risparmio</p>
+                </Card>
+              </div>
             </div>
           </div>
         )

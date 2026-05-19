@@ -737,17 +737,15 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
                   </p>
                   <p className="text-sm text-gray-500">{b.scadenza ? `Scade il ${formatData(b.scadenza)}` : 'Scadenza non disponibile'}</p>
                   <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                    {b.contratto && (
-                      b.contratto.domiciliazione ? (
+                    {(b.contratto?.domiciliazione || b.metodo_pagamento === 'rid') ? (
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
                           <span className="w-1.5 h-1.5 bg-green-500 rounded-full" /> Domiciliata
                         </span>
-                      ) : (
+                      ) : (b.contratto || b.metodo_pagamento) && (
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
                           <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" /> Da pagare manualmente
                         </span>
-                      )
-                    )}
+                      )}
                     <FonteBadge fonte={b.fonte} />
                     {b.pdf_url && (
                       <a

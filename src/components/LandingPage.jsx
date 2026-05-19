@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { ChevronDown, Zap, Bell, CalendarDays, Camera, Shield, Star, ArrowRight, Users, PiggyBank, Check } from 'lucide-react'
+import { ChevronDown, Zap, Bell, CalendarDays, Camera, Shield, Star, ArrowRight, Users, PiggyBank, Check, Home, UserCheck, Building } from 'lucide-react'
 
 const FAQ_ITEMS = [
   {
@@ -200,7 +200,7 @@ export default function LandingPage({ onGoToAuth }) {
           <FadeIn delay={100}>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight mb-5">
               Le tue bollette,<br />
-              <span style={{ color: '#FFD54F' }}>finalmente sotto controllo.</span>
+              finalmente <span className="font-pacifico" style={{ color: '#FFD54F', fontWeight: 400 }}>sotto controllo</span>.
             </h1>
           </FadeIn>
 
@@ -263,33 +263,132 @@ export default function LandingPage({ onGoToAuth }) {
         </div>
       </section>
 
-      {/* ── FEATURES ── */}
+      {/* ── NUMERI / SOCIAL PROOF ── */}
+      <section className="py-14 bg-white">
+        <div className="max-w-5xl mx-auto px-5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+            {[
+              { num: '3', label: 'Modi per raccogliere bollette', sub: 'Email AI · Upload PDF · Scansione foto', color: '#00897B' },
+              { num: '0', label: 'Scadenze dimenticate', sub: 'Promemoria automatici prima di ogni pagamento', color: '#FFA726' },
+              { num: '100%', label: 'Gratuito per iniziare', sub: 'Fino a 3 contratti senza limiti di tempo', color: '#5C6BC0' },
+              { num: '30s', label: 'Per aggiungere una bolletta', sub: 'Scansiona o inoltra — pensa a tutto l\'AI', color: '#E91E63' }
+            ].map((item, i) => (
+              <FadeIn key={i} delay={i * 100}>
+                <div className="text-center p-5 rounded-2xl border border-gray-100 hover:shadow-md transition-shadow duration-300 bg-white">
+                  <span className="font-pacifico text-3xl sm:text-4xl block mb-2" style={{ color: item.color }}>{item.num}</span>
+                  <p className="font-bold text-gray-900 text-sm mb-1">{item.label}</p>
+                  <p className="text-gray-400 text-xs leading-relaxed">{item.sub}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FEATURES — layout alternato ── */}
       <section className="py-16 bg-white">
         <div className="max-w-5xl mx-auto px-5">
           <FadeIn>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 text-center mb-3">
               Tutto quello che ti serve
             </h2>
-            <p className="text-gray-500 text-center mb-12 max-w-md mx-auto">
+            <p className="text-gray-500 text-center mb-14 max-w-md mx-auto">
               Gestisci bollette, scadenze e spese quotidiane in un'unica app semplice e intuitiva.
             </p>
           </FadeIn>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {FEATURES.map((f, i) => (
-              <FadeIn key={i} delay={i * 80}>
-                <div className="p-6 rounded-2xl border border-gray-100 bg-white hover:shadow-lg hover:border-gray-200 transition-all duration-300 h-full">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
-                    style={{ backgroundColor: f.color + '15' }}
-                  >
-                    <f.icon size={24} style={{ color: f.color }} />
-                  </div>
-                  <h3 className="font-bold text-gray-900 text-lg mb-2">{f.title}</h3>
-                  <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
+
+          {/* Feature block 1 — screenshot sx */}
+          <FadeIn>
+            <div className="flex flex-col sm:flex-row items-center gap-8 sm:gap-12 mb-16">
+              <div className="w-56 sm:w-64 flex-shrink-0">
+                <div className="rounded-[2rem] overflow-hidden shadow-xl border border-gray-200/50">
+                  <img src="/screenshots/calendario.png" alt="Calendario Bolly" className="w-full" loading="lazy" />
                 </div>
-              </FadeIn>
-            ))}
-          </div>
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <div className="flex items-center gap-3 mb-3 justify-center sm:justify-start">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#00897B15' }}>
+                    <CalendarDays size={22} style={{ color: '#00897B' }} />
+                  </div>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FFA72615' }}>
+                    <Bell size={22} style={{ color: '#FFA726' }} />
+                  </div>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-2">Calendario e promemoria</h3>
+                <p className="text-gray-500 leading-relaxed mb-3">Tutte le tue scadenze in un colpo d'occhio. Bolly ti avvisa prima di ogni pagamento con una notifica push.</p>
+                <div className="flex flex-col gap-2">
+                  {['Vista mese con dots colorati', 'Notifiche push automatiche', 'Scadenze contratti e bollette'].map((item, i) => (
+                    <div key={i} className="flex items-center gap-2 justify-center sm:justify-start">
+                      <Check size={14} style={{ color: '#00897B' }} />
+                      <span className="text-sm text-gray-600">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </FadeIn>
+
+          {/* Feature block 2 — screenshot dx */}
+          <FadeIn>
+            <div className="flex flex-col sm:flex-row-reverse items-center gap-8 sm:gap-12 mb-16">
+              <div className="w-56 sm:w-64 flex-shrink-0">
+                <div className="rounded-[2rem] overflow-hidden shadow-xl border border-gray-200/50">
+                  <img src="/screenshots/spesa.png" alt="Spese Bolly" className="w-full" loading="lazy" />
+                </div>
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <div className="flex items-center gap-3 mb-3 justify-center sm:justify-start">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FF704315' }}>
+                    <Camera size={22} style={{ color: '#FF7043' }} />
+                  </div>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#26A69A15' }}>
+                    <Shield size={22} style={{ color: '#26A69A' }} />
+                  </div>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-2">Bollette e spese quotidiane</h3>
+                <p className="text-gray-500 leading-relaxed mb-3">Scansiona scontrini e bollette cartacee con la fotocamera. L'AI compila tutto in automatico.</p>
+                <div className="flex flex-col gap-2">
+                  {['OCR con intelligenza artificiale', 'Spese quotidiane + utenze', 'Tutto in un posto solo'].map((item, i) => (
+                    <div key={i} className="flex items-center gap-2 justify-center sm:justify-start">
+                      <Check size={14} style={{ color: '#00897B' }} />
+                      <span className="text-sm text-gray-600">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </FadeIn>
+
+          {/* Feature block 3 — screenshot sx */}
+          <FadeIn>
+            <div className="flex flex-col sm:flex-row items-center gap-8 sm:gap-12">
+              <div className="w-56 sm:w-64 flex-shrink-0">
+                <div className="rounded-[2rem] overflow-hidden shadow-xl border border-gray-200/50">
+                  <img src="/screenshots/categorie.png" alt="Categorie Bolly" className="w-full" loading="lazy" />
+                </div>
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <div className="flex items-center gap-3 mb-3 justify-center sm:justify-start">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#5C6BC015' }}>
+                    <Users size={22} style={{ color: '#5C6BC0' }} />
+                  </div>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#E91E6315' }}>
+                    <PiggyBank size={22} style={{ color: '#E91E63' }} />
+                  </div>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-2">Condividi e risparmia</h3>
+                <p className="text-gray-500 leading-relaxed mb-3">Dividi le bollette con coinquilini o familiari e crea fondi di risparmio con obiettivo.</p>
+                <div className="flex flex-col gap-2">
+                  {['Split spese con saldi aggiornati', 'Salvadanaio digitale con traguardo', 'Multi-abitazione'].map((item, i) => (
+                    <div key={i} className="flex items-center gap-2 justify-center sm:justify-start">
+                      <Check size={14} style={{ color: '#00897B' }} />
+                      <span className="text-sm text-gray-600">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </FadeIn>
         </div>
       </section>
 
@@ -345,6 +444,37 @@ export default function LandingPage({ onGoToAuth }) {
                   <StarRating count={r.stars} />
                   <p className="text-gray-700 mt-3 mb-4 text-sm leading-relaxed italic">"{r.text}"</p>
                   <p className="font-semibold text-gray-900 text-sm">{r.name}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── PER CHI È BOLLY ── */}
+      <section className="py-16 bg-white">
+        <div className="max-w-5xl mx-auto px-5">
+          <FadeIn>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 text-center mb-3">
+              Per chi è Bolly?
+            </h2>
+            <p className="text-gray-500 text-center mb-10 max-w-md mx-auto">
+              Chiunque abbia bollette da pagare e scadenze da ricordare.
+            </p>
+          </FadeIn>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-3xl mx-auto">
+            {[
+              { icon: Home, title: 'Famiglie', desc: 'Gestisci luce, gas, telefono e tutte le spese di casa senza stress.', color: '#00897B' },
+              { icon: Users, title: 'Coinquilini', desc: 'Dividi le bollette in modo equo e tieni traccia di chi ha pagato cosa.', color: '#5C6BC0' },
+              { icon: Building, title: 'Proprietari', desc: 'Più abitazioni, più contratti — tutto organizzato in un unico posto.', color: '#FFA726' }
+            ].map((item, i) => (
+              <FadeIn key={i} delay={i * 100}>
+                <div className="text-center p-6 rounded-2xl border border-gray-100 hover:shadow-lg transition-all duration-300">
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: item.color + '12' }}>
+                    <item.icon size={28} style={{ color: item.color }} />
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-lg mb-2">{item.title}</h3>
+                  <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
                 </div>
               </FadeIn>
             ))}

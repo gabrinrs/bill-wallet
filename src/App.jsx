@@ -970,7 +970,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
   const chartDataConsumi = useMemo(() =>
     [...bollette].filter(b => b.periodo && b.consumo).sort((a, b) => new Date(a.periodo) - new Date(b.periodo)).map(b => {
       const consumo = Number(b.consumo)
-      const costoUnitario = consumo > 0 ? Number((Number(b.importo) / consumo).toFixed(4)) : null
+      const costoUnitario = consumo > 0 && (b.costo_energia || b.importo) ? Number(((b.costo_energia ? Number(b.costo_energia) : Number(b.importo)) / consumo).toFixed(4)) : null
       return { periodo: formatPeriodo(b.periodo), consumo, costoUnitario, unita: b.unita_misura }
     })
   , [bollette])
@@ -1130,8 +1130,8 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
                       {b.consumo && b.unita_misura && (
                         <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{Number(b.consumo).toLocaleString('it-IT')} {b.unita_misura}</span>
                       )}
-                      {b.consumo && b.unita_misura && Number(b.consumo) > 0 && (
-                        <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{(Number(b.importo) / Number(b.consumo)).toFixed(2)} €/{b.unita_misura}</span>
+                      {b.consumo && b.unita_misura && Number(b.consumo) > 0 && (b.costo_energia || b.importo) && (
+                        <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{((b.costo_energia ? Number(b.costo_energia) : Number(b.importo)) / Number(b.consumo)).toFixed(2)} €/{b.unita_misura}</span>
                       )}
                       {bollettaSplit && (
                         <button onClick={() => onViewSplit(bollettaSplit.id)}>
@@ -1565,7 +1565,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
   const [form, setForm] = useState({
     contratto_id: contrattoId || (contratti[0]?.id || ''),
     importo: '', periodo: '', periodo_fine: '', emissione: '', scadenza: '', descrizione_libera: '', metodo_pagamento: null,
-    consumo: '', unita_misura: '',
+    consumo: '', unita_misura: '', costo_energia: '',
   })
   const update = (f, v) => setForm(p => ({ ...p, [f]: v }))
 
@@ -1680,6 +1680,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
         fonte: 'scan',
         consumo: result.consumo || null,
         unita_misura: result.unita_misura || null,
+        costo_energia: result.costo_energia || null,
       }
       // RID con scadenza passata → già pagata
       if (result.metodo_pagamento === 'rid' && result.data_scadenza && new Date(result.data_scadenza) < new Date()) {
@@ -1711,6 +1712,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
         stato_elaborazione: 'ok',
         consumo: form.consumo ? parseFloat(form.consumo) : null,
         unita_misura: form.consumo && form.unita_misura ? form.unita_misura : null,
+        costo_energia: form.costo_energia ? parseFloat(form.costo_energia) : null,
       }
       // RID con scadenza passata → già addebitata automaticamente
       if (form.metodo_pagamento === 'rid' && form.scadenza && new Date(form.scadenza) < new Date()) {
@@ -1967,6 +1969,14 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
                   </div>
                 </div>
               </div>
+              {form.consumo && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Costo energia (opzionale)</label>
+                <input type="number" step="0.01" value={form.costo_energia} onChange={e => update('costo_energia', e.target.value)} placeholder="Solo componente energia, senza oneri/IVA"
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none" />
+                <p className="text-xs text-gray-400 mt-1">Usato per calcolare il costo unitario €/{form.unita_misura || 'kWh'}</p>
+              </div>
+              )}
             </div>
             <button onClick={handleSave}
               disabled={saving || !form.importo || !form.scadenza || !form.metodo_pagamento}

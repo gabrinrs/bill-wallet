@@ -5350,12 +5350,6 @@ function ModaleCondivisione({ streakValore, anno, mese, onClose }) {
     track('riepilogo_condiviso', { metodo: 'download' })
   }
 
-  const handleWhatsApp = () => {
-    const text = encodeURIComponent(`${streakValore} ${streakValore === 1 ? 'mese' : 'mesi'} senza scadenze dimenticate su Bolly 🔥 getbolly.app`)
-    window.open(`https://wa.me/?text=${text}`, '_blank')
-    track('riepilogo_condiviso', { metodo: 'whatsapp_text' })
-  }
-
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4 py-6 overflow-y-auto">
       <Card className="p-5 w-full max-w-sm space-y-4">
@@ -5376,20 +5370,16 @@ function ModaleCondivisione({ streakValore, anno, mese, onClose }) {
         <button
           onClick={handleNativeShare}
           disabled={!blob || condividendo}
-          className="w-full py-3 rounded-xl bg-bolly-500 text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+          className="w-full py-3 rounded-xl text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+          style={{ background: '#00897B' }}
         >
           {condividendo ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={18} />}
           Condividi
         </button>
 
-        <div className="flex gap-2">
-          <button onClick={handleWhatsApp} className="flex-1 py-2.5 rounded-xl bg-green-500 text-white text-sm font-medium flex items-center justify-center gap-2">
-            <Send size={16} /> WhatsApp
-          </button>
-          <button onClick={handleDownload} disabled={!imgUrl} className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50">
-            <Download size={16} /> Salva
-          </button>
-        </div>
+        <button onClick={handleDownload} disabled={!imgUrl} className="w-full py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50">
+          <Download size={16} /> Salva immagine
+        </button>
       </Card>
     </div>
   )

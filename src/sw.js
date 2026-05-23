@@ -35,7 +35,7 @@ self.addEventListener('push', (event) => {
   )
 })
 
-// Evento click sulla notifica: apre l'app e rimuove badge
+// Evento click sulla notifica: apre l'app, naviga all'URL e rimuove badge
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
@@ -48,10 +48,15 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Se l'app è già aperta, portala in primo piano
+      // Se l'app è già aperta, naviga e poi prendi focus
       for (const client of windowClients) {
-        if (client.url.includes('getbolly') && 'focus' in client) {
-          return client.focus()
+        if (client.url.includes('getbolly')) {
+          if ('navigate' in client && url !== '/') {
+            return client.navigate(url)
+              .then((c) => c && 'focus' in c ? c.focus() : client.focus())
+              .catch(() => client.focus())
+          }
+          return 'focus' in client ? client.focus() : null
         }
       }
       // Altrimenti apri una nuova finestra

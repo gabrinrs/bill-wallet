@@ -5582,18 +5582,27 @@ function RiepilogoMensile({ target, streakScadenze, profile, onBack }) {
 
       {!loading && dati && (
         <>
-          {/* Hero streak */}
-          <Card className="p-6 text-center bg-bolly-500 border-0">
-            <Flame size={56} className="text-white mx-auto mb-2" />
-            <p className="text-3xl font-bold text-white">{streakVal} {streakVal === 1 ? 'mese' : 'mesi'} di fila</p>
-            <p className="text-sm text-white/90 mt-1">
-              {(dati.bollette || 0) === 0
-                ? 'Nessuna bolletta nel mese'
-                : (dati.saltate || 0) === 0
+          {/* Hero — caso "mese vuoto": niente bollette */}
+          {(dati.bollette || 0) === 0 && (
+            <Card className="p-6 text-center bg-gray-50 border-0">
+              <CalendarDays size={48} className="text-gray-300 mx-auto mb-2" />
+              <p className="text-base font-semibold text-gray-700">Niente da raccontare per {meseLabel}</p>
+              <p className="text-sm text-gray-500 mt-1">In questo mese non risultano bollette scadute. Il riepilogo torna utile a fine mese.</p>
+            </Card>
+          )}
+
+          {/* Hero — caso "mese con bollette" */}
+          {(dati.bollette || 0) > 0 && (
+            <Card className="p-6 text-center bg-bolly-500 border-0">
+              <Flame size={56} className="text-white mx-auto mb-2" />
+              <p className="text-3xl font-bold text-white">{streakVal} {streakVal === 1 ? 'mese' : 'mesi'} di fila</p>
+              <p className="text-sm text-white/90 mt-1">
+                {(dati.saltate || 0) === 0
                   ? 'Zero scadenze dimenticate'
                   : `${dati.saltate} scadenze saltate`}
-            </p>
-          </Card>
+              </p>
+            </Card>
+          )}
 
           {/* Metriche */}
           <div className="grid grid-cols-2 gap-3">
@@ -6648,14 +6657,23 @@ export default function App() {
 
   // Gestisce URL ?riepilogo=YYYY-MM (arrivata da push del riepilogo mensile)
   useEffect(() => {
-    if (!session) return
-    const params = new URLSearchParams(window.location.search)
-    const r = params.get('riepilogo')
-    if (r && /^\d{4}-\d{2}$/.test(r)) {
-      const [anno, mese] = r.split('-').map(Number)
-      setRiepilogoMese({ anno, mese })
-      setScreen('riepilogo')
-      window.history.replaceState({}, '', '/')
+    const checkRiepilogoUrl = () => {
+      if (!session) return
+      const params = new URLSearchParams(window.location.search)
+      const r = params.get('riepilogo')
+      if (r && /^\d{4}-\d{2}$/.test(r)) {
+        const [anno, mese] = r.split('-').map(Number)
+        setRiepilogoMese({ anno, mese })
+        setScreen('riepilogo')
+        window.history.replaceState({}, '', '/')
+      }
+    }
+    checkRiepilogoUrl()
+    window.addEventListener('focus', checkRiepilogoUrl)
+    document.addEventListener('visibilitychange', checkRiepilogoUrl)
+    return () => {
+      window.removeEventListener('focus', checkRiepilogoUrl)
+      document.removeEventListener('visibilitychange', checkRiepilogoUrl)
     }
   }, [session])
 

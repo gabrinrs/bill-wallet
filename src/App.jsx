@@ -5584,24 +5584,24 @@ function RiepilogoMensile({ target, streakScadenze, profile, onBack }) {
         <>
           {/* Hero — caso "mese vuoto": niente bollette */}
           {(dati.bollette || 0) === 0 && (
-            <Card className="p-6 text-center bg-gray-50 border-0">
+            <div className="p-6 text-center rounded-2xl shadow-sm" style={{ background: '#F3F4F6' }}>
               <CalendarDays size={48} className="text-gray-300 mx-auto mb-2" />
               <p className="text-base font-semibold text-gray-700">Niente da raccontare per {meseLabel}</p>
               <p className="text-sm text-gray-500 mt-1">In questo mese non risultano bollette scadute. Il riepilogo torna utile a fine mese.</p>
-            </Card>
+            </div>
           )}
 
           {/* Hero — caso "mese con bollette" */}
           {(dati.bollette || 0) > 0 && (
-            <Card className="p-6 text-center bg-bolly-500 border-0">
+            <div className="p-6 text-center rounded-2xl shadow-sm" style={{ background: '#00897B' }}>
               <Flame size={56} className="text-white mx-auto mb-2" />
               <p className="text-3xl font-bold text-white">{streakVal} {streakVal === 1 ? 'mese' : 'mesi'} di fila</p>
-              <p className="text-sm text-white/90 mt-1">
+              <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.9)' }}>
                 {(dati.saltate || 0) === 0
                   ? 'Zero scadenze dimenticate'
-                  : `${dati.saltate} scadenze saltate`}
+                  : `${dati.saltate} ${(dati.saltate || 0) === 1 ? 'scadenza saltata' : 'scadenze saltate'}`}
               </p>
-            </Card>
+            </div>
           )}
 
           {/* Metriche */}

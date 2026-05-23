@@ -611,3 +611,80 @@ export async function deleteVersamento(id) {
     .eq('id', id)
   if (error) throw error
 }
+
+// ============================================================
+// TRAGUARDI (coccarde sbloccate)
+// ============================================================
+
+export async function getTraguardi() {
+  const { data, error } = await supabase
+    .from('traguardi')
+    .select('*')
+    .order('prima_data', { ascending: false })
+  if (error) throw error
+  return data || []
+}
+
+// Marca una coccarda come "vista" (toglie il pallino "nuovo")
+export async function segnaTraguardoVisto(id) {
+  const { error } = await supabase
+    .from('traguardi')
+    .update({ visto: true })
+    .eq('id', id)
+  if (error) throw error
+}
+
+// Marca tutte le coccarde dell'utente come viste
+export async function segnaTuttiTraguardiVisti() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const { error } = await supabase
+    .from('traguardi')
+    .update({ visto: true })
+    .eq('user_id', user.id)
+    .eq('visto', false)
+  if (error) throw error
+}
+
+// ============================================================
+// STREAK
+// ============================================================
+
+export async function getStreak() {
+  const { data, error } = await supabase
+    .from('streak')
+    .select('*')
+  if (error) throw error
+  return data || []
+}
+
+// Recupera la streak primaria (scadenze rispettate)
+export async function getStreakScadenze() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data, error } = await supabase
+    .from('streak')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('tipo', 'scadenze')
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+// ============================================================
+// RIEPILOGO MENSILE
+// ============================================================
+
+export async function getRiepilogoMensile(anno, mese) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data, error } = await supabase
+    .rpc('calcola_riepilogo_mensile', {
+      p_user_id: user.id,
+      p_anno: anno,
+      p_mese: mese
+    })
+  if (error) throw error
+  return data
+}

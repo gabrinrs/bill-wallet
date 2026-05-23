@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione, getAmici, getRichiesteRicevute, getRichiesteInviate, cercaUtenteBolly, inviaRichiestaAmicizia, accettaAmicizia, rifiutaAmicizia, rimuoviAmico, getContattiEsterni, addContattoEsterno, deleteContattoEsterno, createSplit, getSplitsByUser, getSplitsRicevuti, getSplitByRiferimento, togglePartecipantePagato, deleteSplit, getNotifiche, segnaNotificaLetta, deleteNotifica, getSalvadanai, createSalvadanaio, updateSalvadanaio, deleteSalvadanaio, getAllVersamenti, getVersamentiSalvadanaio, createVersamento, deleteVersamento } from './lib/database'
+import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione, getAmici, getRichiesteRicevute, getRichiesteInviate, cercaUtenteBolly, inviaRichiestaAmicizia, accettaAmicizia, rifiutaAmicizia, rimuoviAmico, getContattiEsterni, addContattoEsterno, deleteContattoEsterno, createSplit, getSplitsByUser, getSplitsRicevuti, getSplitByRiferimento, togglePartecipantePagato, deleteSplit, getNotifiche, segnaNotificaLetta, deleteNotifica, getSalvadanai, createSalvadanaio, updateSalvadanaio, deleteSalvadanaio, getAllVersamenti, getVersamentiSalvadanaio, createVersamento, deleteVersamento, getTraguardi, segnaTraguardoVisto, segnaTuttiTraguardiVisti, getStreakScadenze, getRiepilogoMensile } from './lib/database'
 import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, CATEGORIE_SPESE, getCategoriaSpesa, CATEGORIE_ENTRATE, getCategoriaEntrata } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import { subscribeToPush, isPushSubscribed } from './lib/pushNotifications'
@@ -16,7 +16,8 @@ import {
   Menu, X, ChevronDown, Search,
   ShoppingCart, Car, Gamepad2, Heart, Shirt, UtensilsCrossed, MoreHorizontal, Wallet, Camera,
   Banknote, Gift, RotateCcw, Building2, Sun, MapPin, Warehouse, Users, UserPlus, UserCheck, UserX, Clock, Send, Split, CircleDollarSign,
-  ArrowUpRight, ArrowDownRight, Scale, ScanLine, PiggyBank, Target, Archive, Download, AlertOctagon
+  ArrowUpRight, ArrowDownRight, Scale, ScanLine, PiggyBank, Target, Archive, Download, AlertOctagon,
+  Award, Trophy, Share2, Eye, Leaf, Lock, LayoutGrid
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -411,7 +412,7 @@ function SwipeableSpesa({ isOpen, onOpen, onClose, onEdit, onDelete, children })
 // DASHBOARD
 // ============================================================
 
-function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto, onDeleteSpesa, onEditSpesa, abitazioni, filtroAbitazione, onSetFiltroAbitazione, splits, onSplit, onViewSplit, richiesteCount, splitsRicevuti, salvadanai, versamenti }) {
+function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto, onDeleteSpesa, onEditSpesa, abitazioni, filtroAbitazione, onSetFiltroAbitazione, splits, onSplit, onViewSplit, richiesteCount, splitsRicevuti, salvadanai, versamenti, streakScadenze }) {
   const [cardSwipedId, setCardSwipedId] = useState(null)
   const [spesaSwipedId, setSpesaSwipedId] = useState(null)
   const [deletingContratto, setDeletingContratto] = useState(null)
@@ -515,12 +516,24 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Ciao {profile?.nome || 'utente'}</h1>
         </div>
-        <button onClick={() => onNavigate('menu')} className="relative p-2 rounded-xl hover:bg-gray-100 text-gray-500">
-          <Menu size={22} />
-          {richiesteCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full" />
+        <div className="flex items-center gap-1">
+          {streakScadenze && streakScadenze.valore_corrente > 0 && (
+            <button
+              onClick={() => onNavigate('traguardi')}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 active:scale-95 transition-transform"
+              title="I miei traguardi"
+            >
+              <Flame size={16} className="text-amber-600" />
+              <span className="text-sm font-semibold text-amber-700">{streakScadenze.valore_corrente}</span>
+            </button>
           )}
-        </button>
+          <button onClick={() => onNavigate('menu')} className="relative p-2 rounded-xl hover:bg-gray-100 text-gray-500">
+            <Menu size={22} />
+            {richiesteCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Banner richieste amicizia */}
@@ -5141,6 +5154,495 @@ function DettaglioSalvadanaio({ salvadanaio, versamenti, onBack, onRefresh, onNa
   )
 }
 
+// ============================================================
+// TRAGUARDI — coccarde, streak, livelli
+// ============================================================
+
+const COCCARDE = {
+  primo_contratto: { label: 'Primo contratto', icon: FileText, hint: 'Aggiungi il primo contratto', desc: 'Hai mosso il primo passo.' },
+  posta_in_arrivo: { label: 'Posta in arrivo', icon: Mail, hint: 'Ricevi la prima bolletta via email automatica', desc: 'La prima bolletta è arrivata da sola.' },
+  hub_completo: { label: 'Hub completo', icon: LayoutGrid, hint: 'Contratti in almeno 3 categorie diverse', desc: 'Gestisci almeno 3 categorie.' },
+  mese_pulito: { label: 'Mese pulito', icon: CalendarDays, hint: 'Chiudi un mese senza dimenticare scadenze', desc: 'Zero scadenze dimenticate.', ripetibile: true },
+  anno_pulito: { label: 'Anno pulito', icon: Trophy, hint: '12 mesi di fila senza dimenticarne una', desc: 'Un anno intero senza saltarne una.' },
+  lo_sapevi_prima: { label: 'Lo sapevi prima', icon: Eye, hint: 'Paga in anticipo l\'80% delle bollette del mese', desc: 'Hai gestito le bollette in anticipo.', ripetibile: true },
+  risparmiatore: { label: 'Risparmiatore', icon: Leaf, hint: 'Costo unitario in calo per 3 mesi consecutivi', desc: 'Il tuo costo unitario è in calo.' },
+  salvadanaio_centrato: { label: 'Salvadanaio centrato', icon: Target, hint: 'Raggiungi l\'obiettivo di un salvadanaio', desc: 'Obiettivo raggiunto.', ripetibile: true },
+  split_fatto: { label: 'Split fatto', icon: Split, hint: 'Dividi una spesa con un amico', desc: 'Hai diviso una spesa.' },
+  custode: { label: 'Custode', icon: Building2, hint: 'Aggiungi una seconda abitazione', desc: 'Più di un\'abitazione gestita.' }
+}
+const COCCARDE_ORDINE = ['primo_contratto', 'posta_in_arrivo', 'hub_completo', 'mese_pulito', 'anno_pulito', 'lo_sapevi_prima', 'risparmiatore', 'salvadanaio_centrato', 'split_fatto', 'custode']
+
+const LIVELLI_INFO = {
+  esploratore: { label: 'Esploratore', icon: Award, color: 'gray', progressColor: '#9CA3AF', bgClass: 'bg-gray-100', textClass: 'text-gray-600', next: 'organizzato' },
+  organizzato: { label: 'Organizzato', icon: Award, color: 'teal', progressColor: '#00897B', bgClass: 'bg-bolly-100', textClass: 'text-bolly-700', next: 'maestro' },
+  maestro: { label: 'Maestro', icon: Trophy, color: 'amber', progressColor: '#D97706', bgClass: 'bg-amber-100', textClass: 'text-amber-700', next: null }
+}
+
+function calcolaRequisitiProssimoLivello(livello, contratti, bollette, salvadanai, streakScadenze, profile) {
+  const livelloVal = livello || 'esploratore'
+  if (livelloVal === 'maestro') return { progresso: 100, hint: 'Hai raggiunto il massimo livello.', missing: [] }
+
+  if (livelloVal === 'esploratore') {
+    const contrattiAttivi = (contratti || []).filter(c => c.attivo !== false).length
+    const bolletteAuto = (bollette || []).filter(b => b.fonte === 'email' || b.fonte === 'upload').length
+    const onboarding = !!profile?.onboarding_done
+    const missing = []
+    if (contrattiAttivi < 3) missing.push(`${3 - contrattiAttivi} contratti`)
+    if (bolletteAuto < 1) missing.push('una bolletta automatica')
+    if (!onboarding) missing.push('completare l\'onboarding')
+    const checks = [contrattiAttivi >= 3, bolletteAuto >= 1, onboarding]
+    const progresso = Math.round(checks.filter(Boolean).length / checks.length * 100)
+    return {
+      progresso,
+      hint: missing.length === 0 ? 'Pronto a salire al prossimo livello' : `Per Organizzato: manca ${missing.join(', ')}`,
+      missing
+    }
+  }
+
+  // organizzato → maestro
+  const streakVal = streakScadenze?.valore_corrente || 0
+  const categorie = new Set((contratti || []).filter(c => c.attivo !== false).map(c => c.categoria)).size
+  const hubCompleto = categorie >= 3
+  const salvadanaiAttivi = (salvadanai || []).filter(s => !s.archiviato).length
+
+  const missing = []
+  if (streakVal < 3) missing.push(`streak ${3 - streakVal} mesi (sei a ${streakVal})`)
+  if (!hubCompleto) missing.push(`hub completo (${categorie}/3 categorie)`)
+  if (salvadanaiAttivi < 1) missing.push('un salvadanaio attivo')
+  const checks = [streakVal >= 3, hubCompleto, salvadanaiAttivi >= 1]
+  const progresso = Math.round(checks.filter(Boolean).length / checks.length * 100)
+  return {
+    progresso,
+    hint: missing.length === 0 ? 'Pronto per Maestro' : `Per Maestro: ${missing.join(' + ')}`,
+    missing
+  }
+}
+
+// Disegna una fiamma stilizzata su canvas
+function drawFlame(ctx, cx, cy, size) {
+  ctx.save()
+  ctx.translate(cx, cy)
+  const s = size / 100
+  // Fiamma esterna arancio
+  ctx.fillStyle = '#FFA726'
+  ctx.beginPath()
+  ctx.moveTo(0, -90 * s)
+  ctx.bezierCurveTo(-55 * s, -40 * s, -65 * s, 25 * s, -32 * s, 55 * s)
+  ctx.bezierCurveTo(-12 * s, 72 * s, 12 * s, 72 * s, 32 * s, 55 * s)
+  ctx.bezierCurveTo(65 * s, 25 * s, 55 * s, -40 * s, 0, -90 * s)
+  ctx.closePath()
+  ctx.fill()
+  // Fiamma interna giallo
+  ctx.fillStyle = '#FFEB3B'
+  ctx.beginPath()
+  ctx.moveTo(0, -55 * s)
+  ctx.bezierCurveTo(-28 * s, -22 * s, -32 * s, 18 * s, -16 * s, 38 * s)
+  ctx.bezierCurveTo(-6 * s, 48 * s, 6 * s, 48 * s, 16 * s, 38 * s)
+  ctx.bezierCurveTo(32 * s, 18 * s, 28 * s, -22 * s, 0, -55 * s)
+  ctx.closePath()
+  ctx.fill()
+  ctx.restore()
+}
+
+// Genera un Blob PNG 1080x1080 con la card condivisibile
+async function generaImmagineCondivisibile({ streakValore, mese, anno }) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 1080
+  canvas.height = 1080
+  const ctx = canvas.getContext('2d')
+
+  // Sfondo teal scuro
+  ctx.fillStyle = '#00695C'
+  ctx.fillRect(0, 0, 1080, 1080)
+
+  // Sottile pattern: leggero overlay scuro
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.07)'
+  ctx.fillRect(0, 880, 1080, 200)
+
+  // Logo "Bolly" in alto a sinistra (Pacifico se disponibile)
+  ctx.fillStyle = '#ffffff'
+  ctx.font = '72px "Pacifico", "Brush Script MT", cursive'
+  ctx.textBaseline = 'top'
+  ctx.fillText('Bolly', 70, 70)
+
+  // Mese · anno in alto a destra
+  const mesi = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre']
+  const meseLabel = mesi[(mese || (new Date().getMonth() + 1)) - 1] || ''
+  ctx.font = '32px system-ui, -apple-system, sans-serif'
+  ctx.fillStyle = 'rgba(255,255,255,0.7)'
+  ctx.textAlign = 'right'
+  ctx.fillText(`${meseLabel} · ${anno || new Date().getFullYear()}`, 1010, 100)
+
+  // Fiamma centrale
+  drawFlame(ctx, 540, 470, 220)
+
+  // Numero grande "N mese/i"
+  ctx.textAlign = 'center'
+  ctx.fillStyle = '#ffffff'
+  ctx.font = '700 130px system-ui, -apple-system, sans-serif'
+  ctx.textBaseline = 'middle'
+  const num = streakValore || 0
+  ctx.fillText(`${num} ${num === 1 ? 'mese' : 'mesi'}`, 540, 720)
+
+  // Sottotitolo
+  ctx.font = '36px system-ui, -apple-system, sans-serif'
+  ctx.fillStyle = 'rgba(255,255,255,0.88)'
+  ctx.fillText('senza scadenze dimenticate', 540, 795)
+
+  // Footer
+  ctx.font = '26px system-ui, -apple-system, sans-serif'
+  ctx.fillStyle = 'rgba(255,255,255,0.65)'
+  ctx.fillText('mai più scadenze dimenticate — getbolly.app', 540, 985)
+
+  // Converti in Blob
+  return new Promise(resolve => canvas.toBlob(b => resolve(b), 'image/png', 0.95))
+}
+
+// Sub-componente modale condivisione
+function ModaleCondivisione({ streakValore, anno, mese, onClose }) {
+  const [imgUrl, setImgUrl] = useState(null)
+  const [generando, setGenerando] = useState(true)
+  const [condividendo, setCondividendo] = useState(false)
+  const [blob, setBlob] = useState(null)
+
+  useEffect(() => {
+    let revoke = null
+    generaImmagineCondivisibile({ streakValore, anno, mese }).then(b => {
+      if (!b) { setGenerando(false); return }
+      setBlob(b)
+      const url = URL.createObjectURL(b)
+      setImgUrl(url)
+      revoke = url
+      setGenerando(false)
+    })
+    return () => { if (revoke) URL.revokeObjectURL(revoke) }
+  }, [streakValore, anno, mese])
+
+  const handleNativeShare = async () => {
+    if (!blob) return
+    const file = new File([blob], `bolly-${anno}-${String(mese).padStart(2, '0')}.png`, { type: 'image/png' })
+    setCondividendo(true)
+    try {
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          text: `${streakValore} ${streakValore === 1 ? 'mese' : 'mesi'} senza scadenze dimenticate su Bolly 🔥 getbolly.app`
+        })
+        track('riepilogo_condiviso', { metodo: 'native' })
+      } else {
+        // Fallback: scarica
+        handleDownload()
+      }
+    } catch (e) {
+      if (e.name !== 'AbortError') console.error('Errore condivisione:', e)
+    }
+    setCondividendo(false)
+  }
+
+  const handleDownload = () => {
+    if (!imgUrl) return
+    const a = document.createElement('a')
+    a.href = imgUrl
+    a.download = `bolly-${anno}-${String(mese).padStart(2, '0')}.png`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    track('riepilogo_condiviso', { metodo: 'download' })
+  }
+
+  const handleWhatsApp = () => {
+    const text = encodeURIComponent(`${streakValore} ${streakValore === 1 ? 'mese' : 'mesi'} senza scadenze dimenticate su Bolly 🔥 getbolly.app`)
+    window.open(`https://wa.me/?text=${text}`, '_blank')
+    track('riepilogo_condiviso', { metodo: 'whatsapp_text' })
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4 py-6 overflow-y-auto">
+      <Card className="p-5 w-full max-w-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="font-semibold text-gray-900">Condividi il tuo mese</p>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="aspect-square rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center">
+          {generando && <Loader2 size={32} className="animate-spin text-gray-300" />}
+          {imgUrl && <img src={imgUrl} alt="Anteprima condivisione" className="w-full h-full object-cover" />}
+        </div>
+
+        <p className="text-xs text-gray-400 text-center">Nessuna cifra viene condivisa. Solo lo streak.</p>
+
+        <button
+          onClick={handleNativeShare}
+          disabled={!blob || condividendo}
+          className="w-full py-3 rounded-xl bg-bolly-500 text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {condividendo ? <Loader2 size={18} className="animate-spin" /> : <Share2 size={18} />}
+          Condividi
+        </button>
+
+        <div className="flex gap-2">
+          <button onClick={handleWhatsApp} className="flex-1 py-2.5 rounded-xl bg-green-500 text-white text-sm font-medium flex items-center justify-center gap-2">
+            <Send size={16} /> WhatsApp
+          </button>
+          <button onClick={handleDownload} disabled={!imgUrl} className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50">
+            <Download size={16} /> Salva
+          </button>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+function SchermataTraguardi({ traguardi, streakScadenze, profile, onBack, onRefresh }) {
+  const [showShare, setShowShare] = useState(false)
+
+  useEffect(() => {
+    trackScreen('traguardi')
+    // Quando si entra in schermata, marca i traguardi come visti
+    if (onRefresh) onRefresh()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const livello = profile?.livello || 'esploratore'
+  const livelloInfo = LIVELLI_INFO[livello] || LIVELLI_INFO.esploratore
+  const LivelloIcon = livelloInfo.icon
+
+  const sbloccatiMap = useMemo(() => {
+    const m = {}
+    ;(traguardi || []).forEach(t => { m[t.codice] = t })
+    return m
+  }, [traguardi])
+
+  const streakValore = streakScadenze?.valore_corrente || 0
+  const streakRecord = streakScadenze?.valore_record || 0
+
+  return (
+    <div className="space-y-5 pb-4">
+      <div className="flex items-center justify-between">
+        <button onClick={onBack} className="flex items-center gap-1 text-gray-500 text-sm">
+          <ChevronLeft size={18} /> Indietro
+        </button>
+        <h1 className="text-lg font-bold text-gray-900">I miei traguardi</h1>
+        <div className="w-12" />
+      </div>
+
+      {/* Card livello */}
+      <Card className={`p-4 ${livelloInfo.bgClass} border-0`}>
+        <div className="flex items-center gap-3 mb-3">
+          <div
+            className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{ background: livelloInfo.progressColor }}
+          >
+            <LivelloIcon size={22} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Il tuo livello</p>
+            <p className={`text-xl font-bold ${livelloInfo.textClass}`}>{livelloInfo.label}</p>
+          </div>
+        </div>
+        {/* Nota: la barra è calcolata dal contesto chiamante via prop; qui mostriamo solo hint testuale */}
+        <ProgressoLivello livello={livello} />
+      </Card>
+
+      {/* Streak primaria */}
+      {streakValore > 0 && (
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
+                <Flame size={24} className="text-amber-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Streak scadenze</p>
+                <p className="text-2xl font-bold text-amber-700">{streakValore} {streakValore === 1 ? 'mese' : 'mesi'}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowShare(true)}
+              className="p-2 rounded-xl bg-bolly-50 text-bolly-600 hover:bg-bolly-100"
+              title="Condividi"
+            >
+              <Share2 size={18} />
+            </button>
+          </div>
+          {streakRecord > streakValore && (
+            <p className="text-xs text-gray-400 mt-2">Record personale: {streakRecord} mesi</p>
+          )}
+        </Card>
+      )}
+
+      {streakValore === 0 && (
+        <Card className="p-4 text-center">
+          <Flame size={28} className="text-gray-200 mx-auto mb-2" />
+          <p className="text-sm text-gray-500">La tua streak partirà a fine mese, se non dimentichi scadenze.</p>
+        </Card>
+      )}
+
+      {/* Bacheca coccarde */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-gray-900">Le mie coccarde</h2>
+          <span className="text-xs text-gray-400">
+            {Object.keys(sbloccatiMap).length} / {COCCARDE_ORDINE.length}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {COCCARDE_ORDINE.map(codice => {
+            const info = COCCARDE[codice]
+            const sbloccato = sbloccatiMap[codice]
+            const Ico = info.icon
+            return (
+              <div
+                key={codice}
+                className={`aspect-square rounded-xl p-3 flex flex-col items-center justify-center text-center ${sbloccato ? 'bg-bolly-50' : 'bg-gray-50'}`}
+              >
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${sbloccato ? 'bg-bolly-100' : 'bg-gray-100'}`}>
+                  {sbloccato ? <Ico size={18} className="text-bolly-600" /> : <Lock size={16} className="text-gray-300" />}
+                </div>
+                <p className={`text-xs font-medium leading-tight ${sbloccato ? 'text-bolly-800' : 'text-gray-400'}`}>{info.label}</p>
+                {sbloccato && info.ripetibile && sbloccato.contatore > 1 && (
+                  <p className="text-[10px] text-bolly-600 mt-0.5">×{sbloccato.contatore}</p>
+                )}
+                {!sbloccato && (
+                  <p className="text-[10px] text-gray-400 mt-1 leading-tight">{info.hint}</p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {showShare && (
+        <ModaleCondivisione
+          streakValore={streakValore}
+          anno={new Date().getFullYear()}
+          mese={new Date().getMonth() + 1}
+          onClose={() => setShowShare(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+// Mostra hint testuale del prossimo livello — è qui per non rendere SchermataTraguardi più pesante
+function ProgressoLivello({ livello }) {
+  // Lettura dei prerequisiti dal contesto già caricato in App: non passiamo qui i dati, usiamo hint statico.
+  // Il calcolo dettagliato è opzionale e potrebbe essere passato come prop in futuro.
+  const liv = livello || 'esploratore'
+  const next = LIVELLI_INFO[liv]?.next
+  if (!next) return <p className="text-xs text-gray-500">Hai raggiunto il livello massimo.</p>
+  const hints = {
+    esploratore: 'Per Organizzato: 3 contratti + 1 bolletta automatica + onboarding',
+    organizzato: 'Per Maestro: streak 3 mesi + hub completo + 1 salvadanaio attivo'
+  }
+  return <p className="text-xs text-gray-600">{hints[liv]}</p>
+}
+
+function RiepilogoMensile({ target, streakScadenze, profile, onBack }) {
+  const oggi = new Date()
+  const anno = target?.anno || oggi.getFullYear()
+  const mese = target?.mese || (oggi.getMonth() + 1)
+  const [dati, setDati] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [showShare, setShowShare] = useState(false)
+
+  useEffect(() => {
+    trackScreen('riepilogo')
+    track('riepilogo_aperto', { anno, mese })
+    getRiepilogoMensile(anno, mese)
+      .then(d => setDati(d))
+      .catch(e => console.error('Errore riepilogo:', e))
+      .finally(() => setLoading(false))
+  }, [anno, mese])
+
+  const mesi = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre']
+  const meseLabel = mesi[mese - 1] || ''
+  const streakVal = dati?.streak_scadenze ?? streakScadenze?.valore_corrente ?? 0
+
+  return (
+    <div className="space-y-5 pb-4">
+      <div className="flex items-center justify-between">
+        <button onClick={onBack} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500">
+          <X size={20} />
+        </button>
+        <div className="text-center">
+          <p className="text-[11px] text-gray-400 uppercase tracking-wide">Il tuo mese</p>
+          <h1 className="text-xl font-bold text-gray-900 capitalize">{meseLabel} in pillole</h1>
+        </div>
+        <div className="w-9" />
+      </div>
+
+      {loading && (
+        <div className="text-center py-12">
+          <Loader2 size={28} className="animate-spin text-gray-300 mx-auto" />
+        </div>
+      )}
+
+      {!loading && dati && (
+        <>
+          {/* Hero streak */}
+          <Card className="p-6 text-center bg-bolly-500 border-0">
+            <Flame size={56} className="text-white mx-auto mb-2" />
+            <p className="text-3xl font-bold text-white">{streakVal} {streakVal === 1 ? 'mese' : 'mesi'} di fila</p>
+            <p className="text-sm text-white/90 mt-1">
+              {(dati.bollette || 0) === 0
+                ? 'Nessuna bolletta nel mese'
+                : (dati.saltate || 0) === 0
+                  ? 'Zero scadenze dimenticate'
+                  : `${dati.saltate} scadenze saltate`}
+            </p>
+          </Card>
+
+          {/* Metriche */}
+          <div className="grid grid-cols-2 gap-3">
+            <MetricCard label="Pagato" value={formatEuro(Number(dati.importo_pagato || 0))} />
+            <MetricCard
+              label="vs mese prima"
+              value={dati.delta_perc_vs_mese_prec === null || dati.delta_perc_vs_mese_prec === undefined
+                ? '—'
+                : `${dati.delta_perc_vs_mese_prec > 0 ? '+' : ''}${dati.delta_perc_vs_mese_prec}%`}
+              positive={dati.delta_perc_vs_mese_prec !== null && dati.delta_perc_vs_mese_prec < 0}
+            />
+            <MetricCard label="Bollette" value={String(dati.bollette || 0)} />
+            <MetricCard label="In anticipo" value={`${dati.in_anticipo || 0}/${dati.bollette || 0}`} />
+          </div>
+
+          {/* Bottone Condividi */}
+          {streakVal > 0 && (
+            <button
+              onClick={() => setShowShare(true)}
+              className="w-full py-3 rounded-xl bg-bolly-500 text-white font-medium flex items-center justify-center gap-2"
+            >
+              <Share2 size={18} />
+              Condividi il mio mese
+            </button>
+          )}
+        </>
+      )}
+
+      {showShare && (
+        <ModaleCondivisione
+          streakValore={streakVal}
+          anno={anno}
+          mese={mese}
+          onClose={() => setShowShare(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+function MetricCard({ label, value, positive }) {
+  return (
+    <div className="bg-gray-50 rounded-xl p-3">
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className={`text-lg font-bold mt-0.5 ${positive ? 'text-green-700' : 'text-gray-900'}`}>{value}</p>
+    </div>
+  )
+}
+
 function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdateProfile, abitazioni, onRefreshAbitazioni, amiciCount, richiesteCount }) {
   const [copied, setCopied] = useState(false)
   const [faqSectionOpen, setFaqSectionOpen] = useState(false)
@@ -5408,6 +5910,22 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
             )}
             <ChevronRight size={20} className="text-gray-400" />
           </div>
+        </div>
+      </Card>
+
+      {/* I miei traguardi */}
+      <Card className="p-4 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => onNavigate('traguardi')}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-bolly-100 rounded-xl flex items-center justify-center">
+              <Award size={20} className="text-bolly-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900 text-sm">I miei traguardi</p>
+              <p className="text-xs text-gray-500">Livello, streak e coccarde</p>
+            </div>
+          </div>
+          <ChevronRight size={20} className="text-gray-400" />
         </div>
       </Card>
 
@@ -6048,6 +6566,9 @@ export default function App() {
   const [versamenti, setVersamenti] = useState([])
   const [selectedSalvadanaiId, setSelectedSalvadanaiId] = useState(null)
   const [editingSalvadanaio, setEditingSalvadanaio] = useState(null)
+  const [traguardi, setTraguardi] = useState([])
+  const [streakScadenze, setStreakScadenze] = useState(null)
+  const [riepilogoMese, setRiepilogoMese] = useState(null) // {anno, mese} target per RiepilogoMensile
   const [splitTarget, setSplitTarget] = useState(null) // { tipo: 'spesa'|'bolletta', id, importo, descrizione }
   const [selectedSplitId, setSelectedSplitId] = useState(null)
   const [filtroAbitazione, setFiltroAbitazione] = useState(null) // null = tutte
@@ -6125,6 +6646,19 @@ export default function App() {
     handleSharedPdf()
   }, [session])
 
+  // Gestisce URL ?riepilogo=YYYY-MM (arrivata da push del riepilogo mensile)
+  useEffect(() => {
+    if (!session) return
+    const params = new URLSearchParams(window.location.search)
+    const r = params.get('riepilogo')
+    if (r && /^\d{4}-\d{2}$/.test(r)) {
+      const [anno, mese] = r.split('-').map(Number)
+      setRiepilogoMese({ anno, mese })
+      setScreen('riepilogo')
+      window.history.replaceState({}, '', '/')
+    }
+  }, [session])
+
   // Se supabase non è configurato, mostra errore
   if (!supabase) {
     return (
@@ -6168,7 +6702,7 @@ export default function App() {
         piano: prof?.piano || 'free',
         onboarding_done: prof?.onboarding_done || false
       })
-      const [c, b, s, ab, amici, richieste, esterni, sp, spRicevuti, notifDb, sal, vers] = await Promise.all([
+      const [c, b, s, ab, amici, richieste, esterni, sp, spRicevuti, notifDb, sal, vers, trag, strk] = await Promise.all([
         getContratti(), getBollette(), getSpese(), getAbitazioni(),
         getAmici().catch(() => []),
         getRichiesteRicevute().catch(() => []),
@@ -6177,7 +6711,9 @@ export default function App() {
         getSplitsRicevuti().catch(() => []),
         getNotifiche().catch(() => []),
         getSalvadanai().catch(() => []),
-        getAllVersamenti().catch(() => [])
+        getAllVersamenti().catch(() => []),
+        getTraguardi().catch(() => []),
+        getStreakScadenze().catch(() => null)
       ])
       setContratti(c)
       setBollette(b)
@@ -6190,6 +6726,8 @@ export default function App() {
       setDbNotifiche(notifDb)
       setSalvadanai(sal)
       setVersamenti(vers)
+      setTraguardi(trag)
+      setStreakScadenze(strk)
     } catch (e) { console.error('Errore caricamento dati:', e) }
   }, [session])
 
@@ -6351,7 +6889,7 @@ export default function App() {
 
   const renderScreen = () => {
     switch (screen) {
-      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} abitazioni={abitazioni} filtroAbitazione={filtroAbitazione} onSetFiltroAbitazione={setFiltroAbitazione} splits={splits} onSplit={(target) => { setSplitTarget(target); setScreen('form-split') }} onViewSplit={(splitId) => { setSelectedSplitId(splitId); setScreen('dettaglio-split') }} richiesteCount={richiesteCount} splitsRicevuti={splitsRicevuti} salvadanai={salvadanai} versamenti={versamenti} />
+      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} abitazioni={abitazioni} filtroAbitazione={filtroAbitazione} onSetFiltroAbitazione={setFiltroAbitazione} splits={splits} onSplit={(target) => { setSplitTarget(target); setScreen('form-split') }} onViewSplit={(splitId) => { setSelectedSplitId(splitId); setScreen('dettaglio-split') }} richiesteCount={richiesteCount} splitsRicevuti={splitsRicevuti} salvadanai={salvadanai} versamenti={versamenti} streakScadenze={streakScadenze} />
       case 'dettaglio': {
         const c = contratti.find(x => x.id === selectedContrattoId)
         if (!c) { setScreen('dashboard'); return null }
@@ -6417,6 +6955,8 @@ export default function App() {
       case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} abitazioni={abitazioni} onRefreshAbitazioni={async () => { const ab = await getAbitazioni(); setAbitazioni(ab) }} amiciCount={amiciCount} richiesteCount={richiesteCount} />
       case 'termini': return <TerminiCondizioni onBack={() => setScreen('menu')} />
       case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} />
+      case 'traguardi': return <SchermataTraguardi traguardi={traguardi} streakScadenze={streakScadenze} profile={profile} onBack={() => setScreen('menu')} onRefresh={async () => { await segnaTuttiTraguardiVisti().catch(()=>{}); const t = await getTraguardi(); setTraguardi(t) }} />
+      case 'riepilogo': return <RiepilogoMensile target={riepilogoMese} streakScadenze={streakScadenze} profile={profile} onBack={() => setScreen('dashboard')} />
       case 'salvadanai': return <SchermataSalvadanai salvadanai={salvadanai} versamenti={versamenti} onBack={() => setScreen('menu')} onNavigate={(s, id) => { if (id) setSelectedSalvadanaiId(id); setScreen(s) }} onRefresh={loadData} />
       case 'aggiungi-salvadanaio': return <FormSalvadanaio onSave={async (data) => { await createSalvadanaio(data); await loadData(); setScreen('salvadanai') }} onBack={() => setScreen('salvadanai')} editData={editingSalvadanaio} />
       case 'modifica-salvadanaio': {

@@ -1597,10 +1597,14 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
       const pdfUrl = `https://iimzetvymamadclfblgy.supabase.co/storage/v1/object/public/bollette-pdf/${filePath}`
 
       setUploadStatus('processing')
+      // Se arriviamo dal dettaglio di un contratto, passiamo l'id allo scenario Make
+      // così la bolletta viene linkata a quel contratto invece di cercare per fornitore
+      const webhookBody = { user_id: userId, pdf_url: pdfUrl }
+      if (contrattoId) webhookBody.contratto_id = Number(contrattoId)
       const webhookRes = await fetch('https://hook.eu1.make.com/5n4w2qn99uf830yktlyjw8o17ogcd1xt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, pdf_url: pdfUrl })
+        body: JSON.stringify(webhookBody)
       })
       if (!webhookRes.ok) throw new Error('Errore nell\'invio al sistema di elaborazione')
 
@@ -1658,9 +1662,10 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
       if (!res.ok) throw new Error(result.error || 'Errore nella scansione')
       if (!result.importo_euro) throw new Error('Non ho trovato l\'importo nella bolletta')
 
-      // Cerca contratto esistente per fornitore
-      let contrattoIdToUse = null
-      if (result.fornitore) {
+      // Se arriviamo dal dettaglio di un contratto, lo usiamo direttamente
+      // e saltiamo la ricerca/creazione per fornitore
+      let contrattoIdToUse = contrattoId ? Number(contrattoId) : null
+      if (!contrattoIdToUse && result.fornitore) {
         const { data: matchContratti } = await supabase
           .from('contratti')
           .select('id')
@@ -1732,7 +1737,8 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
       if (mode === 'libero') {
         data.descrizione_libera = form.descrizione_libera
         data.fonte = 'manuale'
-        data.contratto_id = null
+        // Se siamo arrivati dal dettaglio di un contratto, manteniamo il link
+        data.contratto_id = contrattoId ? Number(contrattoId) : null
       } else {
         data.contratto_id = Number(form.contratto_id)
         data.fonte = 'manuale'

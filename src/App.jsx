@@ -2965,6 +2965,52 @@ function ListaSpese({ spese, onBack, onDelete }) {
 const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre']
 const GIORNI_SETT = ['L','M','M','G','V','S','D']
 
+// Donut a cerchio con totale + nome mese al centro. Senza dipendenze esterne.
+function DonutCategorie({ data, totale, label, formatEuro }) {
+  const size = 168
+  const strokeWidth = 22
+  const radius = (size - strokeWidth) / 2
+  const cx = size / 2
+  const cy = size / 2
+  const circumference = 2 * Math.PI * radius
+
+  let offsetAcc = 0
+  const segments = data.map(d => {
+    const perc = totale > 0 ? (d.value / totale) : 0
+    const dash = perc * circumference
+    const seg = { ...d, dash, offset: offsetAcc }
+    offsetAcc += dash
+    return seg
+  })
+
+  const totaleStr = totale > 0 ? formatEuro(totale) : '—'
+  const fontSizeNum = totaleStr.length > 10 ? 13 : totaleStr.length > 8 ? 15 : 17
+
+  return (
+    <div className="flex justify-center py-1">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={cx} cy={cy} r={radius} fill="none" stroke="#f3f4f6" strokeWidth={strokeWidth} />
+        {totale > 0 && segments.map(s => (
+          <circle
+            key={s.id}
+            cx={cx}
+            cy={cy}
+            r={radius}
+            fill="none"
+            stroke={s.color}
+            strokeWidth={strokeWidth}
+            strokeDasharray={`${s.dash} ${circumference}`}
+            strokeDashoffset={-s.offset}
+            transform={`rotate(-90 ${cx} ${cy})`}
+          />
+        ))}
+        <text x={cx} y={cy - 2} textAnchor="middle" fontSize={fontSizeNum} fontWeight="700" fill="#111827">{totaleStr}</text>
+        <text x={cx} y={cy + 16} textAnchor="middle" fontSize="11" fill="#6b7280">{label}</text>
+      </svg>
+    </div>
+  )
+}
+
 function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiSpesa }) {
   const oggi = new Date()
   const [meseCorrente, setMeseCorrente] = useState(oggi.getMonth())
@@ -3324,28 +3370,34 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
         )}
 
         {statsMese.categorieSorted.length > 0 && (
-          <div className="space-y-2 pt-3 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Utenze per categoria</p>
-            {statsMese.categorieSorted.map(({ catId, tot, cat }) => {
-              const perc = statsMese.totaleMese > 0 ? (tot / statsMese.totaleMese) * 100 : 0
-              const IconComp = IconMap[cat.icon] || Package
-              return (
-                <div key={catId} className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
-                    <IconComp size={14} style={{ color: cat.color }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
+          <div className="pt-3 border-t border-gray-100">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Utenze per categoria</p>
+            <DonutCategorie
+              data={statsMese.categorieSorted.map(({ catId, tot, cat }) => ({ id: catId, color: cat.color, value: tot }))}
+              totale={statsMese.totaleMese}
+              label={MESI[meseCorrente]}
+              formatEuro={formatEuro}
+            />
+            <div className="space-y-2 mt-3">
+              {statsMese.categorieSorted.map(({ catId, tot, cat }) => {
+                const perc = statsMese.totaleMese > 0 ? (tot / statsMese.totaleMese) * 100 : 0
+                const IconComp = IconMap[cat.icon] || Package
+                return (
+                  <div key={catId} className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
+                      <IconComp size={14} style={{ color: cat.color }} />
+                    </div>
+                    <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
                       <span className="text-xs font-medium text-gray-700 truncate">{cat.label}</span>
-                      <span className="text-xs font-semibold text-gray-900">{formatEuro(tot)}</span>
-                    </div>
-                    <div className="w-full bg-gray-100 rounded-full h-1.5">
-                      <div className="h-1.5 rounded-full" style={{ width: `${perc}%`, backgroundColor: cat.color }} />
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs text-gray-400">{perc.toFixed(0)}%</span>
+                        <span className="text-xs font-semibold text-gray-900">{formatEuro(tot)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         )}
         {statsMese.categorieSpeseSort.length > 0 && (

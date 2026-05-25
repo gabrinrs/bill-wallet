@@ -2,6 +2,7 @@ export const CATEGORIE = [
   { id: 'luce', label: 'Luce', icon: 'Zap', color: '#f59e0b' },
   { id: 'gas', label: 'Gas', icon: 'Flame', color: '#ef4444' },
   { id: 'acqua', label: 'Acqua', icon: 'Droplets', color: '#3b82f6' },
+  { id: 'affitto', label: 'Affitto', icon: 'Home', color: '#4f46e5', freeText: true, placeholder: 'es. Affitto casa, Affitto box...' },
   { id: 'telefono', label: 'Telefono', icon: 'Phone', color: '#8b5cf6' },
   { id: 'internet', label: 'Internet', icon: 'Wifi', color: '#06b6d4' },
   { id: 'assicurazione', label: 'Assicurazione', icon: 'Shield', color: '#10b981' },

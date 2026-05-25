@@ -613,7 +613,7 @@ export async function deleteVersamento(id) {
 }
 
 // ============================================================
-// TRAGUARDI (coccarde sbloccate)
+// TRAGUARDI (obiettivi sbloccati)
 // ============================================================
 
 export async function getTraguardi() {
@@ -625,7 +625,7 @@ export async function getTraguardi() {
   return data || []
 }
 
-// Marca una coccarda come "vista" (toglie il pallino "nuovo")
+// Marca un obiettivo come "visto" (toglie il pallino "nuovo")
 export async function segnaTraguardoVisto(id) {
   const { error } = await supabase
     .from('traguardi')
@@ -634,7 +634,7 @@ export async function segnaTraguardoVisto(id) {
   if (error) throw error
 }
 
-// Marca tutte le coccarde dell'utente come viste
+// Marca tutti gli obiettivi dell'utente come visti
 export async function segnaTuttiTraguardiVisti() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return

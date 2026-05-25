@@ -5155,10 +5155,10 @@ function DettaglioSalvadanaio({ salvadanaio, versamenti, onBack, onRefresh, onNa
 }
 
 // ============================================================
-// TRAGUARDI — coccarde, streak, livelli
+// TRAGUARDI — obiettivi, streak, livelli
 // ============================================================
 
-const COCCARDE = {
+const OBIETTIVI = {
   primo_contratto: { label: 'Primo contratto', icon: FileText, hint: 'Aggiungi il primo contratto', desc: 'Hai mosso il primo passo.' },
   posta_in_arrivo: { label: 'Posta in arrivo', icon: Mail, hint: 'Ricevi la prima bolletta via email automatica', desc: 'La prima bolletta è arrivata da sola.' },
   hub_completo: { label: 'Hub completo', icon: LayoutGrid, hint: 'Contratti in almeno 3 categorie diverse', desc: 'Gestisci almeno 3 categorie.' },
@@ -5170,7 +5170,7 @@ const COCCARDE = {
   split_fatto: { label: 'Split fatto', icon: Split, hint: 'Dividi una spesa con un amico', desc: 'Hai diviso una spesa.' },
   custode: { label: 'Custode', icon: Building2, hint: 'Aggiungi una seconda abitazione', desc: 'Più di un\'abitazione gestita.' }
 }
-const COCCARDE_ORDINE = ['primo_contratto', 'posta_in_arrivo', 'hub_completo', 'mese_pulito', 'anno_pulito', 'lo_sapevi_prima', 'risparmiatore', 'salvadanaio_centrato', 'split_fatto', 'custode']
+const OBIETTIVI_ORDINE = ['primo_contratto', 'posta_in_arrivo', 'hub_completo', 'mese_pulito', 'anno_pulito', 'lo_sapevi_prima', 'risparmiatore', 'salvadanaio_centrato', 'split_fatto', 'custode']
 
 const LIVELLI_INFO = {
   esploratore: { label: 'Esploratore', icon: Award, color: 'gray', progressColor: '#9CA3AF', bgClass: 'bg-gray-100', textClass: 'text-gray-600', next: 'organizzato' },
@@ -5470,17 +5470,19 @@ function SchermataTraguardi({ traguardi, streakScadenze, profile, onBack, onRefr
         </Card>
       )}
 
-      {/* Bacheca coccarde */}
+      {/* Bacheca obiettivi */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-900">Le mie coccarde</h2>
+          <h2 className="font-semibold text-gray-900">I miei obiettivi</h2>
           <span className="text-xs text-gray-400">
-            {Object.keys(sbloccatiMap).length} / {COCCARDE_ORDINE.length}
+            {Object.keys(sbloccatiMap).length} / {OBIETTIVI_ORDINE.length}
           </span>
         </div>
-        <div className="grid grid-cols-3 gap-3">
-          {COCCARDE_ORDINE.map(codice => {
-            const info = COCCARDE[codice]
+        {(() => {
+          const sbloccatiList = OBIETTIVI_ORDINE.filter(c => sbloccatiMap[c])
+          const bloccatiList = OBIETTIVI_ORDINE.filter(c => !sbloccatiMap[c])
+          const renderCard = (codice) => {
+            const info = OBIETTIVI[codice]
             const sbloccato = sbloccatiMap[codice]
             const Ico = info.icon
             return (
@@ -5500,8 +5502,32 @@ function SchermataTraguardi({ traguardi, streakScadenze, profile, onBack, onRefr
                 )}
               </div>
             )
-          })}
-        </div>
+          }
+          return (
+            <>
+              {sbloccatiList.length > 0 && (
+                <div className="mb-5">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                    Sbloccati ({sbloccatiList.length}/{OBIETTIVI_ORDINE.length})
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {sbloccatiList.map(renderCard)}
+                  </div>
+                </div>
+              )}
+              {bloccatiList.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                    Da sbloccare
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {bloccatiList.map(renderCard)}
+                  </div>
+                </div>
+              )}
+            </>
+          )
+        })()}
       </div>
 
       {showShare && (
@@ -5921,7 +5947,7 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
             </div>
             <div>
               <p className="font-semibold text-gray-900 text-sm">I miei traguardi</p>
-              <p className="text-xs text-gray-500">Livello, streak e coccarde</p>
+              <p className="text-xs text-gray-500">Livello, streak e obiettivi</p>
             </div>
           </div>
           <ChevronRight size={20} className="text-gray-400" />

@@ -15,8 +15,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: '/bolly-icon-192.png',
-    badge: '/bolly-icon-192.png',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
     vibrate: [200, 100, 200],
     tag: data.tag || 'bolly-scadenza',
     renotify: true,

@@ -2070,8 +2070,9 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
 // FORM MODIFICA CONTRATTO
 // ============================================================
 
-function FormModificaContratto({ contratto, onSave, onBack, abitazioni }) {
+function FormModificaContratto({ contratto, onSave, onBack, abitazioni, bollette = [] }) {
   const [saving, setSaving] = useState(false)
+  const [pendingCategoria, setPendingCategoria] = useState(null)
   const [form, setForm] = useState({
     categoria: contratto.categoria || '',
     fornitore: contratto.fornitore || '',
@@ -2089,6 +2090,20 @@ function FormModificaContratto({ contratto, onSave, onBack, abitazioni }) {
     abitazione_id: contratto.abitazione_id || null,
   })
   const update = (f, v) => setForm(p => ({ ...p, [f]: v }))
+
+  const bolletteCount = useMemo(
+    () => bollette.filter(b => b.contratto_id === contratto.id).length,
+    [bollette, contratto.id]
+  )
+
+  const handleSelezionaCategoria = (nuovaCategoria) => {
+    if (nuovaCategoria === form.categoria) return
+    if (bolletteCount > 0 && nuovaCategoria !== contratto.categoria) {
+      setPendingCategoria(nuovaCategoria)
+    } else {
+      update('categoria', nuovaCategoria)
+    }
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -2112,6 +2127,28 @@ function FormModificaContratto({ contratto, onSave, onBack, abitazioni }) {
         <h1 className="text-xl font-bold text-gray-900">Modifica contratto</h1>
       </div>
       <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+          <div className="grid grid-cols-4 gap-2">
+            {CATEGORIE.map(cat => {
+              const Icon = IconMap[cat.icon] || Package
+              const attiva = form.categoria === cat.id
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => handleSelezionaCategoria(cat.id)}
+                  className={`flex flex-col items-center gap-1 py-2 px-1 rounded-xl border transition-colors ${attiva ? 'bg-bolly-50 border-bolly-300' : 'border-gray-200 hover:bg-gray-50'}`}
+                >
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
+                    <Icon size={16} style={{ color: cat.color }} />
+                  </div>
+                  <span className={`text-[11px] font-medium leading-tight text-center ${attiva ? 'text-bolly-600' : 'text-gray-600'}`}>{cat.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Fornitore</label>
           <input type="text" value={form.fornitore} onChange={e => update('fornitore', e.target.value)} placeholder="Nome fornitore"
@@ -2237,6 +2274,22 @@ function FormModificaContratto({ contratto, onSave, onBack, abitazioni }) {
       </div>
       <button onClick={handleSave} disabled={saving || !form.fornitore}
         className="w-full py-3 bg-bolly-500 text-white font-semibold rounded-xl disabled:opacity-40">{saving ? 'Salvataggio...' : 'Salva modifiche'}</button>
+
+      {pendingCategoria && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setPendingCategoria(null)}>
+          <div className="bg-white rounded-2xl p-5 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Cambiare categoria?</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Questo contratto ha {bolletteCount === 1 ? 'una bolletta collegata' : `${bolletteCount} bollette collegate`}.
+              Cambiando categoria, {bolletteCount === 1 ? 'verrà raggruppata' : 'verranno raggruppate'} con la nuova categoria nei riepiloghi.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setPendingCategoria(null)} className="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700">Annulla</button>
+              <button onClick={() => { update('categoria', pendingCategoria); setPendingCategoria(null) }} className="flex-1 py-2.5 rounded-xl bg-bolly-500 text-white text-sm font-medium">Cambia</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -7027,7 +7080,7 @@ export default function App() {
           </div>
         )
       case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} abitazioni={abitazioni} />
-      case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} abitazioni={abitazioni} /> : null
+      case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} abitazioni={abitazioni} bollette={bollette} /> : null
       case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} />
       case 'aggiungi-spesa': return <FormSpesa onSave={handleSaveSpesa} onBack={async () => { setSpesaDataPrecompilata(null); await loadData(); setScreen('dashboard') }} dataPrecompilata={spesaDataPrecompilata} />
       case 'aggiungi-entrata': return <FormEntrata onSave={handleSaveSpesa} onBack={() => setScreen('dashboard')} />

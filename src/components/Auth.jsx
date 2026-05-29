@@ -24,6 +24,7 @@ export default function Auth({ onBack }) {
   const [password, setPassword] = useState('')
   const [nome, setNome] = useState('')
   const [accettaTermini, setAccettaTermini] = useState(false)
+  const [codiceInvito, setCodiceInvito] = useState(() => localStorage.getItem('bolly_ref') || '')
   const [showPassword, setShowPassword] = useState(false)
   const [isForgotPassword, setIsForgotPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -53,6 +54,10 @@ export default function Auth({ onBack }) {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) setError(error.message)
     } else {
+      // Salva codice invito in localStorage (lo legge onAuthStateChange in App.jsx)
+      const codice = codiceInvito.trim().toUpperCase()
+      if (codice) localStorage.setItem('bolly_ref', codice)
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -168,6 +173,25 @@ export default function Auth({ onBack }) {
                 >
                   Password dimenticata?
                 </button>
+              </div>
+            )}
+
+            {!isLogin && !isForgotPassword && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Codice invito <span className="text-gray-400 font-normal">(opzionale)</span>
+                </label>
+                <input
+                  type="text"
+                  value={codiceInvito}
+                  onChange={e => setCodiceInvito(e.target.value.toUpperCase())}
+                  placeholder="Es. B7KP4R"
+                  maxLength={10}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none font-mono tracking-widest uppercase"
+                />
+                {codiceInvito.length > 0 && (
+                  <p className="text-xs mt-1" style={{ color: '#00897B' }}>🎁 Otterrai 2 mesi di Premium gratuito!</p>
+                )}
               </div>
             )}
 

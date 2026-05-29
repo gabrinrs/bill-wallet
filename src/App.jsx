@@ -6258,7 +6258,7 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
           if (navigator.share) {
             navigator.share({
               title: 'Bolly — gestisci le tue bollette',
-              text: 'Prova Bolly e ottieni 1 mese Premium gratis! Usa il mio codice personale:',
+              text: 'Prova Bolly e ottieni 2 mesi Premium gratis! Usa il mio codice personale:',
               url: link
             }).catch(() => {})
           } else {
@@ -6277,7 +6277,7 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900 text-sm">Invita un amico</p>
-                <p className="text-xs text-gray-500">Entrambi ottenete 1 mese Premium gratis</p>
+                <p className="text-xs text-gray-500">Tu: 1 mese gratis · Il tuo amico: 2 mesi gratis</p>
               </div>
             </div>
 

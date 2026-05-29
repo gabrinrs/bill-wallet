@@ -759,7 +759,7 @@ export function checkLimiteFree(pianoInfo, contratti = []) {
 export const FEATURE_PREMIUM = [
   { id: 'contratti_illimitati', label: 'Contratti illimitati', desc: 'Aggiungi tutti i contratti che vuoi', icon: 'FileText' },
   { id: 'split_spese',         label: 'Divisione spese',       desc: 'Dividi le bollette con chi vuoi',  icon: 'Split' },
-  { id: 'multi_abitazione',    label: 'Più abitazioni',        desc: 'Gestisci casa, ufficio, vacanze',  icon: 'Building2' },
-  { id: 'ocr_scontrini',       label: 'Scan scontrini',        desc: 'Aggiungi spese fotografando',      icon: 'Camera' },
+  { id: 'multi_abitazione',    label: 'Più abitazioni',        desc: 'Gestisci casa, ufficio, casa vacanze',        icon: 'Building2' },
+  { id: 'ocr_scontrini',       label: 'Scan scontrini',        desc: 'Aggiungi spese con una semplice foto',        icon: 'Camera' },
   { id: 'calendario_previsioni', label: 'Previsioni',          desc: 'Proiezioni spese future',          icon: 'CalendarDays' },
 ]

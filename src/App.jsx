@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione, getAmici, getRichiesteRicevute, getRichiesteInviate, cercaUtenteBolly, inviaRichiestaAmicizia, accettaAmicizia, rifiutaAmicizia, rimuoviAmico, getContattiEsterni, addContattoEsterno, deleteContattoEsterno, createSplit, getSplitsByUser, getSplitsRicevuti, getSplitByRiferimento, togglePartecipantePagato, deleteSplit, getNotifiche, segnaNotificaLetta, deleteNotifica, getSalvadanai, createSalvadanaio, updateSalvadanaio, deleteSalvadanaio, getAllVersamenti, getVersamentiSalvadanaio, createVersamento, deleteVersamento, getTraguardi, segnaTraguardoVisto, segnaTuttiTraguardiVisti, getStreakScadenze, getRiepilogoMensile } from './lib/database'
+import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione, getAmici, getRichiesteRicevute, getRichiesteInviate, cercaUtenteBolly, inviaRichiestaAmicizia, accettaAmicizia, rifiutaAmicizia, rimuoviAmico, getContattiEsterni, addContattoEsterno, deleteContattoEsterno, createSplit, getSplitsByUser, getSplitsRicevuti, getSplitByRiferimento, togglePartecipantePagato, deleteSplit, getNotifiche, segnaNotificaLetta, deleteNotifica, getSalvadanai, createSalvadanaio, updateSalvadanaio, deleteSalvadanaio, getAllVersamenti, getVersamentiSalvadanaio, createVersamento, deleteVersamento, getTraguardi, segnaTraguardoVisto, segnaTuttiTraguardiVisti, getStreakScadenze, getRiepilogoMensile, getPianoInfo, checkLimiteFree, FEATURE_PREMIUM, LIMITI_FREE } from './lib/database'
 import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, CATEGORIE_SPESE, getCategoriaSpesa, CATEGORIE_ENTRATE, getCategoriaEntrata } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import { subscribeToPush, isPushSubscribed } from './lib/pushNotifications'
@@ -403,6 +403,101 @@ function SwipeableSpesa({ isOpen, onOpen, onClose, onEdit, onDelete, children })
         className="relative bg-white"
       >
         {children}
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// MODALE PAYWALL
+// ============================================================
+
+function ModalePaywall({ onClose }) {
+  const iconMap = { FileText, Split, Building2, Camera, CalendarDays }
+
+  return (
+    <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: 'rgba(0,0,0,0.6)' }}>
+      <div className="flex-1" onClick={onClose} />
+      <div className="bg-white rounded-t-3xl overflow-y-auto" style={{ maxHeight: '88vh' }}>
+        {/* Header teal */}
+        <div className="px-6 pt-7 pb-6" style={{ background: 'linear-gradient(160deg, #00897B, #00695C)' }}>
+          <div className="flex justify-end">
+            <button onClick={onClose} className="p-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }}>
+              <X size={18} className="text-white" />
+            </button>
+          </div>
+          <div className="text-center mt-1">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3" style={{ background: 'rgba(255,255,255,0.2)' }}>
+              <Award size={28} className="text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-white" style={{ fontFamily: 'Pacifico, cursive' }}>Bolly Premium</h2>
+            <p className="text-sm mt-1.5" style={{ color: 'rgba(255,255,255,0.8)' }}>Tutto il controllo che ti serve, senza pensieri.</p>
+          </div>
+        </div>
+
+        <div className="px-6 py-6">
+          {/* Feature list */}
+          <div className="space-y-3 mb-6">
+            {FEATURE_PREMIUM.map(f => {
+              const Icon = iconMap[f.icon] || Package
+              return (
+                <div key={f.id} className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#00897B18' }}>
+                    <Icon size={17} style={{ color: '#00897B' }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900">{f.label}</p>
+                    <p className="text-xs text-gray-400">{f.desc}</p>
+                  </div>
+                  <Check size={16} style={{ color: '#00897B' }} className="flex-shrink-0" />
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Pricing */}
+          <div className="space-y-3 mb-6">
+            {/* Annuale — consigliato */}
+            <div className="rounded-2xl p-4 relative" style={{ border: '2px solid #00897B' }}>
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-white text-xs font-bold px-3 py-0.5 rounded-full" style={{ background: '#00897B' }}>
+                Consigliato
+              </div>
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-bold text-gray-900">Piano Annuale</p>
+                  <p className="text-xs text-gray-500">Risparmia il 30%</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-gray-900">€24,99<span className="text-sm font-normal text-gray-500">/anno</span></p>
+                  <p className="text-xs text-gray-400">≈ €2,08/mese</p>
+                </div>
+              </div>
+            </div>
+            {/* Mensile */}
+            <div className="border border-gray-200 rounded-2xl p-4">
+              <div className="flex justify-between items-center">
+                <p className="font-semibold text-gray-900">Piano Mensile</p>
+                <p className="font-bold text-gray-900">€2,99<span className="text-sm font-normal text-gray-500">/mese</span></p>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <button
+            className="w-full py-4 rounded-2xl text-white font-bold text-base"
+            style={{ background: 'linear-gradient(135deg, #00897B, #00695C)' }}
+            onClick={() => {
+              // TODO: collegare RevenueCat quando l'app è su store nativo
+              alert('Il pagamento sarà disponibile a breve!')
+            }}
+          >
+            Inizia 30 giorni gratis
+          </button>
+          <p className="text-center text-xs text-gray-400 mt-3 mb-1">Nessun addebito ora · Annulla quando vuoi</p>
+          <button onClick={onClose} className="w-full text-center text-sm text-gray-400 py-3">
+            Non adesso
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -5779,7 +5874,7 @@ function MetricCard({ label, value, positive }) {
   )
 }
 
-function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdateProfile, abitazioni, onRefreshAbitazioni, amiciCount, richiesteCount }) {
+function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdateProfile, abitazioni, onRefreshAbitazioni, amiciCount, richiesteCount, pianoInfo = { isPremium: true }, onShowPaywall }) {
   const [copied, setCopied] = useState(false)
   const [faqSectionOpen, setFaqSectionOpen] = useState(false)
   const [faqOpen, setFaqOpen] = useState(null)
@@ -6028,6 +6123,69 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
         </div>
       </Card>
 
+      {/* Piano attuale */}
+      {(() => {
+        const isPremium = pianoInfo.isPremium
+        const isInTrial = pianoInfo.isInTrial
+        const giorni = pianoInfo.giorniRimasti
+        const pianoLabel = isPremium
+          ? (isInTrial ? `Trial — ${giorni} ${giorni === 1 ? 'giorno rimasto' : 'giorni rimasti'}` : 'Premium')
+          : 'Gratuito'
+        const pianoBg = isPremium ? '#00897B18' : '#F3F4F6'
+        const pianoColor = isPremium ? '#00695C' : '#6B7280'
+        const pianoIconBg = isPremium ? '#00897B' : '#9CA3AF'
+        return (
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: pianoBg }}>
+                {isPremium
+                  ? <Award size={20} style={{ color: '#00897B' }} />
+                  : <Lock size={20} style={{ color: '#9CA3AF' }} />
+                }
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-900 text-sm">Piano attuale</p>
+                <p className="text-xs font-medium" style={{ color: pianoColor }}>{pianoLabel}</p>
+              </div>
+              {!isPremium && (
+                <button
+                  onClick={onShowPaywall}
+                  className="text-white text-xs font-bold px-3 py-1.5 rounded-xl flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #00897B, #00695C)' }}
+                >
+                  Upgrade
+                </button>
+              )}
+              {isPremium && !isInTrial && (
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: '#00897B18', color: '#00695C' }}>
+                  Attivo
+                </span>
+              )}
+              {isInTrial && giorni !== null && giorni <= 7 && (
+                <button
+                  onClick={onShowPaywall}
+                  className="text-white text-xs font-bold px-3 py-1.5 rounded-xl flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #00897B, #00695C)' }}
+                >
+                  Passa a Premium
+                </button>
+              )}
+            </div>
+            {isInTrial && giorni !== null && (
+              <div className="mt-3">
+                <div className="w-full bg-gray-100 rounded-full h-1.5">
+                  <div
+                    className="h-1.5 rounded-full transition-all"
+                    style={{ background: '#00897B', width: `${Math.min(100, Math.max(5, (giorni / 30) * 100))}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5">Il trial scade tra {giorni} {giorni === 1 ? 'giorno' : 'giorni'} · Passa a Premium per continuare</p>
+              </div>
+            )}
+          </Card>
+        )
+      })()}
+
       {/* I miei amici */}
       <Card className="p-4 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => onNavigate('amici')}>
         <div className="flex items-center justify-between">
@@ -6089,10 +6247,13 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
             <h3 className="font-semibold text-gray-900 text-sm">Le mie abitazioni</h3>
           </div>
           <button
-            onClick={openNewAbitazione}
+            onClick={() => {
+              if (!pianoInfo.isPremium && abitazioni.length >= 1) { onShowPaywall(); return }
+              openNewAbitazione()
+            }}
             className="p-1.5 rounded-lg bg-bolly-50 text-bolly-600 hover:bg-bolly-100"
           >
-            <Plus size={16} />
+            {(!pianoInfo.isPremium && abitazioni.length >= 1) ? <Lock size={16} /> : <Plus size={16} />}
           </button>
         </div>
 
@@ -6707,6 +6868,7 @@ export default function App() {
   const [riepilogoMese, setRiepilogoMese] = useState(null) // {anno, mese} target per RiepilogoMensile
   const [splitTarget, setSplitTarget] = useState(null) // { tipo: 'spesa'|'bolletta', id, importo, descrizione }
   const [selectedSplitId, setSelectedSplitId] = useState(null)
+  const [showPaywall, setShowPaywall] = useState(false)
   const [filtroAbitazione, setFiltroAbitazione] = useState(null) // null = tutte
   const [screen, setScreen] = useState('dashboard')
   const [selectedContrattoId, setSelectedContrattoId] = useState(null)
@@ -7032,13 +7194,23 @@ export default function App() {
   const showBadgeNotifiche = nonLetteDb > 0
   const showBadgeInbox = nuoveBolletteInbox > 0
 
+  // Piano corrente dell'utente — ricalcolato quando cambia profile
+  const pianoInfo = useMemo(() => getPianoInfo(profile), [profile])
+
+  // Handler centralizzato per split: controlla premium prima di procedere
+  const handleSplitWithGate = (target) => {
+    if (!pianoInfo.isPremium) { setShowPaywall(true); return }
+    setSplitTarget(target)
+    setScreen('form-split')
+  }
+
   const renderScreen = () => {
     switch (screen) {
-      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} abitazioni={abitazioni} filtroAbitazione={filtroAbitazione} onSetFiltroAbitazione={setFiltroAbitazione} splits={splits} onSplit={(target) => { setSplitTarget(target); setScreen('form-split') }} onViewSplit={(splitId) => { setSelectedSplitId(splitId); setScreen('dettaglio-split') }} richiesteCount={richiesteCount} splitsRicevuti={splitsRicevuti} salvadanai={salvadanai} versamenti={versamenti} streakScadenze={streakScadenze} />
+      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} abitazioni={abitazioni} filtroAbitazione={filtroAbitazione} onSetFiltroAbitazione={setFiltroAbitazione} splits={splits} onSplit={handleSplitWithGate} onViewSplit={(splitId) => { setSelectedSplitId(splitId); setScreen('dettaglio-split') }} richiesteCount={richiesteCount} splitsRicevuti={splitsRicevuti} salvadanai={salvadanai} versamenti={versamenti} streakScadenze={streakScadenze} />
       case 'dettaglio': {
         const c = contratti.find(x => x.id === selectedContrattoId)
         if (!c) { setScreen('dashboard'); return null }
-        return <DettaglioContratto contratto={c} bollette={bollette.filter(b => b.contratto_id === c.id)} onBack={() => setScreen('dashboard')} onAggiungiBolletta={() => setScreen('aggiungi-bolletta')} onTogglePagata={handleTogglePagata} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteBolletta={handleDeleteBolletta} abitazioni={abitazioni} splits={splits} onSplit={(target) => { setSplitTarget(target); setScreen('form-split') }} onViewSplit={(splitId) => { setSelectedSplitId(splitId); setScreen('dettaglio-split') }} />
+        return <DettaglioContratto contratto={c} bollette={bollette.filter(b => b.contratto_id === c.id)} onBack={() => setScreen('dashboard')} onAggiungiBolletta={() => setScreen('aggiungi-bolletta')} onTogglePagata={handleTogglePagata} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteBolletta={handleDeleteBolletta} abitazioni={abitazioni} splits={splits} onSplit={handleSplitWithGate} onViewSplit={(splitId) => { setSelectedSplitId(splitId); setScreen('dettaglio-split') }} />
       }
       case 'aggiungi':
         return (
@@ -7046,10 +7218,19 @@ export default function App() {
             <h1 className="text-xl font-bold text-gray-900">Cosa vuoi aggiungere?</h1>
             <div className="flex flex-col gap-3" style={{ minHeight: 'calc(75vh - 120px)' }}>
               <div className="grid grid-cols-2 gap-3 flex-1">
-                <Card className="flex flex-col items-center justify-center text-center active:scale-[0.97] transition-transform" onClick={() => setScreen('aggiungi-contratto')}>
+                <Card className="flex flex-col items-center justify-center text-center active:scale-[0.97] transition-transform relative" onClick={() => {
+                  const limite = checkLimiteFree(pianoInfo, contratti)
+                  if (limite.bloccato) { setShowPaywall(true); return }
+                  setScreen('aggiungi-contratto')
+                }}>
                   <div className="w-14 h-14 bg-bolly-100 rounded-xl flex items-center justify-center mb-2"><Repeat size={26} className="text-bolly-500" /></div>
                   <p className="font-semibold text-gray-900">Contratto</p>
                   <p className="text-xs text-gray-400 mt-0.5">Utenze, abbonamenti</p>
+                  {!pianoInfo.isPremium && contratti.length >= LIMITI_FREE.MAX_CONTRATTI && (
+                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: '#00897B' }}>
+                      <Lock size={11} className="text-white" />
+                    </div>
+                  )}
                 </Card>
                 <Card className="flex flex-col items-center justify-center text-center active:scale-[0.97] transition-transform" onClick={() => { setSelectedContrattoId(null); setScreen('aggiungi-bolletta') }}>
                   <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center mb-2"><CreditCard size={26} className="text-green-600" /></div>
@@ -7097,7 +7278,7 @@ export default function App() {
       }
       case 'splits-ricevuti': return <SplitsRicevutiScreen splitsRicevuti={splitsRicevuti} onBack={() => setScreen('dashboard')} onRefresh={loadData} profile={profile} />
       case 'amici': return <SchermataAmici onBack={() => setScreen('menu')} session={session} profile={profile} splits={splits} splitsRicevuti={splitsRicevuti} />
-      case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} abitazioni={abitazioni} onRefreshAbitazioni={async () => { const ab = await getAbitazioni(); setAbitazioni(ab) }} amiciCount={amiciCount} richiesteCount={richiesteCount} />
+      case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} abitazioni={abitazioni} onRefreshAbitazioni={async () => { const ab = await getAbitazioni(); setAbitazioni(ab) }} amiciCount={amiciCount} richiesteCount={richiesteCount} pianoInfo={pianoInfo} onShowPaywall={() => setShowPaywall(true)} />
       case 'termini': return <TerminiCondizioni onBack={() => setScreen('menu')} />
       case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} />
       case 'traguardi': return <SchermataTraguardi traguardi={traguardi} streakScadenze={streakScadenze} profile={profile} onBack={() => setScreen('menu')} onRefresh={async () => { await segnaTuttiTraguardiVisti().catch(()=>{}); const t = await getTraguardi(); setTraguardi(t) }} />
@@ -7120,6 +7301,9 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#f0f7f6] flex flex-col" style={{ maxWidth: 430, margin: '0 auto', backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='260' viewBox='0 0 220 260'%3E%3Cg fill='none' stroke='%23b8d5cf' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg transform='translate(15,12) rotate(15,5,7)'%3E%3Cpolyline points='7,0 3,7 7,7 4,15'/%3E%3C/g%3E%3Cg transform='translate(55,5) rotate(-20,6,6)'%3E%3Crect x='0' y='1' width='13' height='10' rx='1.5'/%3E%3Cpolyline points='0,1 6.5,7 13,1'/%3E%3C/g%3E%3Cg transform='translate(110,18) rotate(25,5,8)'%3E%3Cpath d='M5 1 C5 1 0 7 0 10 C0 13 2.5 15 5 15 C7.5 15 10 13 10 10 C10 7 5 1 5 1 Z'/%3E%3C/g%3E%3Cg transform='translate(165,8) rotate(-10,6,7)'%3E%3Ccircle cx='6' cy='7' r='6.5'/%3E%3Cline x1='6' y1='7' x2='6' y2='3'/%3E%3Cline x1='6' y1='7' x2='9' y2='9'/%3E%3C/g%3E%3Cg transform='translate(200,50) rotate(30,5,7)'%3E%3Cpath d='M5 0 L0 2.5 L0 7 C0 10.5 5 13 5 13 C5 13 10 10.5 10 7 L10 2.5 Z'/%3E%3Cpolyline points='3,7 4.5,9 7,5'/%3E%3C/g%3E%3Cg transform='translate(30,52) rotate(-15,5,7)'%3E%3Cpath d='M0 7 L5 2 L10 7'/%3E%3Crect x='1.5' y='7' width='7' height='6' rx='0.5'/%3E%3Crect x='3.5' y='9' width='3' height='4'/%3E%3C/g%3E%3Cg transform='translate(82,42) rotate(40,6,7)'%3E%3Cpath d='M11 2 C9 0 6 0 4 2 C2 4 2 8 4 10 C6 12 9 12 11 10'/%3E%3Cline x1='1' y1='5' x2='8' y2='5'/%3E%3Cline x1='1' y1='8' x2='8' y2='8'/%3E%3C/g%3E%3Cg transform='translate(140,45) rotate(-35,5,7)'%3E%3Cpath d='M2 10 C2 10 1 6 1 4 C1 1.5 3 0 5 0 C7 0 9 1.5 9 4 C9 6 8 10 8 10'/%3E%3Cline x1='1.5' y1='10' x2='8.5' y2='10'/%3E%3Cpath d='M4 11 C4 12 4.5 13 5 13 C5.5 13 6 12 6 11'/%3E%3C/g%3E%3Cg transform='translate(8,100) rotate(10,5,7)'%3E%3Cpath d='M5 14 C1.5 11 0.5 8 2.5 4 C3.5 2 5 1 5 0 C5 1 7 2 7.5 4 C9.5 8 8.5 11 5 14 Z'/%3E%3Cpath d='M5 14 C3.5 12 3 10 4.5 8 C5 7.5 5.5 8 5.5 8 C6.5 10 6.5 12 5 14 Z'/%3E%3C/g%3E%3Cg transform='translate(55,95) rotate(-25,7,5)'%3E%3Crect x='0' y='0' width='14' height='10' rx='1.5'/%3E%3Cline x1='0' y1='3.5' x2='14' y2='3.5'/%3E%3Crect x='2' y='6' width='4' height='2' rx='0.5' fill='%23b8d5cf'/%3E%3C/g%3E%3Cg transform='translate(115,88) rotate(20,6,7)'%3E%3Crect x='0' y='2' width='12' height='11' rx='1.5'/%3E%3Cline x1='0' y1='5.5' x2='12' y2='5.5'/%3E%3Cline x1='3' y1='0' x2='3' y2='3.5'/%3E%3Cline x1='9' y1='0' x2='9' y2='3.5'/%3E%3Ccircle cx='4' cy='9' r='0.8' fill='%23b8d5cf'/%3E%3Ccircle cx='8' cy='9' r='0.8' fill='%23b8d5cf'/%3E%3C/g%3E%3Cg transform='translate(170,90) rotate(-40,5,8)'%3E%3Crect x='0.5' y='0' width='9' height='15' rx='2'/%3E%3Cline x1='3.5' y1='12' x2='6.5' y2='12'/%3E%3C/g%3E%3Cg transform='translate(25,150) rotate(5,6,6)'%3E%3Cpath d='M0 4 C3 0 9 0 12 4'/%3E%3Cpath d='M2 6.5 C4 3.5 8 3.5 10 6.5'/%3E%3Cpath d='M4 9 C5 7.5 7 7.5 8 9'/%3E%3Ccircle cx='6' cy='11' r='1' fill='%23b8d5cf'/%3E%3C/g%3E%3Cg transform='translate(75,148) rotate(-30,5,7)'%3E%3Crect x='0' y='0' width='11' height='14' rx='1.5'/%3E%3Cpolyline points='2,3.5 3.5,5.5 6,2.5'/%3E%3Cline x1='7' y1='4' x2='9' y2='4'/%3E%3Cpolyline points='2,8 3.5,10 6,7'/%3E%3Cline x1='7' y1='9' x2='9' y2='9'/%3E%3C/g%3E%3Cg transform='translate(130,145) rotate(35,5,6)'%3E%3Cpath d='M1 5 C1 2.5 3 0.5 5.5 0.5 L8 0.5'/%3E%3Cpolyline points='7,0 9,1.5 7,3'/%3E%3Cpath d='M10 5.5 C10 8 8 10 5.5 10 L3 10'/%3E%3Cpolyline points='4,9 2,10.5 4,12'/%3E%3C/g%3E%3Cg transform='translate(180,142) rotate(-8,6,7)'%3E%3Ccircle cx='4.5' cy='5.5' r='4.5'/%3E%3Ccircle cx='7.5' cy='8.5' r='4.5'/%3E%3Cline x1='7' y1='7' x2='7' y2='10.5'/%3E%3Cline x1='5.5' y1='8.5' x2='8.5' y2='8.5'/%3E%3C/g%3E%3Cg transform='translate(45,198) rotate(22,5,7)'%3E%3Cellipse cx='5' cy='8' rx='5' ry='4.5'/%3E%3Crect x='3' y='2.5' width='4' height='2' rx='0.5'/%3E%3Cline x1='8' y1='11' x2='9' y2='14'/%3E%3Cline x1='2' y1='11' x2='1' y2='14'/%3E%3C/g%3E%3Cg transform='translate(105,200) rotate(-18,5,8)'%3E%3Crect x='0' y='1' width='11' height='14' rx='1.5'/%3E%3Cline x1='3' y1='5' x2='8' y2='5'/%3E%3Cline x1='3' y1='8' x2='8' y2='8'/%3E%3Cline x1='3' y1='11' x2='6' y2='11'/%3E%3C/g%3E%3Cg transform='translate(160,200) rotate(12,5,7)'%3E%3Crect x='1' y='6' width='9' height='7' rx='1'/%3E%3Cpath d='M3 6 L3 3.5 C3 1.5 4 0 5.5 0 C7 0 8 1.5 8 3.5 L8 6'/%3E%3Ccircle cx='5.5' cy='9.5' r='1' fill='%23b8d5cf'/%3E%3C/g%3E%3Cg transform='translate(3,240) rotate(-5,6,7)'%3E%3Cline x1='0' y1='14' x2='12' y2='14'/%3E%3Cline x1='0' y1='0' x2='0' y2='14'/%3E%3Crect x='2' y='8' width='2.5' height='6' fill='%23b8d5cf'/%3E%3Crect x='5.5' y='4' width='2.5' height='10' fill='%23b8d5cf'/%3E%3Crect x='9' y='1.5' width='2.5' height='12.5' fill='%23b8d5cf'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")", backgroundRepeat: 'repeat', backgroundSize: '220px 260px' }}>
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pt-6 pb-24 safe-top">{renderScreen()}</div>
+
+      {/* Paywall overlay */}
+      {showPaywall && <ModalePaywall onClose={() => setShowPaywall(false)} />}
 
       {/* Toast per PDF condiviso da altre app */}
       {sharedPdfStatus && (

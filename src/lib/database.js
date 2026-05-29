@@ -688,3 +688,78 @@ export async function getRiepilogoMensile(anno, mese) {
   if (error) throw error
   return data
 }
+
+// ============================================================
+// PIANO / PAYWALL
+// ============================================================
+
+/**
+ * Calcola lo stato del piano di un utente a partire dal suo profilo.
+ * Ritorna un oggetto con:
+ *   - piano: 'trial' | 'free' | 'premium'
+ *   - isPremium: bool (true se ha accesso completo — trial attivo o premium)
+ *   - isInTrial: bool
+ *   - giorniRimasti: number | null (null se premium senza scadenza)
+ *   - trialScaduto: bool
+ */
+export function getPianoInfo(profile) {
+  if (!profile) return { piano: 'free', isPremium: false, isInTrial: false, giorniRimasti: 0, trialScaduto: false }
+
+  const ora = new Date()
+  const piano = profile.piano || 'premium' // default premium — tutti i beta tester sono premium
+
+  if (piano === 'premium') {
+    // Controlla se ha una scadenza (premium a tempo — es. beta tester con 6 mesi)
+    if (profile.premium_scade_il) {
+      const scadenza = new Date(profile.premium_scade_il)
+      if (scadenza <= ora) {
+        // Premium scaduto → cade su free
+        return { piano: 'free', isPremium: false, isInTrial: false, giorniRimasti: 0, trialScaduto: false }
+      }
+      const giorniRimasti = Math.ceil((scadenza - ora) / (1000 * 60 * 60 * 24))
+      return { piano: 'premium', isPremium: true, isInTrial: false, giorniRimasti, trialScaduto: false }
+    }
+    return { piano: 'premium', isPremium: true, isInTrial: false, giorniRimasti: null, trialScaduto: false }
+  }
+
+  if (piano === 'trial') {
+    const scadenza = profile.trial_scade_il ? new Date(profile.trial_scade_il) : null
+    if (scadenza && scadenza > ora) {
+      const giorniRimasti = Math.ceil((scadenza - ora) / (1000 * 60 * 60 * 24))
+      return { piano: 'trial', isPremium: true, isInTrial: true, giorniRimasti, trialScaduto: false }
+    }
+    // Trial scaduto → free
+    return { piano: 'free', isPremium: false, isInTrial: false, giorniRimasti: 0, trialScaduto: true }
+  }
+
+  // piano === 'free'
+  return { piano: 'free', isPremium: false, isInTrial: false, giorniRimasti: 0, trialScaduto: false }
+}
+
+/**
+ * Limiti del piano free.
+ * Ritorna { bloccato: bool, motivo: string | null }
+ */
+export const LIMITI_FREE = {
+  MAX_CONTRATTI: 3,
+}
+
+export function checkLimiteFree(pianoInfo, contratti = []) {
+  if (pianoInfo.isPremium) return { bloccato: false, motivo: null }
+  if (contratti.length >= LIMITI_FREE.MAX_CONTRATTI) {
+    return { bloccato: true, motivo: 'contratti', messaggio: `Con il piano gratuito puoi avere massimo ${LIMITI_FREE.MAX_CONTRATTI} contratti attivi.` }
+  }
+  return { bloccato: false, motivo: null }
+}
+
+/**
+ * Feature gating — lista feature premium con label e icona per il modale paywall.
+ * Usato sia per bloccare gli accessi che per mostrarle nel modale.
+ */
+export const FEATURE_PREMIUM = [
+  { id: 'contratti_illimitati', label: 'Contratti illimitati', desc: 'Aggiungi tutti i contratti che vuoi', icon: 'FileText' },
+  { id: 'split_spese',         label: 'Divisione spese',       desc: 'Dividi le bollette con chi vuoi',  icon: 'Split' },
+  { id: 'multi_abitazione',    label: 'Più abitazioni',        desc: 'Gestisci casa, ufficio, vacanze',  icon: 'Building2' },
+  { id: 'ocr_scontrini',       label: 'Scan scontrini',        desc: 'Aggiungi spese fotografando',      icon: 'Camera' },
+  { id: 'calendario_previsioni', label: 'Previsioni',          desc: 'Proiezioni spese future',          icon: 'CalendarDays' },
+]

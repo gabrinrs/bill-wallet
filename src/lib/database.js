@@ -763,3 +763,46 @@ export const FEATURE_PREMIUM = [
   { id: 'ocr_scontrini',       label: 'Scan scontrini',        desc: 'Aggiungi spese con una semplice foto',        icon: 'Camera' },
   { id: 'calendario_previsioni', label: 'Previsioni',          desc: 'Proiezioni spese future',          icon: 'CalendarDays' },
 ]
+
+// ============================================================
+// REFERRAL
+// ============================================================
+
+/**
+ * Registra un referral dopo il primo login dell'utente invitato.
+ * Chiamato da App.jsx in onAuthStateChange (evento SIGNED_IN)
+ * se localStorage ha 'bolly_ref'.
+ */
+export async function registraReferral(codice) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, motivo: 'non_autenticato' }
+  const { data, error } = await supabase.rpc('registra_referral', {
+    p_referred_id: user.id,
+    p_codice: codice
+  })
+  if (error) return { ok: false, motivo: error.message }
+  return data
+}
+
+/**
+ * Ritorna le statistiche referral dell'utente corrente:
+ * { codice, link, invitati, completati }
+ */
+export async function getReferralStats() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const [profRes, referralRes] = await Promise.all([
+    supabase.from('profiles').select('codice_referral').eq('id', user.id).single(),
+    supabase.from('referral').select('stato').eq('referrer_id', user.id)
+  ])
+
+  const codice = profRes.data?.codice_referral || ''
+  const tutti = referralRes.data || []
+  return {
+    codice,
+    link: codice ? `https://getbolly.app?ref=${codice}` : '',
+    invitati: tutti.length,
+    completati: tutti.filter(r => r.stato === 'completato').length
+  }
+}

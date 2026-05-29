@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabase'
-import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione, getAmici, getRichiesteRicevute, getRichiesteInviate, cercaUtenteBolly, inviaRichiestaAmicizia, accettaAmicizia, rifiutaAmicizia, rimuoviAmico, getContattiEsterni, addContattoEsterno, deleteContattoEsterno, createSplit, getSplitsByUser, getSplitsRicevuti, getSplitByRiferimento, togglePartecipantePagato, deleteSplit, getNotifiche, segnaNotificaLetta, deleteNotifica, getSalvadanai, createSalvadanaio, updateSalvadanaio, deleteSalvadanaio, getAllVersamenti, getVersamentiSalvadanaio, createVersamento, deleteVersamento, getTraguardi, segnaTraguardoVisto, segnaTuttiTraguardiVisti, getStreakScadenze, getRiepilogoMensile, getPianoInfo, checkLimiteFree, FEATURE_PREMIUM, LIMITI_FREE } from './lib/database'
+import { getContratti, getBollette, createContratto, createBolletta, togglePagata, updateContratto, deleteContratto, deleteBolletta, getSpese, createSpesa, updateSpesa, deleteSpesa, getAbitazioni, createAbitazione, updateAbitazione, deleteAbitazione, getAmici, getRichiesteRicevute, getRichiesteInviate, cercaUtenteBolly, inviaRichiestaAmicizia, accettaAmicizia, rifiutaAmicizia, rimuoviAmico, getContattiEsterni, addContattoEsterno, deleteContattoEsterno, createSplit, getSplitsByUser, getSplitsRicevuti, getSplitByRiferimento, togglePartecipantePagato, deleteSplit, getNotifiche, segnaNotificaLetta, deleteNotifica, getSalvadanai, createSalvadanaio, updateSalvadanaio, deleteSalvadanaio, getAllVersamenti, getVersamentiSalvadanaio, createVersamento, deleteVersamento, getTraguardi, segnaTraguardoVisto, segnaTuttiTraguardiVisti, getStreakScadenze, getRiepilogoMensile, getPianoInfo, checkLimiteFree, FEATURE_PREMIUM, LIMITI_FREE, registraReferral, getReferralStats } from './lib/database'
 import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, CATEGORIE_SPESE, getCategoriaSpesa, CATEGORIE_ENTRATE, getCategoriaEntrata } from './lib/categorie'
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import { subscribeToPush, isPushSubscribed } from './lib/pushNotifications'
@@ -5935,7 +5935,7 @@ function MetricCard({ label, value, positive }) {
   )
 }
 
-function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdateProfile, abitazioni, onRefreshAbitazioni, amiciCount, richiesteCount, pianoInfo = { isPremium: true }, onShowPaywall }) {
+function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdateProfile, abitazioni, onRefreshAbitazioni, amiciCount, richiesteCount, pianoInfo = { isPremium: true }, onShowPaywall, referralStats }) {
   const [copied, setCopied] = useState(false)
   const [faqSectionOpen, setFaqSectionOpen] = useState(false)
   const [faqOpen, setFaqOpen] = useState(null)
@@ -6243,6 +6243,82 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
                 <p className="text-xs text-gray-400 mt-1.5">Il trial scade tra {giorni} {giorni === 1 ? 'giorno' : 'giorni'} · Passa a Premium per continuare</p>
               </div>
             )}
+          </Card>
+        )
+      })()}
+
+      {/* Invita un amico */}
+      {(() => {
+        const codice = referralStats?.codice || profile?.codice_referral || ''
+        const link = codice ? `https://getbolly.app?ref=${codice}` : ''
+        const invitati = referralStats?.invitati || 0
+        const completati = referralStats?.completati || 0
+        const handleShare = () => {
+          if (!link) return
+          if (navigator.share) {
+            navigator.share({
+              title: 'Bolly — gestisci le tue bollette',
+              text: 'Prova Bolly e ottieni 1 mese Premium gratis! Usa il mio codice personale:',
+              url: link
+            }).catch(() => {})
+          } else {
+            navigator.clipboard.writeText(link).then(() => alert('Link copiato!')).catch(() => {})
+          }
+        }
+        const handleCopyCode = () => {
+          if (!codice) return
+          navigator.clipboard.writeText(codice).then(() => alert('Codice copiato!')).catch(() => {})
+        }
+        return (
+          <Card className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#FFF3E0' }}>
+                <Gift size={20} style={{ color: '#F57C00' }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-900 text-sm">Invita un amico</p>
+                <p className="text-xs text-gray-500">Entrambi ottenete 1 mese Premium gratis</p>
+              </div>
+            </div>
+
+            {/* Codice referral */}
+            {codice ? (
+              <button
+                onClick={handleCopyCode}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl mb-3 active:scale-[0.98] transition-transform"
+                style={{ background: '#FFF8F0', border: '1.5px dashed #F57C00' }}
+              >
+                <span className="font-mono font-bold tracking-widest text-base" style={{ color: '#E65100', letterSpacing: '0.15em' }}>{codice}</span>
+                <div className="flex items-center gap-1 text-xs font-medium" style={{ color: '#F57C00' }}>
+                  <Copy size={13} />
+                  <span>copia</span>
+                </div>
+              </button>
+            ) : (
+              <div className="w-full h-10 rounded-xl mb-3 bg-gray-100 animate-pulse" />
+            )}
+
+            {/* Bottone condividi */}
+            <button
+              onClick={handleShare}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white mb-3 active:scale-[0.98] transition-transform"
+              style={{ background: 'linear-gradient(135deg, #F57C00, #E65100)' }}
+            >
+              <Share2 size={16} />
+              Condividi il tuo link
+            </button>
+
+            {/* Contatori */}
+            <div className="flex gap-3">
+              <div className="flex-1 rounded-xl py-2 text-center" style={{ background: '#F9FAFB' }}>
+                <p className="text-lg font-bold text-gray-900">{invitati}</p>
+                <p className="text-xs text-gray-400">invitati</p>
+              </div>
+              <div className="flex-1 rounded-xl py-2 text-center" style={{ background: '#F0FDF4' }}>
+                <p className="text-lg font-bold" style={{ color: '#16A34A' }}>{completati}</p>
+                <p className="text-xs" style={{ color: '#4ADE80' }}>premi ottenuti</p>
+              </div>
+            </div>
           </Card>
         )
       })()}
@@ -6948,11 +7024,22 @@ export default function App() {
   const scrollRef = useRef(null)
   const [sharedPdfStatus, setSharedPdfStatus] = useState(null) // null, 'uploading', 'processing', 'success', 'error'
   const [sharedPdfError, setSharedPdfError] = useState(null)
+  const [referralStats, setReferralStats] = useState(null)
 
   useEffect(() => {
     requestAnimationFrame(() => scrollRef.current?.scrollTo(0, 0))
     if (screen) trackScreen(screen)
   }, [screen])
+
+  // Referral: cattura ?ref=CODICE all'apertura dell'app e salva in localStorage
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const ref = params.get('ref')
+    if (ref && ref.length >= 4) {
+      localStorage.setItem('bolly_ref', ref.toUpperCase())
+      window.history.replaceState({}, '', '/')
+    }
+  }, [])
 
   // Web Share Target: gestisce PDF condiviso da altre app
   useEffect(() => {
@@ -7052,6 +7139,17 @@ export default function App() {
       setSession(session)
       if (event === 'PASSWORD_RECOVERY') {
         setIsRecovery(true)
+      }
+      // Referral: al primo login registra il codice salvato in localStorage
+      if (event === 'SIGNED_IN' && session) {
+        const refCode = localStorage.getItem('bolly_ref')
+        if (refCode) {
+          registraReferral(refCode)
+            .then(() => localStorage.removeItem('bolly_ref'))
+            .catch(() => {})
+        }
+        // Carica le stats referral dell'utente
+        getReferralStats().then(stats => { if (stats) setReferralStats(stats) }).catch(() => {})
       }
     })
     return () => subscription.unsubscribe()
@@ -7347,7 +7445,7 @@ export default function App() {
       }
       case 'splits-ricevuti': return <SplitsRicevutiScreen splitsRicevuti={splitsRicevuti} onBack={() => setScreen('dashboard')} onRefresh={loadData} profile={profile} />
       case 'amici': return <SchermataAmici onBack={() => setScreen('menu')} session={session} profile={profile} splits={splits} splitsRicevuti={splitsRicevuti} />
-      case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} abitazioni={abitazioni} onRefreshAbitazioni={async () => { const ab = await getAbitazioni(); setAbitazioni(ab) }} amiciCount={amiciCount} richiesteCount={richiesteCount} pianoInfo={pianoInfo} onShowPaywall={() => setShowPaywall(true)} />
+      case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} abitazioni={abitazioni} onRefreshAbitazioni={async () => { const ab = await getAbitazioni(); setAbitazioni(ab) }} amiciCount={amiciCount} richiesteCount={richiesteCount} pianoInfo={pianoInfo} onShowPaywall={() => setShowPaywall(true)} referralStats={referralStats} />
       case 'termini': return <TerminiCondizioni onBack={() => setScreen('menu')} />
       case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} />
       case 'traguardi': return <SchermataTraguardi traguardi={traguardi} streakScadenze={streakScadenze} profile={profile} onBack={() => setScreen('menu')} onRefresh={async () => { await segnaTuttiTraguardiVisti().catch(()=>{}); const t = await getTraguardi(); setTraguardi(t) }} />

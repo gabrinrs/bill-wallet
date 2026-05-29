@@ -412,8 +412,27 @@ function SwipeableSpesa({ isOpen, onOpen, onClose, onEdit, onDelete, children })
 // MODALE PAYWALL
 // ============================================================
 
-function ModalePaywall({ onClose }) {
+function ModalePaywall({ onClose, pianoInfo = {} }) {
   const iconMap = { FileText, Split, Building2, Camera, CalendarDays }
+  const [pianoSelezionato, setPianoSelezionato] = useState('annuale')
+
+  // CTA e sottotitolo variano in base allo stato del piano
+  const isInTrial = pianoInfo.isInTrial
+  const trialScaduto = pianoInfo.trialScaduto
+  // trial mai usato = piano free e trial_scade_il mai impostato (null)
+  const trialDisponibile = pianoInfo.piano === 'free' && !trialScaduto
+
+  const ctaLabel = isInTrial
+    ? 'Attiva Premium ora'
+    : trialDisponibile
+      ? 'Inizia 30 giorni gratis'
+      : 'Passa a Premium'
+
+  const ctaSubtitle = isInTrial
+    ? `Il tuo trial scade tra ${pianoInfo.giorniRimasti} ${pianoInfo.giorniRimasti === 1 ? 'giorno' : 'giorni'}`
+    : trialDisponibile
+      ? 'Nessun addebito ora · Annulla quando vuoi'
+      : 'Accesso immediato a tutte le funzioni'
 
   return (
     <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: 'rgba(0,0,0,0.6)' }}>
@@ -455,31 +474,55 @@ function ModalePaywall({ onClose }) {
             })}
           </div>
 
-          {/* Pricing */}
+          {/* Pricing — selezionabile */}
           <div className="space-y-3 mb-6">
-            {/* Annuale — consigliato */}
-            <div className="rounded-2xl p-4 relative" style={{ border: '2px solid #00897B' }}>
+            {/* Annuale */}
+            <button
+              onClick={() => setPianoSelezionato('annuale')}
+              className="w-full rounded-2xl p-4 relative text-left transition-all"
+              style={{
+                border: pianoSelezionato === 'annuale' ? '2px solid #00897B' : '2px solid #E5E7EB',
+                background: pianoSelezionato === 'annuale' ? '#00897B08' : 'white'
+              }}
+            >
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-white text-xs font-bold px-3 py-0.5 rounded-full" style={{ background: '#00897B' }}>
                 Consigliato
               </div>
               <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-bold text-gray-900">Piano Annuale</p>
-                  <p className="text-xs text-gray-500">Risparmia il 30%</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0" style={{ borderColor: pianoSelezionato === 'annuale' ? '#00897B' : '#D1D5DB' }}>
+                    {pianoSelezionato === 'annuale' && <div className="w-2 h-2 rounded-full" style={{ background: '#00897B' }} />}
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900">Piano Annuale</p>
+                    <p className="text-xs text-gray-500">Risparmia il 30%</p>
+                  </div>
                 </div>
                 <div className="text-right">
                   <p className="text-xl font-bold text-gray-900">€24,99<span className="text-sm font-normal text-gray-500">/anno</span></p>
                   <p className="text-xs text-gray-400">≈ €2,08/mese</p>
                 </div>
               </div>
-            </div>
+            </button>
             {/* Mensile */}
-            <div className="border border-gray-200 rounded-2xl p-4">
+            <button
+              onClick={() => setPianoSelezionato('mensile')}
+              className="w-full rounded-2xl p-4 text-left transition-all"
+              style={{
+                border: pianoSelezionato === 'mensile' ? '2px solid #00897B' : '2px solid #E5E7EB',
+                background: pianoSelezionato === 'mensile' ? '#00897B08' : 'white'
+              }}
+            >
               <div className="flex justify-between items-center">
-                <p className="font-semibold text-gray-900">Piano Mensile</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0" style={{ borderColor: pianoSelezionato === 'mensile' ? '#00897B' : '#D1D5DB' }}>
+                    {pianoSelezionato === 'mensile' && <div className="w-2 h-2 rounded-full" style={{ background: '#00897B' }} />}
+                  </div>
+                  <p className="font-semibold text-gray-900">Piano Mensile</p>
+                </div>
                 <p className="font-bold text-gray-900">€2,99<span className="text-sm font-normal text-gray-500">/mese</span></p>
               </div>
-            </div>
+            </button>
           </div>
 
           {/* CTA */}
@@ -487,13 +530,13 @@ function ModalePaywall({ onClose }) {
             className="w-full py-4 rounded-2xl text-white font-bold text-base"
             style={{ background: 'linear-gradient(135deg, #00897B, #00695C)' }}
             onClick={() => {
-              // TODO: collegare RevenueCat quando l'app è su store nativo
+              // TODO: collegare RevenueCat — passare pianoSelezionato ('annuale'|'mensile')
               alert('Il pagamento sarà disponibile a breve!')
             }}
           >
-            Inizia 30 giorni gratis
+            {ctaLabel}
           </button>
-          <p className="text-center text-xs text-gray-400 mt-3 mb-1">Nessun addebito ora · Annulla quando vuoi</p>
+          <p className="text-center text-xs text-gray-400 mt-3 mb-1">{ctaSubtitle}</p>
           <button onClick={onClose} className="w-full text-center text-sm text-gray-400 py-3">
             Non adesso
           </button>
@@ -507,7 +550,7 @@ function ModalePaywall({ onClose }) {
 // DASHBOARD
 // ============================================================
 
-function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto, onDeleteSpesa, onEditSpesa, abitazioni, filtroAbitazione, onSetFiltroAbitazione, splits, onSplit, onViewSplit, richiesteCount, splitsRicevuti, salvadanai, versamenti, streakScadenze }) {
+function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto, onDeleteSpesa, onEditSpesa, abitazioni, filtroAbitazione, onSetFiltroAbitazione, splits, onSplit, onViewSplit, richiesteCount, splitsRicevuti, salvadanai, versamenti, streakScadenze, contrattiNascosti = 0, onShowPaywall }) {
   const [cardSwipedId, setCardSwipedId] = useState(null)
   const [spesaSwipedId, setSpesaSwipedId] = useState(null)
   const [deletingContratto, setDeletingContratto] = useState(null)
@@ -928,6 +971,24 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
               <Plus size={32} className="text-gray-300 mx-auto mb-2" />
               <p className="text-gray-400">{filtroAbitazione ? 'Nessun contratto per questa abitazione' : 'Aggiungi il tuo primo contratto'}</p>
             </Card>
+          )}
+          {contrattiNascosti > 0 && (
+            <button
+              onClick={onShowPaywall}
+              className="w-full flex items-center gap-3 p-4 rounded-2xl border border-dashed border-gray-300 hover:border-bolly-400 transition-colors"
+              style={{ background: '#00897B08' }}
+            >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#00897B18' }}>
+                <Lock size={17} style={{ color: '#00897B' }} />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-semibold" style={{ color: '#00695C' }}>
+                  {contrattiNascosti} {contrattiNascosti === 1 ? 'contratto nascosto' : 'contratti nascosti'}
+                </p>
+                <p className="text-xs text-gray-400">Passa a Premium per vederli tutti</p>
+              </div>
+              <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
+            </button>
           )}
         </div>
       </div>
@@ -7197,6 +7258,14 @@ export default function App() {
   // Piano corrente dell'utente — funzione pura, sicura dopo i return anticipati
   const pianoInfo = getPianoInfo(profile)
 
+  // Contratti visibili in Dashboard: i primi 3 se free, tutti se premium
+  const contrattiPerDashboard = pianoInfo.isPremium
+    ? contratti
+    : contratti.slice(0, LIMITI_FREE.MAX_CONTRATTI)
+  const contrattiNascostiCount = pianoInfo.isPremium
+    ? 0
+    : Math.max(0, contratti.length - LIMITI_FREE.MAX_CONTRATTI)
+
   // Handler centralizzato per split: controlla premium prima di procedere
   const handleSplitWithGate = (target) => {
     if (!pianoInfo.isPremium) { setShowPaywall(true); return }
@@ -7206,7 +7275,7 @@ export default function App() {
 
   const renderScreen = () => {
     switch (screen) {
-      case 'dashboard': return <Dashboard contratti={contratti} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} abitazioni={abitazioni} filtroAbitazione={filtroAbitazione} onSetFiltroAbitazione={setFiltroAbitazione} splits={splits} onSplit={handleSplitWithGate} onViewSplit={(splitId) => { setSelectedSplitId(splitId); setScreen('dettaglio-split') }} richiesteCount={richiesteCount} splitsRicevuti={splitsRicevuti} salvadanai={salvadanai} versamenti={versamenti} streakScadenze={streakScadenze} />
+      case 'dashboard': return <Dashboard contratti={contrattiPerDashboard} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} abitazioni={abitazioni} filtroAbitazione={filtroAbitazione} onSetFiltroAbitazione={setFiltroAbitazione} splits={splits} onSplit={handleSplitWithGate} onViewSplit={(splitId) => { setSelectedSplitId(splitId); setScreen('dettaglio-split') }} richiesteCount={richiesteCount} splitsRicevuti={splitsRicevuti} salvadanai={salvadanai} versamenti={versamenti} streakScadenze={streakScadenze} contrattiNascosti={contrattiNascostiCount} onShowPaywall={() => setShowPaywall(true)} />
       case 'dettaglio': {
         const c = contratti.find(x => x.id === selectedContrattoId)
         if (!c) { setScreen('dashboard'); return null }
@@ -7303,7 +7372,7 @@ export default function App() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pt-6 pb-24 safe-top">{renderScreen()}</div>
 
       {/* Paywall overlay */}
-      {showPaywall && <ModalePaywall onClose={() => setShowPaywall(false)} />}
+      {showPaywall && <ModalePaywall onClose={() => setShowPaywall(false)} pianoInfo={pianoInfo} />}
 
       {/* Toast per PDF condiviso da altre app */}
       {sharedPdfStatus && (

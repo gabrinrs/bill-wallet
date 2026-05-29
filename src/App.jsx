@@ -7194,8 +7194,8 @@ export default function App() {
   const showBadgeNotifiche = nonLetteDb > 0
   const showBadgeInbox = nuoveBolletteInbox > 0
 
-  // Piano corrente dell'utente — ricalcolato quando cambia profile
-  const pianoInfo = useMemo(() => getPianoInfo(profile), [profile])
+  // Piano corrente dell'utente — funzione pura, sicura dopo i return anticipati
+  const pianoInfo = getPianoInfo(profile)
 
   // Handler centralizzato per split: controlla premium prima di procedere
   const handleSplitWithGate = (target) => {

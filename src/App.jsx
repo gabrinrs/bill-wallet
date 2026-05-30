@@ -547,6 +547,85 @@ function ModalePaywall({ onClose, pianoInfo = {} }) {
 }
 
 // ============================================================
+// TOOLTIP CONTESTUALE — il "?" che spiega ogni schermata
+// ============================================================
+
+function TooltipContestuale({ titolo, descrizione, cose = [] }) {
+  const [aperto, setAperto] = useState(false)
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setAperto(true) }}
+        className="p-1.5 rounded-full text-gray-400 hover:text-bolly-600 hover:bg-bolly-50 active:scale-95 transition-all flex-shrink-0"
+        aria-label="Cos'è questa schermata"
+        title="Cos'è questa schermata"
+      >
+        <HelpCircle size={18} />
+      </button>
+
+      {aperto && (
+        <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: 'rgba(0,0,0,0.6)' }}>
+          <div className="flex-1" onClick={() => setAperto(false)} />
+          <div className="bg-white rounded-t-3xl overflow-y-auto" style={{ maxHeight: '82vh' }}>
+            {/* Header teal */}
+            <div className="px-6 pt-6 pb-5" style={{ background: 'linear-gradient(160deg, #00897B, #00695C)' }}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                    <HelpCircle size={20} className="text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.7)' }}>Cos'è</p>
+                    <h2 className="text-lg font-bold text-white truncate">{titolo}</h2>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAperto(false)}
+                  className="p-1.5 rounded-full flex-shrink-0"
+                  style={{ background: 'rgba(255,255,255,0.2)' }}
+                  aria-label="Chiudi"
+                >
+                  <X size={16} className="text-white" />
+                </button>
+              </div>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              {descrizione && (
+                <p className="text-sm text-gray-700 leading-relaxed">{descrizione}</p>
+              )}
+              {cose.length > 0 && (
+                <div className="space-y-2.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Cosa puoi fare</p>
+                  <ul className="space-y-2">
+                    {cose.map((c, i) => (
+                      <li key={i} className="flex gap-2.5 text-sm text-gray-700 leading-snug">
+                        <span className="w-1.5 h-1.5 rounded-full bg-bolly-500 mt-2 flex-shrink-0" />
+                        <span>{c}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setAperto(false)}
+                className="w-full py-3 rounded-xl bg-bolly-500 text-white font-semibold active:scale-[0.98] transition-transform"
+              >
+                Ho capito
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ============================================================
 // DASHBOARD
 // ============================================================
 
@@ -651,8 +730,19 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
   return (
     <div className="space-y-6 pb-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Ciao {profile?.nome || 'utente'}</h1>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <h1 className="text-2xl font-bold text-gray-900 truncate">Ciao {profile?.nome || 'utente'}</h1>
+          <TooltipContestuale
+            titolo="Home"
+            descrizione="Da qui tieni d'occhio le tue spese del mese in corso: bollette, ricorrenti e spese di tutti i giorni."
+            cose={[
+              "In alto vedi i totali: spese del mese, da pagare, entrate e uscite",
+              "La sezione Prossime scadenze mostra le bollette in arrivo",
+              "Scorri a sinistra una card per modificare o eliminarla",
+              "Filtra per abitazione se ne hai più di una",
+              "Tocca la fiammella in alto per vedere streak e traguardi"
+            ]}
+          />
         </div>
         <div className="flex items-center gap-1">
           {streakScadenze && streakScadenze.valore_corrente > 0 && (
@@ -1154,7 +1244,20 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
         <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-600" /></button>
         <CategoriaIcon categoriaId={contratto.categoria} />
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold text-gray-900">{contratto.fornitore}</h1>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <h1 className="text-xl font-bold text-gray-900 truncate">{contratto.fornitore}</h1>
+            <TooltipContestuale
+              titolo="Dettaglio contratto"
+              descrizione="Tutto quello che riguarda questo contratto: bollette ricevute, importi, scadenze e consumi."
+              cose={[
+                "Tocca + per aggiungere una bolletta (manuale o caricando il PDF)",
+                "Spunta una bolletta come pagata o riapri lo stato",
+                "Per luce/gas/acqua vedi anche consumi e spesa unitaria",
+                "Modifica il contratto (categoria, frequenza, importo) o eliminalo dal menu in alto",
+                "Tocca un PDF per aprirlo a schermo intero"
+              ]}
+            />
+          </div>
           <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
             {categorieList.map(catId => (
               <span key={catId} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-bolly-50 text-bolly-700 border border-bolly-200">
@@ -2508,7 +2611,19 @@ function Notifiche({ contratti, bollette, dbNotifiche = [], onNotificheLette }) 
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Notifiche</h1>
+      <div className="flex items-center gap-1.5">
+        <h1 className="text-2xl font-bold text-gray-900">Notifiche</h1>
+        <TooltipContestuale
+          titolo="Notifiche"
+          descrizione="Promemoria automatici di Bolly: scadenze in arrivo, traguardi sbloccati, comunicazioni dei tuoi fornitori e novità dell'app."
+          cose={[
+            "Il bordo blu indica una notifica non ancora letta",
+            "Tocca una notifica per aprire la sezione collegata",
+            "Premi la X a destra per eliminarla",
+            "Le notifiche push arrivano anche fuori dall'app, se le hai attivate"
+          ]}
+        />
+      </div>
       {tutteNotifiche.length === 0 ? (
         <div className="text-center py-12"><Bell size={40} className="text-gray-300 mx-auto mb-3" /><p className="text-gray-400">Nessuna notifica</p></div>
       ) : (
@@ -3121,6 +3236,15 @@ function ListaSpese({ spese, onBack, onDelete }) {
       <div className="flex items-center gap-3">
         <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={20} /></button>
         <h1 className="text-xl font-bold text-gray-900">Tutti i movimenti</h1>
+        <TooltipContestuale
+          titolo="Tutti i movimenti"
+          descrizione="Cronologia completa di spese ed entrate registrate giorno per giorno. Qui non vedi le bollette: quelle stanno nei contratti."
+          cose={[
+            "Lista ordinata per mese, dalla più recente",
+            "Scorri a sinistra una voce per modificarla o eliminarla",
+            "Aggiungi nuove voci dal + nella barra in basso"
+          ]}
+        />
       </div>
 
       {spesePerMese.length === 0 && (
@@ -3418,7 +3542,21 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
     <div className="space-y-4 pb-4">
       <div className="flex items-center justify-between">
         <button onClick={mesePrecedente} className="p-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={20} className="text-gray-500" /></button>
-        <h1 className="text-lg font-bold text-gray-900">{MESI[meseCorrente]} {annoCorrente}</h1>
+        <div className="flex items-center gap-1.5">
+          <h1 className="text-lg font-bold text-gray-900">{MESI[meseCorrente]} {annoCorrente}</h1>
+          <TooltipContestuale
+            titolo="Calendario"
+            descrizione="Vista mese a colpo d'occhio: bollette, spese giornaliere e proiezioni di quelle ricorrenti."
+            cose={[
+              "Pallino verde: bolletta domiciliata (RID, addebito automatico)",
+              "Pallino viola: bolletta da pagare manualmente",
+              "Pallino grigio: spesa o entrata registrata quel giorno",
+              "Pallino sfumato: proiezione di una bolletta ricorrente in arrivo",
+              "Tocca un giorno per vedere il dettaglio",
+              "Scorri sotto per il riepilogo del mese con grafico utenze"
+            ]}
+          />
+        </div>
         <button onClick={meseSuccessivo} className="p-2 rounded-xl hover:bg-gray-100"><ChevronRight size={20} className="text-gray-500" /></button>
       </div>
 
@@ -3866,7 +4004,20 @@ function StoricoBollette({ bollette, contratti, onSelectContratto, onDeleteBolle
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-900">Inbox</h1>
+      <div className="flex items-center gap-1.5">
+        <h1 className="text-xl font-bold text-gray-900">Inbox</h1>
+        <TooltipContestuale
+          titolo="Inbox"
+          descrizione="Tutte le bollette ricevute via email o caricate dal tuo dispositivo. Le bollette inserite manualmente non compaiono qui — le trovi nel dettaglio contratto."
+          cose={[
+            "Tab Bollette: gli importi che ti sono arrivati",
+            "Tab Comunicazioni: email di servizio dei fornitori (no bollette)",
+            "Tocca una bolletta per aprire il PDF",
+            "Tocca il nome del contratto per saltare al suo dettaglio",
+            "Scorri a sinistra per eliminare una bolletta sbagliata"
+          ]}
+        />
+      </div>
 
       {/* Tab bollette / comunicazioni */}
       <div className="flex gap-2">
@@ -4286,11 +4437,23 @@ function DettaglioSplit({ split, onBack, onRefresh }) {
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button onClick={onBack} className="p-2 rounded-xl hover:bg-gray-100">
             <ChevronLeft size={22} className="text-gray-500" />
           </button>
-          <h1 className="text-xl font-bold text-gray-900">Dettaglio split</h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-xl font-bold text-gray-900">Dettaglio split</h1>
+            <TooltipContestuale
+              titolo="Dettaglio split"
+              descrizione="Una spesa divisa con uno o più amici. Qui vedi chi ha già pagato, chi deve restituire e quanto."
+              cose={[
+                "Verde = già pagato · Arancione = ancora da saldare",
+                "Spunta i partecipanti man mano che ti restituiscono la loro parte",
+                "Cestino in alto a destra per eliminare lo split (se hai sbagliato)",
+                "Se lo split è collegato a una spesa, l'importo si aggiorna in automatico"
+              ]}
+            />
+          </div>
         </div>
         <button onClick={() => setConfirmDelete(true)} className="p-2 rounded-xl hover:bg-red-50 text-gray-400">
           <Trash2 size={20} />
@@ -4399,11 +4562,21 @@ function SplitsRicevutiScreen({ splitsRicevuti, onBack, onRefresh, profile }) {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <button onClick={onBack} className="p-2 rounded-xl hover:bg-gray-100">
           <ChevronLeft size={22} className="text-gray-500" />
         </button>
         <h1 className="text-xl font-bold text-gray-900">Split ricevuti</h1>
+        <TooltipContestuale
+          titolo="Split ricevuti"
+          descrizione="Tutte le spese che gli amici hanno diviso con te. Da qui vedi cosa devi ancora pagare e cosa hai già saldato."
+          cose={[
+            "Sezione Da saldare: ti tocca ancora pagare la tua parte",
+            "Sezione Saldati: già regolati",
+            "Tocca uno split per vedere il dettaglio (cosa, importo, altri partecipanti)",
+            "Quando paghi l'amico, conferma qui la tua parte per chiudere lo split"
+          ]}
+        />
       </div>
 
       {nonPagati.length === 0 && pagati.length === 0 && (
@@ -4628,11 +4801,23 @@ function SchermataAmici({ onBack, session, profile, splits = [], splitsRicevuti 
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button onClick={onBack} className="p-2 rounded-xl hover:bg-gray-100">
             <ChevronLeft size={22} className="text-gray-500" />
           </button>
-          <h1 className="text-xl font-bold text-gray-900">I miei amici</h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-xl font-bold text-gray-900">I miei amici</h1>
+            <TooltipContestuale
+              titolo="Amici"
+              descrizione="La tua rubrica Bolly: ti serve per dividere le spese con qualcuno. Puoi aggiungere amici già su Bolly o invitare chi non c'è ancora."
+              cose={[
+                "Cerca un amico per email o invitalo se non è su Bolly",
+                "Le richieste in attesa di accettazione stanno in alto",
+                "Tocca un amico per vedere i vostri split aperti e saldi netti",
+                "Da qui parti per creare un nuovo split (dividi spesa)"
+              ]}
+            />
+          </div>
         </div>
         <button
           onClick={() => { setShowAggiungi(true); setSearchEmail(''); setSearchResult(null); setNomeEsterno(''); setEmailEsterno('') }}
@@ -5162,9 +5347,21 @@ function SchermataSalvadanai({ salvadanai, versamenti, onBack, onNavigate, onRef
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button onClick={onBack} className="p-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-500" /></button>
-          <h1 className="text-xl font-bold text-gray-900">I miei salvadanai</h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-xl font-bold text-gray-900">I miei salvadanai</h1>
+            <TooltipContestuale
+              titolo="Salvadanai"
+              descrizione="Metti soldi da parte per i tuoi obiettivi: vacanza, regalo, fondo di emergenza. Bolly tiene il conto."
+              cose={[
+                "Crea un salvadanaio con nome, icona e importo obiettivo",
+                "Aggiungi versamenti a mano o programmali ricorrenti (mensili, settimanali)",
+                "Quando raggiungi l'obiettivo, ricevi una notifica festeggiamento",
+                "Archivia un salvadanaio quando l'hai usato senza eliminarlo"
+              ]}
+            />
+          </div>
         </div>
         <button onClick={() => onNavigate('aggiungi-salvadanaio')} className="p-2 rounded-xl bg-bolly-50 text-bolly-600 hover:bg-bolly-100"><Plus size={20} /></button>
       </div>
@@ -5304,10 +5501,22 @@ function DettaglioSalvadanaio({ salvadanaio, versamenti, onBack, onRefresh, onNa
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 min-w-0">
           <button onClick={onBack} className="p-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-500" /></button>
           <span className="text-2xl">{salvadanaio.icona}</span>
-          <h1 className="text-xl font-bold text-gray-900">{salvadanaio.nome}</h1>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <h1 className="text-xl font-bold text-gray-900 truncate">{salvadanaio.nome}</h1>
+            <TooltipContestuale
+              titolo="Dettaglio salvadanaio"
+              descrizione="L'andamento di questo salvadanaio: quanto hai messo da parte, quanto manca all'obiettivo e tutti i versamenti fatti."
+              cose={[
+                "Tocca + per aggiungere un nuovo versamento",
+                "La matita in alto a destra apre la modifica (nome, obiettivo, icona)",
+                "Se hai impostato versamenti ricorrenti, vedi anche le prossime date",
+                "Quando completi l'obiettivo puoi archiviare il salvadanaio"
+              ]}
+            />
+          </div>
         </div>
         <button onClick={onNavigateEdit} className="p-2 rounded-xl hover:bg-gray-100"><Pencil size={18} className="text-gray-400" /></button>
       </div>
@@ -5681,7 +5890,20 @@ function SchermataTraguardi({ traguardi, streakScadenze, profile, onBack, onRefr
         <button onClick={onBack} className="flex items-center gap-1 text-gray-500 text-sm">
           <ChevronLeft size={18} /> Indietro
         </button>
-        <h1 className="text-lg font-bold text-gray-900">I miei traguardi</h1>
+        <div className="flex items-center gap-1.5">
+          <h1 className="text-lg font-bold text-gray-900">I miei traguardi</h1>
+          <TooltipContestuale
+            titolo="I miei traguardi"
+            descrizione="La tua progressione su Bolly: streak di scadenze, obiettivi sbloccati e livello attuale. È il modo per rendere divertente gestire le bollette."
+            cose={[
+              "Streak: giorni consecutivi senza saltare scadenze",
+              "Obiettivi: piccole sfide da sbloccare (primo contratto, prima bolletta, ecc.)",
+              "Livello: cresce man mano che usi Bolly e completi obiettivi",
+              "Tocca un obiettivo bloccato per vedere come sbloccarlo",
+              "A fine mese trovi qui il riepilogo condivisibile"
+            ]}
+          />
+        </div>
         <div className="w-12" />
       </div>
 
@@ -5854,7 +6076,16 @@ function RiepilogoMensile({ target, streakScadenze, profile, onBack }) {
           <p className="text-[11px] text-gray-400 uppercase tracking-wide">Il tuo mese</p>
           <h1 className="text-xl font-bold text-gray-900 capitalize">{meseLabel} in pillole</h1>
         </div>
-        <div className="w-9" />
+        <TooltipContestuale
+          titolo="Riepilogo mensile"
+          descrizione="Un riassunto rapido del mese: cosa hai speso, quante bollette hai pagato in tempo e quali obiettivi hai sbloccato. Ottimo da condividere."
+          cose={[
+            "Totale speso e numero di bollette pagate in tempo",
+            "Streak corrente e nuovi traguardi del mese",
+            "Tocca Condividi per generare un'immagine pronta per social o messaggio",
+            "Disponibile dal 1° giorno del mese successivo"
+          ]}
+        />
       </div>
 
       {loading && (
@@ -6110,7 +6341,20 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Menu</h1>
+        <div className="flex items-center gap-1.5">
+          <h1 className="text-xl font-bold text-gray-900">Menu</h1>
+          <TooltipContestuale
+            titolo="Menu"
+            descrizione="Il tuo profilo Bolly e tutte le impostazioni: abitazioni, programma referral, privacy, supporto e gestione account."
+            cose={[
+              "Tocca il tuo nome per modificarlo",
+              "Gestisci le tue abitazioni (utile se hai più di una casa)",
+              "Invita un amico col tuo codice referral e guadagnate entrambi mesi gratis",
+              "Da qui esci dall'account o lo elimini definitivamente con export dati",
+              "Trovi anche privacy policy, termini e contatti supporto"
+            ]}
+          />
+        </div>
         <button onClick={onBack} className="p-2 rounded-xl hover:bg-gray-100">
           <X size={22} className="text-gray-500" />
         </button>
@@ -6947,8 +7191,20 @@ function BolletteOrfane({ bollette, contratti, onBack, onUpdateBolletta, onDelet
         <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100">
           <ChevronLeft size={22} className="text-gray-600" />
         </button>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Bollette da sistemare</h1>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-xl font-bold text-gray-900">Bollette da sistemare</h1>
+            <TooltipContestuale
+              titolo="Bollette da sistemare"
+              descrizione="Bollette arrivate via email o caricate ma a cui manca qualcosa: contratto collegato, importo o scadenza. Bastano pochi tap per completarle."
+              cose={[
+                "Scegli a quale contratto appartiene la bolletta dal menu",
+                "Completa importo o scadenza se l'AI non li ha letti correttamente",
+                "Salva per spostarla tra le bollette normali",
+                "Elimina se è una bolletta sbagliata o doppia"
+              ]}
+            />
+          </div>
           <p className="text-sm text-gray-500 mt-0.5">
             {orfane.length === 0 ? 'Tutto a posto' : `${orfane.length} da completare`}
           </p>

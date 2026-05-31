@@ -701,9 +701,33 @@ export async function getRiepilogoMensile(anno, mese) {
  *   - isInTrial: bool
  *   - giorniRimasti: number | null (null se premium senza scadenza)
  *   - trialScaduto: bool
+ *   - isEarlyAdopter: bool (true se signup in finestra [LAUNCH_DATE, LAUNCH_DATE + EARLY_ADOPTER_WINDOW_DAYS])
+ *
+ * @param profile - record profiles
+ * @param signupDate - data di iscrizione (ISO string o Date), tipicamente session.user.created_at
  */
-export function getPianoInfo(profile) {
-  if (!profile) return { piano: 'free', isPremium: false, isInTrial: false, giorniRimasti: 0, trialScaduto: false }
+
+// ⚠️ PLACEHOLDER: aggiornare LAUNCH_DATE alla data reale di lancio pubblico (uscita su App Store / Play Store).
+// Finché LAUNCH_DATE è futura, NESSUN utente è early adopter → paywall mostra €24,99 standard.
+// Vedi roadmap_post_gamification e project_session_30mag_brevo per il contesto.
+export const LAUNCH_DATE = '2099-01-01'
+export const EARLY_ADOPTER_WINDOW_DAYS = 90
+
+export function isEarlyAdopterSignup(signupDate) {
+  if (!signupDate) return false
+  const signup = new Date(signupDate)
+  if (isNaN(signup.getTime())) return false
+  const launch = new Date(LAUNCH_DATE)
+  const windowEnd = new Date(launch)
+  windowEnd.setDate(windowEnd.getDate() + EARLY_ADOPTER_WINDOW_DAYS)
+  return signup >= launch && signup <= windowEnd
+}
+
+export function getPianoInfo(profile, signupDate = null) {
+  const isEarlyAdopter = isEarlyAdopterSignup(signupDate)
+  const base = { isEarlyAdopter }
+
+  if (!profile) return { piano: 'free', isPremium: false, isInTrial: false, giorniRimasti: 0, trialScaduto: false, ...base }
 
   const ora = new Date()
   const piano = profile.piano || 'premium' // default premium — tutti i beta tester sono premium
@@ -714,26 +738,26 @@ export function getPianoInfo(profile) {
       const scadenza = new Date(profile.premium_scade_il)
       if (scadenza <= ora) {
         // Premium scaduto → cade su free
-        return { piano: 'free', isPremium: false, isInTrial: false, giorniRimasti: 0, trialScaduto: false }
+        return { piano: 'free', isPremium: false, isInTrial: false, giorniRimasti: 0, trialScaduto: false, ...base }
       }
       const giorniRimasti = Math.ceil((scadenza - ora) / (1000 * 60 * 60 * 24))
-      return { piano: 'premium', isPremium: true, isInTrial: false, giorniRimasti, trialScaduto: false }
+      return { piano: 'premium', isPremium: true, isInTrial: false, giorniRimasti, trialScaduto: false, ...base }
     }
-    return { piano: 'premium', isPremium: true, isInTrial: false, giorniRimasti: null, trialScaduto: false }
+    return { piano: 'premium', isPremium: true, isInTrial: false, giorniRimasti: null, trialScaduto: false, ...base }
   }
 
   if (piano === 'trial') {
     const scadenza = profile.trial_scade_il ? new Date(profile.trial_scade_il) : null
     if (scadenza && scadenza > ora) {
       const giorniRimasti = Math.ceil((scadenza - ora) / (1000 * 60 * 60 * 24))
-      return { piano: 'trial', isPremium: true, isInTrial: true, giorniRimasti, trialScaduto: false }
+      return { piano: 'trial', isPremium: true, isInTrial: true, giorniRimasti, trialScaduto: false, ...base }
     }
     // Trial scaduto → free
-    return { piano: 'free', isPremium: false, isInTrial: false, giorniRimasti: 0, trialScaduto: true }
+    return { piano: 'free', isPremium: false, isInTrial: false, giorniRimasti: 0, trialScaduto: true, ...base }
   }
 
   // piano === 'free'
-  return { piano: 'free', isPremium: false, isInTrial: false, giorniRimasti: 0, trialScaduto: false }
+  return { piano: 'free', isPremium: false, isInTrial: false, giorniRimasti: 0, trialScaduto: false, ...base }
 }
 
 /**

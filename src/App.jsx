@@ -422,6 +422,12 @@ function ModalePaywall({ onClose, pianoInfo = {} }) {
   // trial mai usato = piano free e trial_scade_il mai impostato (null)
   const trialDisponibile = pianoInfo.piano === 'free' && !trialScaduto
 
+  // Prezzo annuale: €17,99 per early adopter (signup nei primi 90gg dal lancio), altrimenti €24,99
+  const isEarlyAdopter = pianoInfo.isEarlyAdopter === true
+  const prezzoAnnuale = isEarlyAdopter ? '€17,99' : '€24,99'
+  const prezzoAnnualeMensile = isEarlyAdopter ? '≈ €1,50/mese' : '≈ €2,08/mese'
+  const risparmioLabel = isEarlyAdopter ? 'Prezzo riservato early adopter' : 'Risparmia il 30%'
+
   const ctaLabel = isInTrial
     ? 'Attiva Premium ora'
     : trialDisponibile
@@ -485,8 +491,8 @@ function ModalePaywall({ onClose, pianoInfo = {} }) {
                 background: pianoSelezionato === 'annuale' ? '#00897B08' : 'white'
               }}
             >
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-white text-xs font-bold px-3 py-0.5 rounded-full" style={{ background: '#00897B' }}>
-                Consigliato
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-white text-xs font-bold px-3 py-0.5 rounded-full" style={{ background: isEarlyAdopter ? '#D97706' : '#00897B' }}>
+                {isEarlyAdopter ? 'Early adopter' : 'Consigliato'}
               </div>
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
@@ -495,12 +501,15 @@ function ModalePaywall({ onClose, pianoInfo = {} }) {
                   </div>
                   <div>
                     <p className="font-bold text-gray-900">Piano Annuale</p>
-                    <p className="text-xs text-gray-500">Risparmia il 30%</p>
+                    <p className="text-xs text-gray-500">{risparmioLabel}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-xl font-bold text-gray-900">€24,99<span className="text-sm font-normal text-gray-500">/anno</span></p>
-                  <p className="text-xs text-gray-400">≈ €2,08/mese</p>
+                  {isEarlyAdopter && (
+                    <p className="text-xs text-gray-400 line-through">€24,99</p>
+                  )}
+                  <p className="text-xl font-bold text-gray-900">{prezzoAnnuale}<span className="text-sm font-normal text-gray-500">/anno</span></p>
+                  <p className="text-xs text-gray-400">{prezzoAnnualeMensile}</p>
                 </div>
               </div>
             </button>
@@ -7631,7 +7640,7 @@ export default function App() {
   const showBadgeInbox = nuoveBolletteInbox > 0
 
   // Piano corrente dell'utente — funzione pura, sicura dopo i return anticipati
-  const pianoInfo = getPianoInfo(profile)
+  const pianoInfo = getPianoInfo(profile, session?.user?.created_at)
 
   // Contratti visibili in Dashboard: i primi 3 se free, tutti se premium
   const contrattiPerDashboard = pianoInfo.isPremium

@@ -7370,6 +7370,27 @@ export default function App() {
     }
   }, [session])
 
+  // Gestisce URL ?paywall=1 (arrivata dalle email lifecycle Brevo, push, link condivisi)
+  useEffect(() => {
+    const checkPaywallUrl = () => {
+      if (!session) return
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('paywall') === '1') {
+        setShowPaywall(true)
+        // Pulisci URL così se l'utente chiude il paywall non riappare al focus
+        const cleanUrl = window.location.pathname + window.location.hash
+        window.history.replaceState({}, '', cleanUrl)
+      }
+    }
+    checkPaywallUrl()
+    window.addEventListener('focus', checkPaywallUrl)
+    document.addEventListener('visibilitychange', checkPaywallUrl)
+    return () => {
+      window.removeEventListener('focus', checkPaywallUrl)
+      document.removeEventListener('visibilitychange', checkPaywallUrl)
+    }
+  }, [session])
+
   // Se supabase non è configurato, mostra errore
   if (!supabase) {
     return (

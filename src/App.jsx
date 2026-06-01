@@ -643,10 +643,37 @@ function BannerAttivaNotifiche({ session }) {
   const [show, setShow] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  // iOS Safari non-standalone: le Web Push funzionano SOLO se la PWA è
+  // installata sulla schermata Home (vincolo Apple da iOS 16.4). Se
+  // l'utente è su Safari mobile, dobbiamo mostrare istruzioni install
+  // invece di tentare subscribeToPush (che fallirebbe per PushManager assente).
+  const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent)
+  const isStandalone = typeof window !== 'undefined' && (
+    window.matchMedia?.('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  )
+  const iosNeedsInstall = isIOS && !isStandalone
+
   useEffect(() => {
     let cancelled = false
     const check = async () => {
       try {
+        // Su iOS Safari non-PWA: serviceWorker/PushManager possono esserci o no,
+        // ma comunque la sottoscrizione fallirà. Mostriamo banner con CTA diversa.
+        if (iosNeedsInstall) {
+          // Cooldown 7gg anche qui
+          const dismissedAt = localStorage.getItem('bolly_push_nudge_dismissed_at')
+          if (dismissedAt) {
+            const days = (Date.now() - Number(dismissedAt)) / (1000 * 60 * 60 * 24)
+            if (days < 7) { if (!cancelled) setShow(false); return }
+          }
+          if (!cancelled) {
+            setShow(true)
+            if (window.posthog) window.posthog.capture('nudge_push_mostrato', { variante: 'ios_install' })
+          }
+          return
+        }
+
         const subscribed = await isPushSubscribed()
         if (subscribed) { if (!cancelled) setShow(false); return }
         // Se l'utente ha già negato i permessi a livello browser, non insistiamo
@@ -661,7 +688,7 @@ function BannerAttivaNotifiche({ session }) {
         }
         if (!cancelled) {
           setShow(true)
-          if (window.posthog) window.posthog.capture('nudge_push_mostrato')
+          if (window.posthog) window.posthog.capture('nudge_push_mostrato', { variante: 'standard' })
         }
       } catch {
         if (!cancelled) setShow(false)
@@ -673,7 +700,23 @@ function BannerAttivaNotifiche({ session }) {
   }, [])
 
   const handleAttiva = async () => {
-    if (!session?.user?.id || loading) return
+    if (loading) return
+
+    // Caso iOS Safari non-installata: mostra istruzioni invece di tentare
+    if (iosNeedsInstall) {
+      if (window.posthog) window.posthog.capture('nudge_push_install_istruzioni')
+      alert(
+        'Per ricevere le notifiche su iPhone devi prima installare Bolly:\n\n' +
+        '1. Tocca il tasto Condividi (in basso al centro)\n' +
+        '2. Scorri e tocca "Aggiungi alla schermata Home"\n' +
+        '3. Apri Bolly dall\'icona sulla Home\n' +
+        '4. Torna qui e tocca di nuovo "Attiva notifiche"\n\n' +
+        'Le notifiche web non funzionano in Safari, solo nelle app installate (vincolo Apple).'
+      )
+      return
+    }
+
+    if (!session?.user?.id) return
     setLoading(true)
     try {
       const ok = await subscribeToPush(session.user.id)
@@ -698,6 +741,11 @@ function BannerAttivaNotifiche({ session }) {
 
   if (!show) return null
 
+  const titolo = iosNeedsInstall ? 'Installa Bolly per le notifiche' : 'Attiva le notifiche'
+  const sottotitolo = iosNeedsInstall
+    ? 'Su iPhone aggiungi Bolly alla Home — tocca per le istruzioni'
+    : (loading ? 'Attivazione...' : 'Avvisi su scadenze, split e riepilogo mensile')
+
   return (
     <div className="w-full rounded-xl bg-gradient-to-r from-teal-50 to-cyan-50 border border-bolly-200 overflow-hidden">
       <div className="flex items-center gap-3 p-3">
@@ -711,10 +759,8 @@ function BannerAttivaNotifiche({ session }) {
             <Bell size={18} className="text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900">Attiva le notifiche</p>
-            <p className="text-xs text-gray-500 truncate">
-              {loading ? 'Attivazione...' : 'Avvisi su scadenze, split e riepilogo mensile'}
-            </p>
+            <p className="text-sm font-semibold text-gray-900">{titolo}</p>
+            <p className="text-xs text-gray-500 truncate">{sottotitolo}</p>
           </div>
         </button>
         <button
@@ -2767,7 +2813,7 @@ function Notifiche({ contratti, bollette, dbNotifiche = [], onNotificheLette }) 
                 <div className="flex-1">
                   <p className="font-medium text-gray-900">{n.titolo}</p>
                   <p className="text-sm text-gray-600 mt-0.5">{n.desc}</p>
-                  {n.url && <p className="text-xs text-blue-500 mt-1 font-medium">Tocca per aprire →</p>}
+                  {n.url && n.url !== '/' && <p className="text-xs text-blue-500 mt-1 font-medium">Tocca per aprire →</p>}
                 </div>
                 {n.id && <button onClick={(e) => handleDeleteNotifica(e, n.id)} className="p-1 rounded-lg hover:bg-black/10 shrink-0"><X size={16} className="text-gray-400" /></button>}
               </div>

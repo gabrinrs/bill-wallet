@@ -2587,8 +2587,10 @@ function Notifiche({ contratti, bollette, dbNotifiche = [], onNotificheLette }) 
   const cfg = { urgente: 'bg-amber-50 border-amber-200 text-amber-600', scaduta: 'bg-red-50 border-red-200 text-red-600', promemoria: 'bg-bolly-50 border-bolly-200 text-bolly-500', broadcast: 'bg-blue-50 border-blue-200 text-blue-600' }
 
   const handleNotificaClick = (n) => {
-    if (n.url) {
-      window.open(n.url, '_blank')
+    if (!n.url) return
+
+    // Marca letta in DB+UI in entrambi i casi (interno/esterno)
+    const markRead = () => {
       if (n.id && !n.letta) {
         segnaNotificaLetta(n.id).then(() => {
           const updated = dbNotifiche.map(x => x.id === n.id ? { ...x, letta: true } : x)
@@ -2596,6 +2598,27 @@ function Notifiche({ contratti, bollette, dbNotifiche = [], onNotificheLette }) 
         }).catch(() => {})
       }
     }
+
+    // Se è una rotta interna a getbolly.app (riepilogo, paywall, ecc.) naviga nella PWA
+    // invece di aprire una nuova tab (che su iOS PWA lancia Safari — UX pessima)
+    try {
+      const u = new URL(n.url, window.location.origin)
+      const sameOrigin = u.origin === window.location.origin || u.hostname === 'getbolly.app'
+      if (sameOrigin) {
+        // Spingi i query param nella location: gli useEffect di App (checkRiepilogoUrl,
+        // checkPaywallUrl, ecc.) intercettano e fanno setScreen senza ricaricare.
+        const target = u.pathname + u.search + u.hash
+        window.history.pushState({}, '', target)
+        window.dispatchEvent(new PopStateEvent('popstate'))
+        // Fallback: forza una rilettura dei param anche per chi ascolta focus/visibilitychange
+        window.dispatchEvent(new Event('focus'))
+        markRead()
+        return
+      }
+    } catch (_) { /* URL malformata: cade in window.open */ }
+
+    window.open(n.url, '_blank')
+    markRead()
   }
 
   const handleDeleteNotifica = (e, id) => {

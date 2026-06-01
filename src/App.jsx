@@ -18,7 +18,7 @@ import {
   ShoppingCart, Car, Gamepad2, Heart, Shirt, UtensilsCrossed, MoreHorizontal, Wallet, Camera,
   Banknote, Gift, RotateCcw, Building2, Sun, MapPin, Warehouse, Users, UserPlus, UserCheck, UserX, Clock, Send, Split, CircleDollarSign,
   ArrowUpRight, ArrowDownRight, Scale, ScanLine, PiggyBank, Target, Archive, Download, AlertOctagon,
-  Award, Trophy, Share2, Eye, Leaf, Lock, LayoutGrid
+  Award, Trophy, Share2, Eye, Leaf, Lock, LayoutGrid, Sparkles
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
@@ -1616,6 +1616,10 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome, abitazion
   const [uploadStatus, setUploadStatus] = useState('idle')
   const [uploadError, setUploadError] = useState(null)
   const pdfInputRef = useRef(null)
+  // AI compila per me — testo libero → Edge Function parse-contratto-da-testo
+  const [aiText, setAiText] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState(null)
   const [form, setForm] = useState({
     categoria: '', fornitore: '', intestatario: '', codice: '',
     metodo_ricezione: 'email', domiciliazione: false, data_inizio: '', data_fine: '', note: '',
@@ -1670,6 +1674,68 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome, abitazion
       console.error('Upload PDF error:', e)
       setUploadStatus('error')
       setUploadError(e.message)
+    }
+  }
+
+  const handleAiCompile = async () => {
+    if (!aiText.trim() || aiLoading) return
+    setAiLoading(true)
+    setAiError(null)
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession()
+      const res = await fetch('https://iimzetvymamadclfblgy.supabase.co/functions/v1/parse-contratto-da-testo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authSession?.access_token}`,
+        },
+        body: JSON.stringify({
+          testo: aiText.trim(),
+          abitazioni: (abitazioni || []).map(a => ({ id: a.id, nome: a.nome })),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Errore analisi AI')
+
+      // Misura adozione + qualità via PostHog
+      const campi = ['categoria','fornitore','importo_euro','metodo_pagamento','frequenza','abitazione_id']
+      const estratti = campi.filter(k => data[k] !== null && data[k] !== undefined && data[k] !== '')
+      const mancanti = campi.filter(k => !estratti.includes(k))
+      if (window.posthog) window.posthog.capture('contratto_da_testo_usato', {
+        campi_estratti: estratti, campi_mancanti: mancanti, n_estratti: estratti.length,
+      })
+
+      // Prefill form con i campi estratti
+      setForm(prev => {
+        const next = { ...prev }
+        if (data.categoria) next.categoria = data.categoria
+        if (data.fornitore) next.fornitore = data.fornitore
+        if (data.metodo_pagamento === 'rid') next.domiciliazione = true
+        if (data.frequenza) next.frequenza = data.frequenza
+        if (data.abitazione_id) next.abitazione_id = data.abitazione_id
+        if (data.importo_euro && Number(data.importo_euro) > 0) {
+          next.ricorrente = true
+          next.importo_ricorrente = String(data.importo_euro)
+        }
+        return next
+      })
+
+      // Navigazione intelligente: se Claude ha estratto la categoria, salta lo Step 0
+      if (data.categoria) {
+        const catInfo = CATEGORIE.find(c => c.id === data.categoria)
+        setCustomMode(catInfo?.freeText || false)
+        // Se c'è anche il fornitore vai direttamente ai dettagli, altrimenti allo Step 1 per sceglierlo
+        setStep(data.fornitore ? 2 : 1)
+      }
+      // Se categoria assente l'utente resta allo Step 0 e la sceglie a mano,
+      // gli altri prefilled (importo, frequenza, ecc.) restano nello stato form
+
+      setAiText('')
+    } catch (e) {
+      console.error('AI compile error:', e)
+      setAiError(e.message || 'Errore generico')
+    } finally {
+      setAiLoading(false)
     }
   }
 
@@ -1732,7 +1798,37 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome, abitazion
           <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-600" /></button>
           <h1 className="text-xl font-bold text-gray-900">Nuovo contratto</h1>
         </div>
-        <p className="text-gray-500">Seleziona la categoria</p>
+
+        {/* Banner "Compila per me" — testo libero → AI → prefill form */}
+        <Card className="p-4 bg-bolly-50 border border-bolly-200">
+          <div className="flex items-start gap-3 mb-3">
+            <div className="w-10 h-10 rounded-full bg-bolly-100 flex items-center justify-center flex-shrink-0">
+              <Sparkles size={20} className="text-bolly-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-bolly-700">Descrivilo a parole</p>
+              <p className="text-xs text-bolly-600 mt-0.5">Ci penso io a compilare i campi</p>
+            </div>
+          </div>
+          <textarea
+            value={aiText}
+            onChange={e => setAiText(e.target.value)}
+            placeholder="es. Ho la luce con Octopus, pago 80€ al mese con RID"
+            rows={3}
+            disabled={aiLoading}
+            className="w-full px-3 py-2 rounded-xl border border-bolly-200 focus:ring-2 focus:ring-bolly-500 focus:border-transparent outline-none text-sm bg-white resize-none disabled:opacity-60"
+          />
+          {aiError && <p className="text-xs text-red-600 mt-2">{aiError}</p>}
+          <button
+            onClick={handleAiCompile}
+            disabled={!aiText.trim() || aiLoading}
+            className="w-full mt-3 py-2.5 bg-bolly-500 text-white font-semibold rounded-xl text-sm disabled:opacity-40 flex items-center justify-center gap-2"
+          >
+            {aiLoading ? (<><Loader2 size={16} className="animate-spin" /> Sto leggendo...</>) : 'Compila per me'}
+          </button>
+        </Card>
+
+        <p className="text-gray-500">Oppure seleziona la categoria</p>
         <div className="grid grid-cols-2 gap-3">
           {CATEGORIE.map(cat => {
             const Icon = IconMap[cat.icon] || Package

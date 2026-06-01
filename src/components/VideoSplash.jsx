@@ -16,10 +16,14 @@ const MIN_SHOW = 800    // ms — durata minima per evitare flash
 
 export default function VideoSplash({ dataReady = false, onDone }) {
   const videoRef = useRef(null)
-  const mountedAt = useRef(Date.now())
   const [videoEnded, setVideoEnded] = useState(false)
   const [exiting, setExiting] = useState(false)
   const [canShowMin, setCanShowMin] = useState(false)
+
+  // tieni onDone in una ref così non destabilizza gli useEffect:
+  // se App rerenderizza, onDone cambia identità e cancellerebbe il setTimeout.
+  const onDoneRef = useRef(onDone)
+  useEffect(() => { onDoneRef.current = onDone }, [onDone])
 
   // garantisce una durata minima
   useEffect(() => {
@@ -51,10 +55,15 @@ export default function VideoSplash({ dataReady = false, onDone }) {
   useEffect(() => {
     if (videoEnded && dataReady && canShowMin && !exiting) {
       setExiting(true)
-      const t = setTimeout(() => onDone?.(), 700) // = durata transition CSS
-      return () => clearTimeout(t)
     }
-  }, [videoEnded, dataReady, canShowMin, exiting, onDone])
+  }, [videoEnded, dataReady, canShowMin, exiting])
+
+  // separato: parte solo quando exiting diventa true. Niente onDone in deps.
+  useEffect(() => {
+    if (!exiting) return
+    const t = setTimeout(() => onDoneRef.current?.(), 700) // = durata transition CSS
+    return () => clearTimeout(t)
+  }, [exiting])
 
   return (
     <div
@@ -86,6 +95,7 @@ export default function VideoSplash({ dataReady = false, onDone }) {
         }
         .video-splash--out {
           transform: translateX(-100%);
+          pointer-events: none;
         }
         .video-splash__video {
           position: absolute;

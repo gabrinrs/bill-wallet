@@ -636,10 +636,105 @@ function TooltipContestuale({ titolo, descrizione, cose = [] }) {
 }
 
 // ============================================================
+// BANNER ATTIVA NOTIFICHE (nudge push per utenti senza subscription)
+// ============================================================
+
+function BannerAttivaNotifiche({ session }) {
+  const [show, setShow] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const check = async () => {
+      try {
+        const subscribed = await isPushSubscribed()
+        if (subscribed) { if (!cancelled) setShow(false); return }
+        // Se l'utente ha già negato i permessi a livello browser, non insistiamo
+        if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+          if (!cancelled) setShow(false); return
+        }
+        // Cooldown 7gg da ultimo dismiss
+        const dismissedAt = localStorage.getItem('bolly_push_nudge_dismissed_at')
+        if (dismissedAt) {
+          const days = (Date.now() - Number(dismissedAt)) / (1000 * 60 * 60 * 24)
+          if (days < 7) { if (!cancelled) setShow(false); return }
+        }
+        if (!cancelled) {
+          setShow(true)
+          if (window.posthog) window.posthog.capture('nudge_push_mostrato')
+        }
+      } catch {
+        if (!cancelled) setShow(false)
+      }
+    }
+    check()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleAttiva = async () => {
+    if (!session?.user?.id || loading) return
+    setLoading(true)
+    try {
+      const ok = await subscribeToPush(session.user.id)
+      if (ok) {
+        if (window.posthog) window.posthog.capture('push_attivate', { fonte: 'banner_home' })
+        setShow(false)
+      } else {
+        alert('Non è stato possibile attivare le notifiche. Controlla i permessi del browser per questo sito.')
+      }
+    } catch (e) {
+      console.error('Errore attivazione push da banner:', e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleClose = () => {
+    localStorage.setItem('bolly_push_nudge_dismissed_at', String(Date.now()))
+    if (window.posthog) window.posthog.capture('nudge_push_chiuso')
+    setShow(false)
+  }
+
+  if (!show) return null
+
+  return (
+    <div className="w-full rounded-xl bg-gradient-to-r from-teal-50 to-cyan-50 border border-bolly-200 overflow-hidden">
+      <div className="flex items-center gap-3 p-3">
+        <button
+          type="button"
+          onClick={handleAttiva}
+          disabled={loading}
+          className="flex items-center gap-3 flex-1 text-left transition-all active:scale-[0.98] min-w-0"
+        >
+          <div className="w-9 h-9 rounded-full bg-bolly-500 flex items-center justify-center flex-shrink-0">
+            <Bell size={18} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900">Attiva le notifiche</p>
+            <p className="text-xs text-gray-500 truncate">
+              {loading ? 'Attivazione...' : 'Avvisi su scadenze, split e riepilogo mensile'}
+            </p>
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={handleClose}
+          aria-label="Chiudi"
+          className="text-gray-400 hover:text-gray-600 p-1 -mr-1 flex-shrink-0"
+        >
+          <X size={18} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
 // DASHBOARD
 // ============================================================
 
-function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, onLogout, onDeleteContratto, onEditContratto, onDeleteSpesa, onEditSpesa, abitazioni, filtroAbitazione, onSetFiltroAbitazione, splits, onSplit, onViewSplit, richiesteCount, splitsRicevuti, salvadanai, versamenti, streakScadenze, contrattiNascosti = 0, onShowPaywall }) {
+function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, profile, session, onLogout, onDeleteContratto, onEditContratto, onDeleteSpesa, onEditSpesa, abitazioni, filtroAbitazione, onSetFiltroAbitazione, splits, onSplit, onViewSplit, richiesteCount, splitsRicevuti, salvadanai, versamenti, streakScadenze, contrattiNascosti = 0, onShowPaywall }) {
   const [cardSwipedId, setCardSwipedId] = useState(null)
   const [spesaSwipedId, setSpesaSwipedId] = useState(null)
   const [deletingContratto, setDeletingContratto] = useState(null)
@@ -773,6 +868,9 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
           </button>
         </div>
       </div>
+
+      {/* Nudge attiva notifiche push (solo se subscription assente) */}
+      <BannerAttivaNotifiche session={session} />
 
       {/* Banner richieste amicizia */}
       {richiesteCount > 0 && (
@@ -7693,7 +7791,7 @@ export default function App() {
 
   const renderScreen = () => {
     switch (screen) {
-      case 'dashboard': return <Dashboard contratti={contrattiPerDashboard} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} abitazioni={abitazioni} filtroAbitazione={filtroAbitazione} onSetFiltroAbitazione={setFiltroAbitazione} splits={splits} onSplit={handleSplitWithGate} onViewSplit={(splitId) => { setSelectedSplitId(splitId); setScreen('dettaglio-split') }} richiesteCount={richiesteCount} splitsRicevuti={splitsRicevuti} salvadanai={salvadanai} versamenti={versamenti} streakScadenze={streakScadenze} contrattiNascosti={contrattiNascostiCount} onShowPaywall={() => setShowPaywall(true)} />
+      case 'dashboard': return <Dashboard contratti={contrattiPerDashboard} bollette={bollette} spese={spese} onSelectContratto={handleSelectContratto} onNavigate={setScreen} profile={profile} session={session} onLogout={handleLogout} onDeleteContratto={handleDeleteContratto} onEditContratto={handleEditContratto} onDeleteSpesa={handleDeleteSpesa} onEditSpesa={handleEditSpesa} abitazioni={abitazioni} filtroAbitazione={filtroAbitazione} onSetFiltroAbitazione={setFiltroAbitazione} splits={splits} onSplit={handleSplitWithGate} onViewSplit={(splitId) => { setSelectedSplitId(splitId); setScreen('dettaglio-split') }} richiesteCount={richiesteCount} splitsRicevuti={splitsRicevuti} salvadanai={salvadanai} versamenti={versamenti} streakScadenze={streakScadenze} contrattiNascosti={contrattiNascostiCount} onShowPaywall={() => setShowPaywall(true)} />
       case 'dettaglio': {
         const c = contratti.find(x => x.id === selectedContrattoId)
         if (!c) { setScreen('dashboard'); return null }

@@ -1606,11 +1606,14 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
 // FORM CONTRATTO
 // ============================================================
 
-function FormContratto({ onSave, onBack, session, onRefresh, onGoHome, abitazioni }) {
-  const [step, setStep] = useState(0)
+function FormContratto({ onSave, onBack, session, onRefresh, onGoHome, abitazioni, initialForm }) {
+  // initialForm presente = arrivo da "Crea nuovo contratto" della schermata Bollette Orfane (Caso 2)
+  // Salto direttamente allo Step 2 (Dettagli) con i campi pre-compilati dai dati estratti dal PDF
+  const hasInitial = !!initialForm
+  const [step, setStep] = useState(hasInitial ? 2 : 0)
   const [saving, setSaving] = useState(false)
-  const [customMode, setCustomMode] = useState(false)
-  const [customText, setCustomText] = useState('')
+  const [customMode, setCustomMode] = useState(hasInitial ? !!(CATEGORIE.find(c => c.id === initialForm?.categoria)?.freeText) : false)
+  const [customText, setCustomText] = useState(hasInitial && initialForm?.fornitore ? initialForm.fornitore : '')
   const [searchQuery, setSearchQuery] = useState('')
   const [pdfFile, setPdfFile] = useState(null)
   const [uploadStatus, setUploadStatus] = useState('idle')
@@ -1625,6 +1628,7 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome, abitazion
     metodo_ricezione: 'email', domiciliazione: false, data_inizio: '', data_fine: '', note: '',
     ricorrente: false, importo_ricorrente: '', frequenza: 'mensile', prossimo_addebito: '',
     abitazione_id: null,
+    ...(initialForm || {}),
   })
   const update = (f, v) => setForm(p => ({ ...p, [f]: v }))
 
@@ -7348,9 +7352,11 @@ function TerminiCondizioni({ onBack }) {
 // BOLLETTE ORFANE
 // ============================================================
 
-function OrfanaCard({ bolletta, contratti, onUpdate, onDelete }) {
+function OrfanaCard({ bolletta, contratti, onUpdate, onDelete, onCreaContrattoPreCompilato }) {
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false)
+  const [acceptingMatch, setAcceptingMatch] = useState(false)
   const [form, setForm] = useState({
     contratto_id: bolletta.contratto_id || '',
     importo: bolletta.importo || '',
@@ -7358,6 +7364,58 @@ function OrfanaCard({ bolletta, contratti, onUpdate, onDelete }) {
     descrizione_libera: bolletta.descrizione_libera || '',
   })
   const update = (f, v) => setForm(p => ({ ...p, [f]: v }))
+
+  // Caso 2 — suggerimento AI
+  const suggStato = bolletta.suggerimento_stato
+  const suggContrattoId = bolletta.suggerimento_contratto_id
+  const suggDati = bolletta.suggerimento_dati_estratti
+  const suggMotivo = bolletta.suggerimento_motivo
+  const suggConfidenza = bolletta.suggerimento_confidenza
+  const contrattoSuggerito = suggContrattoId ? contratti.find(c => c.id === suggContrattoId) : null
+  const showSuggPending = suggStato === 'pending' && !suggestionDismissed
+  const showSuggMatch = suggStato === 'done' && contrattoSuggerito && !suggestionDismissed
+  const showSuggCreaNuovo = suggStato === 'done' && !contrattoSuggerito && suggDati && suggDati.fornitore && !suggestionDismissed
+
+  const handleAcceptMatch = async () => {
+    if (!contrattoSuggerito) return
+    setAcceptingMatch(true)
+    try {
+      await onUpdate(bolletta.id, {
+        contratto_id: contrattoSuggerito.id,
+        importo: suggDati?.importo_euro || form.importo ? Number(suggDati?.importo_euro || form.importo) : null,
+        scadenza: suggDati?.data_scadenza || form.scadenza || null,
+        descrizione_libera: form.descrizione_libera || (suggDati?.fornitore ? suggDati.fornitore : null),
+        stato_elaborazione: 'ok',
+      })
+      if (window.posthog) window.posthog.capture('orfana_suggerimento_accettato', {
+        confidenza: suggConfidenza,
+      })
+    } catch (e) { console.error(e) }
+    setAcceptingMatch(false)
+  }
+
+  const handleDismissSuggerimento = () => {
+    setSuggestionDismissed(true)
+    if (window.posthog) window.posthog.capture('orfana_suggerimento_rifiutato', {
+      confidenza: suggConfidenza,
+      tipo: contrattoSuggerito ? 'match' : 'crea_nuovo',
+    })
+  }
+
+  const handleCreaNuovo = () => {
+    if (!suggDati || !onCreaContrattoPreCompilato) return
+    // Mappa dati_estratti su forma FormContratto
+    const mapped = {
+      categoria: suggDati.categoria || '',
+      fornitore: suggDati.fornitore || '',
+      domiciliazione: suggDati.metodo_pagamento === 'rid',
+      ricorrente: !!(suggDati.importo_euro && Number(suggDati.importo_euro) > 0),
+      importo_ricorrente: suggDati.importo_euro ? String(suggDati.importo_euro) : '',
+      frequenza: 'mensile',
+    }
+    if (window.posthog) window.posthog.capture('orfana_crea_nuovo_contratto')
+    onCreaContrattoPreCompilato(mapped)
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -7411,6 +7469,64 @@ function OrfanaCard({ bolletta, contratti, onUpdate, onDelete }) {
         </a>
       )}
 
+      {/* Banner suggerimento AI — Caso 2 Bollette Orfane */}
+      {showSuggPending && (
+        <div className="mb-3 p-3 rounded-xl bg-bolly-50 border border-bolly-100 flex items-center gap-2">
+          <Loader2 size={16} className="animate-spin text-bolly-600 flex-shrink-0" />
+          <p className="text-xs text-bolly-700">Sto leggendo la bolletta per te...</p>
+        </div>
+      )}
+
+      {showSuggMatch && (
+        <div className="mb-3 p-3 rounded-xl bg-green-50 border border-green-200">
+          <div className="flex items-start gap-2 mb-2">
+            <Sparkles size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-green-800">
+                Sembra <span className="underline">{contrattoSuggerito.fornitore}</span>
+                {suggConfidenza && <span className="ml-1 text-xs font-normal text-green-600">({suggConfidenza})</span>}
+              </p>
+              {suggMotivo && <p className="text-xs text-green-700 mt-0.5">{suggMotivo}</p>}
+            </div>
+          </div>
+          <div className="flex gap-2 mt-2">
+            <button onClick={handleAcceptMatch} disabled={acceptingMatch}
+              className="flex-1 py-2 bg-green-600 text-white text-xs font-semibold rounded-xl disabled:opacity-40 flex items-center justify-center gap-1.5">
+              {acceptingMatch ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Conferma
+            </button>
+            <button onClick={handleDismissSuggerimento} disabled={acceptingMatch}
+              className="px-3 py-2 bg-white border border-green-200 text-green-700 text-xs font-medium rounded-xl disabled:opacity-40">
+              Scegli altro
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showSuggCreaNuovo && (
+        <div className="mb-3 p-3 rounded-xl bg-blue-50 border border-blue-200">
+          <div className="flex items-start gap-2 mb-2">
+            <Sparkles size={18} className="text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-blue-800">
+                Posso creare un contratto <span className="underline">{suggDati.fornitore}</span>
+                {suggDati.categoria && <span className="ml-1 text-xs font-normal text-blue-600">({suggDati.categoria})</span>}
+              </p>
+              <p className="text-xs text-blue-700 mt-0.5">Nessun contratto esistente sembra corrispondere a questa bolletta.</p>
+            </div>
+          </div>
+          <div className="flex gap-2 mt-2">
+            <button onClick={handleCreaNuovo}
+              className="flex-1 py-2 bg-blue-600 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5">
+              <Plus size={14} /> Crea contratto
+            </button>
+            <button onClick={handleDismissSuggerimento}
+              className="px-3 py-2 bg-white border border-blue-200 text-blue-700 text-xs font-medium rounded-xl">
+              No grazie
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">Contratto</label>
@@ -7456,7 +7572,7 @@ function OrfanaCard({ bolletta, contratti, onUpdate, onDelete }) {
   )
 }
 
-function BolletteOrfane({ bollette, contratti, onBack, onUpdateBolletta, onDeleteBolletta }) {
+function BolletteOrfane({ bollette, contratti, onBack, onUpdateBolletta, onDeleteBolletta, onCreaContrattoPreCompilato }) {
   const orfane = useMemo(() =>
     bollette
       .filter(b => ['errore_parsing', 'orfana', 'incompleta'].includes(b.stato_elaborazione))
@@ -7506,7 +7622,7 @@ function BolletteOrfane({ bollette, contratti, onBack, onUpdateBolletta, onDelet
           </Card>
           <div className="space-y-3">
             {orfane.map(b => (
-              <OrfanaCard key={b.id} bolletta={b} contratti={contratti} onUpdate={onUpdateBolletta} onDelete={onDeleteBolletta} />
+              <OrfanaCard key={b.id} bolletta={b} contratti={contratti} onUpdate={onUpdateBolletta} onDelete={onDeleteBolletta} onCreaContrattoPreCompilato={onCreaContrattoPreCompilato} />
             ))}
           </div>
         </>
@@ -7545,6 +7661,8 @@ export default function App() {
   const [screen, setScreen] = useState('dashboard')
   const [selectedContrattoId, setSelectedContrattoId] = useState(null)
   const [editingContratto, setEditingContratto] = useState(null)
+  // Caso 2 Orfane: dati da pre-compilare in FormContratto quando l'utente accetta il suggerimento "Crea nuovo contratto"
+  const [precompFromOrfana, setPrecompFromOrfana] = useState(null)
   const [spesaDataPrecompilata, setSpesaDataPrecompilata] = useState(null)
   const [editingSpesa, setEditingSpesa] = useState(null)
   const [lastSeenNotificheCount, setLastSeenNotificheCount] = useState(() => {
@@ -7992,7 +8110,7 @@ export default function App() {
             </div>
           </div>
         )
-      case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} abitazioni={abitazioni} />
+      case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => { setPrecompFromOrfana(null); setScreen(precompFromOrfana ? 'bollette-orfane' : 'aggiungi') }} session={session} onRefresh={loadData} onGoHome={() => { setPrecompFromOrfana(null); setScreen('dashboard') }} abitazioni={abitazioni} initialForm={precompFromOrfana} />
       case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} abitazioni={abitazioni} bollette={bollette} /> : null
       case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} />
       case 'aggiungi-spesa': return <FormSpesa onSave={handleSaveSpesa} onBack={async () => { setSpesaDataPrecompilata(null); await loadData(); setScreen('dashboard') }} dataPrecompilata={spesaDataPrecompilata} />
@@ -8012,7 +8130,7 @@ export default function App() {
       case 'amici': return <SchermataAmici onBack={() => setScreen('menu')} session={session} profile={profile} splits={splits} splitsRicevuti={splitsRicevuti} />
       case 'menu': return <MenuPanel profile={profile} session={session} onBack={() => setScreen('dashboard')} onLogout={handleLogout} onNavigate={setScreen} onUpdateProfile={setProfile} abitazioni={abitazioni} onRefreshAbitazioni={async () => { const ab = await getAbitazioni(); setAbitazioni(ab) }} amiciCount={amiciCount} richiesteCount={richiesteCount} pianoInfo={pianoInfo} onShowPaywall={() => setShowPaywall(true)} referralStats={referralStats} />
       case 'termini': return <TerminiCondizioni onBack={() => setScreen('menu')} />
-      case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} />
+      case 'bollette-orfane': return <BolletteOrfane bollette={bollette} contratti={contratti} onBack={() => setScreen('dashboard')} onUpdateBolletta={handleUpdateBolletta} onDeleteBolletta={handleDeleteBolletta} onCreaContrattoPreCompilato={(dati) => { setPrecompFromOrfana(dati); setScreen('aggiungi-contratto') }} />
       case 'traguardi': return <SchermataTraguardi traguardi={traguardi} streakScadenze={streakScadenze} profile={profile} onBack={() => setScreen('menu')} onRefresh={async () => { await segnaTuttiTraguardiVisti().catch(()=>{}); const t = await getTraguardi(); setTraguardi(t) }} />
       case 'riepilogo': return <RiepilogoMensile target={riepilogoMese} streakScadenze={streakScadenze} profile={profile} onBack={() => setScreen('dashboard')} />
       case 'salvadanai': return <SchermataSalvadanai salvadanai={salvadanai} versamenti={versamenti} onBack={() => setScreen('menu')} onNavigate={(s, id) => { if (id) setSelectedSalvadanaiId(id); setScreen(s) }} onRefresh={loadData} />

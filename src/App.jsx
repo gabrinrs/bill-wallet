@@ -1698,7 +1698,7 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome, abitazion
       if (!res.ok) throw new Error(data?.error || 'Errore analisi AI')
 
       // Misura adozione + qualità via PostHog
-      const campi = ['categoria','fornitore','importo_euro','metodo_pagamento','frequenza','abitazione_id']
+      const campi = ['categoria','fornitore','importo_euro','metodo_pagamento','frequenza','abitazione_id','intestatario']
       const estratti = campi.filter(k => data[k] !== null && data[k] !== undefined && data[k] !== '')
       const mancanti = campi.filter(k => !estratti.includes(k))
       if (window.posthog) window.posthog.capture('contratto_da_testo_usato', {
@@ -1710,6 +1710,7 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome, abitazion
         const next = { ...prev }
         if (data.categoria) next.categoria = data.categoria
         if (data.fornitore) next.fornitore = data.fornitore
+        if (data.intestatario) next.intestatario = data.intestatario
         if (data.metodo_pagamento === 'rid') next.domiciliazione = true
         if (data.frequenza) next.frequenza = data.frequenza
         if (data.abitazione_id) next.abitazione_id = data.abitazione_id
@@ -1723,7 +1724,11 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome, abitazion
       // Navigazione intelligente: se Claude ha estratto la categoria, salta lo Step 0
       if (data.categoria) {
         const catInfo = CATEGORIE.find(c => c.id === data.categoria)
-        setCustomMode(catInfo?.freeText || false)
+        const isFreeText = catInfo?.freeText || false
+        setCustomMode(isFreeText)
+        // Se la categoria è freeText (pagopa, f24, finanziamento, affitto, altro) e abbiamo un fornitore,
+        // pre-popoliamo customText così l'input testuale dello Step 1 mostra già il valore
+        if (isFreeText && data.fornitore) setCustomText(data.fornitore)
         // Se c'è anche il fornitore vai direttamente ai dettagli, altrimenti allo Step 1 per sceglierlo
         setStep(data.fornitore ? 2 : 1)
       }

@@ -3712,7 +3712,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
   }, [spese, meseCorrente, annoCorrente])
 
   const isOggi = (g) => g === oggi.getDate() && meseCorrente === oggi.getMonth() && annoCorrente === oggi.getFullYear()
-  const isDomiciliata = (b) => b.contratto?.metodo_pagamento === 'rid' || b.contratto?.domiciliazione
+  const isDomiciliata = (b) => b.metodo_pagamento === 'rid' || b.contratto?.metodo_pagamento === 'rid' || b.contratto?.domiciliazione
 
   const celle = []
   const giorniMesePrecedente = new Date(annoCorrente, meseCorrente, 0).getDate()
@@ -3923,7 +3923,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
                     <div className="text-right">
                       <p className="text-sm font-semibold text-gray-900">{b.importo ? formatEuro(b.importo) : '—'}</p>
                       <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${isProiezione ? 'bg-purple-50 text-purple-700' : domiciliata ? 'bg-bolly-50 text-bolly-700' : 'bg-amber-50 text-amber-700'}`}>
-                        {isProiezione ? 'Previsto' : b.contratto?.metodo_pagamento === 'rid' ? 'RID' : b.contratto?.metodo_pagamento === 'bollettino' ? 'Bollettino' : 'Manuale'}
+                        {isProiezione ? 'Previsto' : (b.metodo_pagamento === 'rid' || b.contratto?.domiciliazione) ? 'RID' : b.metodo_pagamento === 'bollettino' ? 'Bollettino' : 'Manuale'}
                       </span>
                     </div>
                   </div>

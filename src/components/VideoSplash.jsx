@@ -59,8 +59,16 @@ export default function VideoSplash({ dataReady = false, onDone }) {
     const p = v.play()
     if (p && typeof p.catch === 'function') {
       p.catch(() => {
-        // autoplay bloccato (es. Risparmio energetico) → salta lo splash, vai in home
-        skipToHome()
+        // La play() esplicita può essere rifiutata con AbortError perché l'attributo
+        // autoPlay ha già avviato (o sta avviando) il video: NON è un blocco reale.
+        // Quindi non decidiamo dal tipo di errore, ma dallo stato reale dell'elemento:
+        // diamo un attimo e, se il video è davvero ancora in pausa, allora è bloccato
+        // (es. Risparmio energetico) → andiamo dritti in home.
+        setTimeout(() => {
+          if (!finishedRef.current && videoRef.current && videoRef.current.paused) {
+            skipToHome()
+          }
+        }, 250)
       })
     }
   }, [])

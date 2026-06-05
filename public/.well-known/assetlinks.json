@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.getbolly",
+      "sha256_cert_fingerprints": [
+        "A5:51:01:59:03:71:14:47:46:2A:CD:4A:B3:5E:A4:8D:0F:6F:3F:A2:6F:34:41:C3:A3:D1:19:D8:01:F4:66:60"
+      ]
+    }
+  }
+]

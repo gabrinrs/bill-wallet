@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/blog", "destination": "https://bolly-blog.vercel.app/blog/" },
+    { "source": "/blog/(.*)", "destination": "https://bolly-blog.vercel.app/blog/$1" }
+  ]
+}

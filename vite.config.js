@@ -18,6 +18,7 @@ export default defineConfig({
         name: 'Bolly',
         short_name: 'Bolly',
         description: 'Mai più scadenze dimenticate.',
+        lang: 'it',
         theme_color: '#00897B',
         background_color: '#F5F5F0',
         display: 'standalone',

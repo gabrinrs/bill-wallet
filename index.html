@@ -46,6 +46,22 @@
         autocapture: false
       });
     </script>
+
+    <!-- PWA installata (es. iPhone aggiunta alla Home): nello splash iniziale mostra
+         SOLO il logo e nasconde il testo SEO (che nell'app installata non serve a Google).
+         Nel browser resta tutto visibile per i motori di ricerca e le anteprime social. -->
+    <style>
+      html.pwa-standalone #boot-hero > :not(#boot-logo) { display: none; }
+      @media (display-mode: standalone) { #boot-hero > :not(#boot-logo) { display: none; } }
+    </style>
+    <script>
+      try {
+        if (window.navigator.standalone === true ||
+            (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)) {
+          document.documentElement.classList.add('pwa-standalone');
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body class="bg-gray-50">
     <!--
@@ -55,8 +71,8 @@
       Il testo coincide con la hero della LandingPage (nessun cloaking).
     -->
     <div id="root">
-      <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;background:linear-gradient(160deg,#00897B 0%,#00695C 100%);color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-        <div style="font-family:'Pacifico',cursive;font-size:44px;margin-bottom:24px;">Bolly</div>
+      <div id="boot-hero" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;background:linear-gradient(160deg,#00897B 0%,#00695C 100%);color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+        <div id="boot-logo" style="font-family:'Pacifico',cursive;font-size:44px;margin-bottom:24px;">Bolly</div>
         <h1 style="font-size:30px;font-weight:800;line-height:1.2;max-width:620px;margin:0 0 16px;">Le tue bollette, finalmente sotto controllo</h1>
         <p style="font-size:17px;line-height:1.5;max-width:520px;margin:0 0 12px;color:rgba(255,255,255,0.85);">
           Bolly raccoglie tutti i tuoi contratti e le tue bollette — luce, gas, acqua, internet, telefono, assicurazioni e abbonamenti — in un'unica app.

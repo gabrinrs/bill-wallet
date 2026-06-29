@@ -66,8 +66,15 @@ function CategoriaIcon({ categoriaId, size = 20 }) {
 }
 
 function Card({ children, className = '', onClick }) {
+  const interactive = !!onClick
   return (
-    <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm ${onClick ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''} ${className}`} onClick={onClick}>
+    <div
+      className={`bg-white rounded-2xl border border-gray-100 shadow-sm ${interactive ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''} ${className}`}
+      onClick={onClick}
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onKeyDown={interactive ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(e) } } : undefined}
+    >
       {children}
     </div>
   )
@@ -786,6 +793,14 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
   const [deletingContratto, setDeletingContratto] = useState(null)
   const [deletingSpesa, setDeletingSpesa] = useState(null)
 
+  // Chiudi i modali di conferma con il tasto Esc
+  useEffect(() => {
+    if (!deletingContratto && !deletingSpesa) return
+    const onKey = (e) => { if (e.key === 'Escape') { setDeletingContratto(null); setDeletingSpesa(null) } }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [deletingContratto, deletingSpesa])
+
   // Filtra contratti per abitazione selezionata
   const contrattiFiltrati = useMemo(() => {
     if (!filtroAbitazione) return contratti
@@ -1332,15 +1347,15 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
 
       {deletingContratto && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setDeletingContratto(null)}>
-          <div className="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3" onClick={e => e.stopPropagation()}>
-            <p className="font-semibold text-gray-900">Eliminare il contratto?</p>
+          <div role="dialog" aria-modal="true" aria-labelledby="del-contratto-title" className="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3" onClick={e => e.stopPropagation()}>
+            <p id="del-contratto-title" className="font-semibold text-gray-900">Eliminare il contratto?</p>
             <p className="text-sm text-gray-600">
               {deletingContratto.numBollette > 0
                 ? `Verranno eliminate anche ${deletingContratto.numBollette === 1 ? 'la bolletta collegata' : `le ${deletingContratto.numBollette} bollette collegate`}. Questa azione non si può annullare.`
                 : 'Questa azione non si può annullare.'}
             </p>
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setDeletingContratto(null)} className="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700">Annulla</button>
+              <button autoFocus onClick={() => setDeletingContratto(null)} className="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700">Annulla</button>
               <button onClick={() => { onDeleteContratto(deletingContratto.contratto.id); setDeletingContratto(null) }} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium">Elimina</button>
             </div>
           </div>
@@ -1349,13 +1364,13 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
 
       {deletingSpesa && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setDeletingSpesa(null)}>
-          <div className="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3" onClick={e => e.stopPropagation()}>
-            <p className="font-semibold text-gray-900">Eliminare la spesa?</p>
+          <div role="dialog" aria-modal="true" aria-labelledby="del-spesa-title" className="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3" onClick={e => e.stopPropagation()}>
+            <p id="del-spesa-title" className="font-semibold text-gray-900">Eliminare la spesa?</p>
             <p className="text-sm text-gray-600">
               {deletingSpesa.descrizione || getCategoriaSpesa(deletingSpesa.categoria).label} — {formatEuro(deletingSpesa.importo)}. Questa azione non si può annullare.
             </p>
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setDeletingSpesa(null)} className="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700">Annulla</button>
+              <button autoFocus onClick={() => setDeletingSpesa(null)} className="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700">Annulla</button>
               <button onClick={() => { onDeleteSpesa(deletingSpesa.id); setDeletingSpesa(null) }} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium">Elimina</button>
             </div>
           </div>

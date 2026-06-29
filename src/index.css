@@ -28,3 +28,20 @@ body {
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+/* 1) Focus visibile da tastiera.
+   Appare SOLO quando si naviga con il tasto Tab (mai con mouse/touch),
+   quindi per l'utente normale dell'app non cambia niente: serve a chi
+   usa la tastiera o tecnologie assistive. Colore = teal del brand. */
+:focus-visible {
+  outline: 2px solid #00897B;
+  outline-offset: 2px;
+}
+
+/* 2) Cifre allineate in colonna (tabular numbers).
+   In un'app di soldi i numeri in colonna "ballano" perché le cifre hanno
+   larghezze diverse; questo le incolonna. Effetto solo estetico.
+   Se non ti piace come vengono i numeri, elimina SOLO questo blocco. */
+body {
+  font-variant-numeric: tabular-nums;
+}

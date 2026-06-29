@@ -906,8 +906,8 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
               <span className="text-sm font-semibold text-amber-700">{streakScadenze.valore_corrente}</span>
             </button>
           )}
-          <button onClick={() => onNavigate('menu')} className="relative p-2 rounded-xl hover:bg-gray-100 text-gray-500">
-            <Menu size={22} />
+          <button onClick={() => onNavigate('menu')} aria-label="Apri menu" className="relative p-2 rounded-xl hover:bg-gray-100 text-gray-500">
+            <Menu size={22} aria-hidden="true" />
             {richiesteCount > 0 && (
               <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full" />
             )}
@@ -922,7 +922,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
       {richiesteCount > 0 && (
         <button
           onClick={() => onNavigate('amici')}
-          className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 transition-all active:scale-[0.98]"
+          className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 transition-transform active:scale-[0.98]"
         >
           <div className="w-9 h-9 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
             <UserPlus size={18} className="text-white" />
@@ -945,7 +945,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
         return (
           <button
             onClick={() => onNavigate('splits-ricevuti')}
-            className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 transition-all active:scale-[0.98]"
+            className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 transition-transform active:scale-[0.98]"
           >
             <div className="w-9 h-9 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
               <CircleDollarSign size={18} className="text-white" />
@@ -1016,8 +1016,8 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
         <Card className="p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wide">Spese fisse</p>
           <div className="flex items-center gap-1.5 mt-1">
-            <Repeat size={14} className="text-pink-500" />
-            <p className="text-xl font-bold text-pink-600">{formatEuro(totaleRicorrentiMensili)}</p>
+            <Repeat size={14} className="text-bolly-500" />
+            <p className="text-xl font-bold text-gray-900">{formatEuro(totaleRicorrentiMensili)}</p>
           </div>
         </Card>
         <Card className="p-4">
@@ -1189,7 +1189,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
                 <div className="flex items-center gap-3 p-4">
                   <CategoriaIcon categoriaId={c.categoria} />
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900">{c.fornitore}</p>
+                    <p className="font-medium text-gray-900 truncate">{c.fornitore}</p>
                     <p className="text-sm text-gray-500">
                       {getCategoria(c.categoria).label} · {c.domiciliazione ? 'Domiciliato' : 'Pagamento manuale'}
                       {c.ricorrente && ` · ${formatEuro(c.importo_ricorrente)}/${{ mensile: 'mese', bimestrale: '2 mesi', trimestrale: 'trim.', semestrale: '6 mesi', annuale: 'anno' }[c.frequenza] || c.frequenza}`}
@@ -1202,7 +1202,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    {c.ricorrente && <Repeat size={14} className="text-pink-400" />}
+                    {c.ricorrente && <Repeat size={14} className="text-bolly-500" />}
                     {nonPagate > 0 && <span className="bg-red-100 text-red-700 text-xs font-medium px-2 py-0.5 rounded-full">{nonPagate}</span>}
                     <ChevronRight size={18} className="text-gray-400" />
                   </div>
@@ -1314,8 +1314,8 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
                         </div>
                         <div className="flex items-center gap-1.5">
                           {!isEntrata && !spesaSplit && (
-                            <button onClick={(e) => { e.stopPropagation(); onSplit({ tipo: 'spesa', id: s.id, importo: s.importo, descrizione: s.descrizione || cat.label }) }} className="p-1 rounded-lg hover:bg-purple-50 text-gray-300 hover:text-purple-500">
-                              <Split size={14} />
+                            <button onClick={(e) => { e.stopPropagation(); onSplit({ tipo: 'spesa', id: s.id, importo: s.importo, descrizione: s.descrizione || cat.label }) }} aria-label="Dividi la spesa" className="p-1 rounded-lg hover:bg-purple-50 text-gray-300 hover:text-purple-500">
+                              <Split size={14} aria-hidden="true" />
                             </button>
                           )}
                           <p className={`text-sm font-semibold ${isEntrata ? 'text-green-600' : 'text-gray-900'}`}>{isEntrata ? '+' : ''}{formatEuro(s.importo)}</p>

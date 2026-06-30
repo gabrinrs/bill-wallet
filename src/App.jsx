@@ -2863,7 +2863,7 @@ function Notifiche({ contratti, bollette, dbNotifiche = [], onNotificheLette }) 
     return list.sort((a, b) => { const p = { scaduta: 0, urgente: 1, promemoria: 2 }; return (p[a.tipo] ?? 9) - (p[b.tipo] ?? 9) })
   }, [contratti, bollette])
 
-  const cfg = { urgente: 'bg-amber-50 border-amber-200 text-amber-600', scaduta: 'bg-red-50 border-red-200 text-red-600', promemoria: 'bg-bolly-50 border-bolly-200 text-bolly-500', broadcast: 'bg-blue-50 border-blue-200 text-blue-600' }
+  const cfg = { urgente: 'bg-amber-50 border-amber-200 text-amber-600', scaduta: 'bg-red-50 border-red-200 text-red-600', promemoria: 'bg-bolly-50 border-bolly-200 text-bolly-500', broadcast: 'bg-gray-50 border-gray-200 text-gray-600' }
 
   const handleNotificaClick = (n) => {
     if (!n.url) return
@@ -2929,7 +2929,7 @@ function Notifiche({ contratti, bollette, dbNotifiche = [], onNotificheLette }) 
           titolo="Notifiche"
           descrizione="Promemoria automatici di Bolly: scadenze in arrivo, traguardi sbloccati, comunicazioni dei tuoi fornitori e novità dell'app."
           cose={[
-            "Il bordo blu indica una notifica non ancora letta",
+            "Il bordo teal indica una notifica non ancora letta",
             "Tocca una notifica per aprire la sezione collegata",
             "Premi la X a destra per eliminarla",
             "Le notifiche push arrivano anche fuori dall'app, se le hai attivate"
@@ -2937,20 +2937,21 @@ function Notifiche({ contratti, bollette, dbNotifiche = [], onNotificheLette }) 
         />
       </div>
       {tutteNotifiche.length === 0 ? (
-        <div className="text-center py-12"><Bell size={40} className="text-gray-300 mx-auto mb-3" /><p className="text-gray-400">Nessuna notifica</p></div>
+        <div className="text-center py-12"><Bell size={40} className="text-gray-300 mx-auto mb-3" aria-hidden="true" /><p className="text-gray-400">Nessuna notifica</p></div>
       ) : (
         <div className="space-y-2">
           {tutteNotifiche.map((n, i) => (
-            <Card key={n.id || `scad-${i}`} className={`p-4 ${cfg[n.tipo] || cfg.promemoria} ${n.url ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''} ${n.letta === false ? 'ring-2 ring-blue-300' : ''}`}
-              onClick={() => handleNotificaClick(n)}>
+            <Card key={n.id || `scad-${i}`} className={`p-4 ${cfg[n.tipo] || cfg.promemoria} ${n.url ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''} ${n.letta === false ? 'ring-2 ring-bolly-300' : ''}`}
+              onClick={n.url ? () => handleNotificaClick(n) : undefined}>
               <div className="flex items-start gap-3">
-                {n.tipo === 'broadcast' ? <MessageCircle size={20} className="mt-0.5" /> : <AlertTriangle size={20} className="mt-0.5" />}
+                {n.tipo === 'broadcast' ? <MessageCircle size={20} className="mt-0.5" aria-hidden="true" /> : <AlertTriangle size={20} className="mt-0.5" aria-hidden="true" />}
                 <div className="flex-1">
+                  {n.letta === false && <span className="sr-only">Non letta. </span>}
                   <p className="font-medium text-gray-900">{n.titolo}</p>
                   <p className="text-sm text-gray-600 mt-0.5">{n.desc}</p>
-                  {n.url && n.url !== '/' && <p className="text-xs text-blue-500 mt-1 font-medium">Tocca per aprire →</p>}
+                  {n.url && n.url !== '/' && <p className="text-xs text-bolly-500 mt-1 font-medium">Tocca per aprire →</p>}
                 </div>
-                {n.id && <button onClick={(e) => handleDeleteNotifica(e, n.id)} className="p-1 rounded-lg hover:bg-black/10 shrink-0"><X size={16} className="text-gray-400" /></button>}
+                {n.id && <button onClick={(e) => handleDeleteNotifica(e, n.id)} aria-label="Elimina notifica" className="p-1 rounded-lg hover:bg-black/10 shrink-0"><X size={16} className="text-gray-400" aria-hidden="true" /></button>}
               </div>
             </Card>
           ))}

@@ -60,7 +60,7 @@ function CategoriaIcon({ categoriaId, size = 20 }) {
   const Icon = IconMap[cat.icon] || Package
   return (
     <div className="flex items-center justify-center w-10 h-10 rounded-xl" style={{ backgroundColor: cat.color + '18' }}>
-      <Icon size={size} style={{ color: cat.color }} />
+      <Icon size={size} style={{ color: cat.color }} aria-hidden="true" />
     </div>
   )
 }
@@ -1396,6 +1396,12 @@ const MESI_BREVI = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott',
 function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, onTogglePagata, onDeleteContratto, onEditContratto, onDeleteBolletta, abitazioni, splits, onSplit, onViewSplit }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deletingBollettaId, setDeletingBollettaId] = useState(null)
+  useEffect(() => {
+    if (!showDeleteConfirm) return
+    const onKey = (e) => { if (e.key === 'Escape') setShowDeleteConfirm(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showDeleteConfirm])
   const bolletteOrdinate = useMemo(() => [...bollette].sort((a, b) => new Date(b.periodo) - new Date(a.periodo)), [bollette])
   const chartData = useMemo(() =>
     [...bollette].filter(b => b.periodo).sort((a, b) => new Date(a.periodo) - new Date(b.periodo)).map(b => ({ periodo: formatPeriodo(b.periodo), importo: Number(b.importo) }))
@@ -1417,7 +1423,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <button onClick={onBack} className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-600" /></button>
+        <button onClick={onBack} aria-label="Indietro" className="p-2 -ml-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={22} className="text-gray-600" aria-hidden="true" /></button>
         <CategoriaIcon categoriaId={contratto.categoria} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
@@ -1447,42 +1453,44 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
               const AbIcon = getIconaAbitazione(ab.icona).icon
               return (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-bolly-50 text-bolly-600 border border-bolly-100">
-                  <AbIcon size={10} />
+                  <AbIcon size={10} aria-hidden="true" />
                   {ab.nome}
                 </span>
               )
             })()}
           </div>
         </div>
-        <button onClick={() => onEditContratto(contratto)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400"><Pencil size={20} /></button>
-        <button onClick={() => setShowDeleteConfirm(true)} className="p-2 rounded-xl hover:bg-red-50 text-gray-400"><Trash2 size={20} /></button>
+        <button onClick={() => onEditContratto(contratto)} aria-label="Modifica contratto" className="p-2 rounded-xl hover:bg-gray-100 text-gray-400"><Pencil size={20} aria-hidden="true" /></button>
+        <button onClick={() => setShowDeleteConfirm(true)} aria-label="Elimina contratto" className="p-2 rounded-xl hover:bg-red-50 text-gray-400"><Trash2 size={20} aria-hidden="true" /></button>
       </div>
 
       {showDeleteConfirm && (
-        <Card className="p-4 border-red-200 bg-red-50">
-          <p className="font-medium text-red-800 mb-1">Eliminare questo contratto?</p>
-          <p className="text-sm text-red-600 mb-3">
-            {bollette.length > 0
-              ? `Verranno eliminate anche ${bollette.length === 1 ? 'la bolletta collegata' : `le ${bollette.length} bollette collegate`}. Questa azione non si può annullare.`
-              : 'Questa azione non si può annullare.'}
-          </p>
-          <div className="flex gap-2">
-            <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2 rounded-xl border border-gray-300 text-sm font-medium text-gray-700">Annulla</button>
-            <button onClick={() => onDeleteContratto(contratto.id)} className="flex-1 py-2 rounded-xl bg-red-600 text-white text-sm font-medium">Elimina</button>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowDeleteConfirm(false)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="del-contratto-dett-title" className="bg-white rounded-2xl p-5 max-w-sm w-full space-y-3" onClick={e => e.stopPropagation()}>
+            <p id="del-contratto-dett-title" className="font-medium text-gray-900">Eliminare questo contratto?</p>
+            <p className="text-sm text-gray-500">
+              {bollette.length > 0
+                ? `Verranno eliminate anche ${bollette.length === 1 ? 'la bolletta collegata' : `le ${bollette.length} bollette collegate`}. Questa azione non si può annullare.`
+                : 'Questa azione non si può annullare.'}
+            </p>
+            <div className="flex gap-2">
+              <button autoFocus onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700">Annulla</button>
+              <button onClick={() => onDeleteContratto(contratto.id)} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium">Elimina</button>
+            </div>
           </div>
-        </Card>
+        </div>
       )}
 
       {!contratto.domiciliazione && portaleUrl && (
         <a href={portaleUrl} target="_blank" rel="noopener noreferrer" className="block">
           <Card className="p-4 bg-bolly-50 border-bolly-200">
             <div className="flex items-center gap-3">
-              <ExternalLink size={20} className="text-bolly-500" />
+              <ExternalLink size={20} className="text-bolly-500" aria-hidden="true" />
               <div className="flex-1">
                 <p className="font-medium text-bolly-700">Vai al portale per pagare</p>
                 <p className="text-xs text-bolly-500 mt-0.5">Apri l'area clienti di {contratto.fornitore}</p>
               </div>
-              <ChevronRight size={18} className="text-bolly-300" />
+              <ChevronRight size={18} className="text-bolly-300" aria-hidden="true" />
             </div>
           </Card>
         </a>
@@ -1495,12 +1503,12 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
           <div><p className="text-gray-500">Domiciliazione</p><p className="font-medium">{contratto.domiciliazione ? 'Attiva' : 'No'}</p></div>
           <div><p className="text-gray-500">Attivo dal</p><p className="font-medium">{contratto.data_inizio ? formatData(contratto.data_inizio) : '—'}</p></div>
           {contratto.data_fine && (
-            <div><p className="text-gray-500">{contratto.categoria === 'finanziamento' ? 'Fine finanziamento' : 'Scadenza contratto'}</p><p className="font-medium text-orange-600">{formatData(contratto.data_fine)}</p></div>
+            <div><p className="text-gray-500">{contratto.categoria === 'finanziamento' ? 'Fine finanziamento' : 'Scadenza contratto'}</p><p className="font-medium text-amber-600">{formatData(contratto.data_fine)}</p></div>
           )}
         </div>
         {contratto.ricorrente && (
           <div className="pt-2 border-t border-gray-100">
-            <div className="flex items-center gap-2 mb-2"><Repeat size={14} className="text-pink-500" /><span className="text-sm font-medium text-pink-700">Pagamento ricorrente</span></div>
+            <div className="flex items-center gap-2 mb-2"><Repeat size={14} className="text-bolly-500" aria-hidden="true" /><span className="text-sm font-medium text-bolly-700">Pagamento ricorrente</span></div>
             <div className="grid grid-cols-3 gap-3 text-sm">
               <div><p className="text-gray-500">Importo</p><p className="font-medium">{formatEuro(contratto.importo_ricorrente)}</p></div>
               <div><p className="text-gray-500">Frequenza</p><p className="font-medium capitalize">{contratto.frequenza}</p></div>
@@ -1535,7 +1543,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
               <XAxis dataKey="periodo" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${v}`} />
               <Tooltip formatter={v => [`${Number(v).toLocaleString('it-IT')} ${unitaConsumi}`, 'Consumo']} />
-              <Line type="monotone" dataKey="consumo" stroke="#3B82F6" strokeWidth={2.5} dot={{ r: 4 }} />
+              <Line type="monotone" dataKey="consumo" stroke="#00897B" strokeWidth={2.5} dot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         </Card>
@@ -1559,7 +1567,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-gray-900">Storico bollette</h3>
-          <button onClick={onAggiungiBolletta} className="flex items-center gap-1 text-sm font-medium text-bolly-500"><Plus size={16} /> Aggiungi</button>
+          <button onClick={onAggiungiBolletta} className="flex items-center gap-1 text-sm font-medium text-bolly-500"><Plus size={16} aria-hidden="true" /> Aggiungi</button>
         </div>
         <div className="space-y-2">
           {bolletteOrdinate.map(b => {
@@ -1574,15 +1582,15 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-medium text-gray-900">{formatEuro(b.importo)}</p>
                       {b.consumo && b.unita_misura && (
-                        <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{Number(b.consumo).toLocaleString('it-IT')} {b.unita_misura}</span>
+                        <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">{Number(b.consumo).toLocaleString('it-IT')} {b.unita_misura}</span>
                       )}
                       {b.consumo && b.unita_misura && Number(b.consumo) > 0 && (b.costo_energia || b.importo) && (
                         <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{((b.costo_energia ? Number(b.costo_energia) : Number(b.importo)) / Number(b.consumo)).toFixed(2)} €/{b.unita_misura}</span>
                       )}
                       {bollettaSplit && (
-                        <button onClick={() => onViewSplit(bollettaSplit.id)}>
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
-                            <Split size={10} /> Split
+                        <button onClick={() => onViewSplit(bollettaSplit.id)} aria-label="Vedi dettaglio split">
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-social-100 text-social-700">
+                            <Split size={10} aria-hidden="true" /> Split
                           </span>
                         </button>
                       )}
@@ -1593,23 +1601,23 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge stato={stato} />
                     {!bollettaSplit && (
-                      <button onClick={() => onSplit({ tipo: 'bolletta', id: b.id, importo: b.importo, descrizione: `${contratto.fornitore} — ${b.periodo ? formatPeriodo(b.periodo) : 'bolletta'}` })} className="p-1.5 rounded-lg hover:bg-purple-50 text-gray-300 hover:text-purple-500" title="Dividi">
-                        <Split size={18} />
+                      <button onClick={() => onSplit({ tipo: 'bolletta', id: b.id, importo: b.importo, descrizione: `${contratto.fornitore} — ${b.periodo ? formatPeriodo(b.periodo) : 'bolletta'}` })} className="p-1.5 rounded-lg hover:bg-social-50 text-gray-300 hover:text-social-500" title="Dividi" aria-label="Dividi questa bolletta">
+                        <Split size={18} aria-hidden="true" />
                       </button>
                     )}
                     {!b.pagata && portaleUrl && (
-                      <a href={portaleUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600" title={`Paga su ${contratto.fornitore}`}>
-                        <CreditCard size={18} />
+                      <a href={portaleUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600" title={`Paga su ${contratto.fornitore}`} aria-label={`Paga su ${contratto.fornitore}`}>
+                        <CreditCard size={18} aria-hidden="true" />
                       </a>
                     )}
                     {b.pdf_url && (
-                      <a href={b.pdf_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="p-1.5 rounded-lg hover:bg-bolly-50 text-bolly-500" title="Apri PDF">
-                        <ExternalLink size={18} />
+                      <a href={b.pdf_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="p-1.5 rounded-lg hover:bg-bolly-50 text-bolly-500" title="Apri PDF" aria-label="Apri PDF">
+                        <ExternalLink size={18} aria-hidden="true" />
                       </a>
                     )}
                     {!b.pagata && (
-                      <button onClick={e => { e.stopPropagation(); onTogglePagata(b.id) }} className="p-1.5 rounded-lg hover:bg-green-50 text-green-600" title="Segna come pagata">
-                        <Check size={18} />
+                      <button onClick={e => { e.stopPropagation(); onTogglePagata(b.id) }} className="p-1.5 rounded-lg hover:bg-green-50 text-green-600" title="Segna come pagata" aria-label="Segna come pagata">
+                        <Check size={18} aria-hidden="true" />
                       </button>
                     )}
                   </div>

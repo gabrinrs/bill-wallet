@@ -47,12 +47,14 @@
       });
     </script>
 
-    <!-- PWA installata (es. iPhone aggiunta alla Home): nello splash iniziale mostra
-         SOLO il logo e nasconde il testo SEO (che nell'app installata non serve a Google).
+    <!-- PWA installata (es. iPhone aggiunta alla Home): il boot statico fa solo da
+         sfondo neutro (bianco, uguale al VideoSplash) e NON mostra il logo "Bolly" —
+         così non si vede nessun flash del logo prima che parta il video splash.
          Nel browser resta tutto visibile per i motori di ricerca e le anteprime social. -->
     <style>
-      html.pwa-standalone #boot-hero > :not(#boot-logo) { display: none; }
-      @media (display-mode: standalone) { #boot-hero > :not(#boot-logo) { display: none; } }
+      html.pwa-standalone #boot-hero > * { display: none; }
+      html.pwa-standalone #boot-hero { background: #ffffff; }
+      @media (display-mode: standalone) { #boot-hero > * { display: none; } #boot-hero { background: #ffffff; } }
     </style>
     <script>
       try {

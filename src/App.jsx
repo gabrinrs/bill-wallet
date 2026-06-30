@@ -7998,7 +7998,7 @@ export default function App() {
   // NON si rimonta quando loading passa da true a false → niente video che
   // riparte da capo / lampo bianco a metà.
   const renderRoot = () => {
-  if (loading) return <SplashScreen />
+  if (loading) return showVideoSplash ? null : <SplashScreen />
   if (isRecovery) return <ResetPassword onDone={() => setIsRecovery(false)} />
   if (!session && showAuth) return <Auth onBack={() => setShowAuth(false)} />
   if (!session) return <LandingPage onGoToAuth={() => setShowAuth(true)} />
@@ -8259,7 +8259,7 @@ export default function App() {
             <CalendarDays size={22} /><span className="text-xs font-medium">Calendario</span>
           </button>
           <button onClick={() => setScreen('aggiungi')} className="flex flex-col items-center gap-1 py-2 px-3">
-            <div className="w-11 h-11 bg-bolly-500 rounded-full flex items-center justify-center -mt-5 shadow-lg"><Plus size={24} className="text-white" /></div>
+            <div className="w-11 h-11 bg-bolly-500 rounded-full flex items-center justify-center shadow-lg"><Plus size={24} className="text-white" aria-hidden="true" /></div>
             <span className="text-xs font-medium text-bolly-500">Aggiungi</span>
           </button>
           <button onClick={() => { setScreen('bollette'); const now = new Date().toISOString(); setLastSeenInboxTime(now); try { localStorage.setItem('bolly_seen_inbox_time', now) } catch(e) {} }} className={`flex flex-col items-center gap-1 py-2 px-3 relative ${screen === 'bollette' ? 'text-bolly-500' : 'text-gray-400'}`}>

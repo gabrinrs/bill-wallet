@@ -4274,6 +4274,25 @@ function StoricoBollette({ bollette, contratti, onSelectContratto, onDeleteBolle
     return links
   }
 
+  // Rileva se una "comunicazione" è in realtà l'avviso di una bolletta da scaricare dal portale
+  // (es. Iren: "la tua bolletta è stata emessa, accedi al portale"). Tutto lato client, nessuna AI.
+  const rilevaAvvisoBolletta = (c) => {
+    const testo = `${c.email_oggetto || ''} ${c.email_riassunto || ''}`.toLowerCase()
+    // Escludi marketing/promo (a volte citano "bolletta")
+    if (/vinc|gratis|concors|festeggia|regalo|in evidenza|offerta|promo|sconto|newsletter|black friday|saldi|webinar|catalog/i.test(testo)) return { isAvviso: false }
+    const parlaDiBolletta = /bolletta|fattura/i.test(testo)
+    const cuePortale = /emess|disponibil|pronta|pronto|allegat|scarica|consultar|area clienti|area riservata|accedi|portale|importo/i.test(testo)
+    if (!parlaDiBolletta || !cuePortale) return { isAvviso: false }
+    // Identifica il fornitore cercando un nome noto nel testo (match a parola intera)
+    const parole = ' ' + testo.replace(/[^a-z0-9]+/g, ' ') + ' '
+    let fornitore = null
+    for (const nome of Object.keys(PORTALI_PAGAMENTO)) {
+      const token = nome.toLowerCase().split(' ')[0]
+      if (token.length >= 3 && parole.includes(' ' + token + ' ')) { fornitore = nome; break }
+    }
+    return { isAvviso: true, fornitore, portaleUrl: fornitore ? PORTALI_PAGAMENTO[fornitore] : null }
+  }
+
   // Renderizza testo con link cliccabili inline
   const renderTextWithLinks = (text) => {
     if (!text) return 'Nessun contenuto disponibile'
@@ -4402,6 +4421,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto, onDeleteBolle
                 const isExpanded = expandedComm === c.id
                 const cleanedText = cleanEmailText(c.email_riassunto)
                 const links = extractLinks(cleanedText)
+                const avviso = rilevaAvvisoBolletta(c)
                 return (
                   <Card key={c.id} className="p-4" onClick={() => setExpandedComm(isExpanded ? null : c.id)}>
                     <div className="flex items-start gap-3">
@@ -4411,6 +4431,19 @@ function StoricoBollette({ bollette, contratti, onSelectContratto, onDeleteBolle
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-900">{c.email_oggetto || 'Comunicazione'}</p>
                         <p className="text-xs text-gray-400 mt-0.5">{formatDataRicezione(c)}</p>
+                        {avviso.isAvviso && (
+                          <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg" onClick={(e) => e.stopPropagation()}>
+                            <p className="text-xs text-amber-800 leading-snug">
+                              📄 Sembra l'avviso di una bolletta{avviso.fornitore ? ` di ${avviso.fornitore}` : ''}: il fornitore non ha allegato il PDF.
+                            </p>
+                            <p className="text-xs text-amber-700 mt-1">Scaricala dal portale e caricala con <span className="font-semibold">➕ Carica PDF</span>.</p>
+                            {avviso.portaleUrl && (
+                              <a href={avviso.portaleUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-white bg-bolly-500 px-3 py-1.5 rounded-lg hover:bg-bolly-600 transition-colors">
+                                <ExternalLink size={13} /> Apri portale {avviso.fornitore}
+                              </a>
+                            )}
+                          </div>
+                        )}
                         {isExpanded && (
                           <div className="mt-3 space-y-3">
                             <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{renderTextWithLinks(cleanedText)}</p>

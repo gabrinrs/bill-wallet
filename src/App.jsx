@@ -937,9 +937,9 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
       {richiesteCount > 0 && (
         <button
           onClick={() => onNavigate('amici')}
-          className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 transition-transform active:scale-[0.98]"
+          className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-social-50 to-social-100 border border-social-200 transition-transform active:scale-[0.98]"
         >
-          <div className="w-9 h-9 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 rounded-full bg-social-500 flex items-center justify-center flex-shrink-0">
             <UserPlus size={18} className="text-white" />
           </div>
           <div className="flex-1 text-left">
@@ -1026,7 +1026,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
         </Card>
         <Card className="p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wide">Da pagare</p>
-          <p className="text-xl font-bold text-red-600 mt-1">{formatEuro(totaleDaPagare)}</p>
+          <p className="text-xl font-bold text-corallo-600 mt-1">{formatEuro(totaleDaPagare)}</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wide">Spese fisse</p>
@@ -1112,20 +1112,20 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
       {alertTrend.length > 0 && (
         <div className="space-y-2">
           {alertTrend.map(a => (
-            <Card key={a.contratto.id} className="p-4 bg-red-50 border-red-200" onClick={() => onSelectContratto(a.contratto.id)}>
+            <Card key={a.contratto.id} className="p-4 bg-corallo-50 border-corallo-200" onClick={() => onSelectContratto(a.contratto.id)}>
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-red-100">
-                  <TrendingUp size={20} className="text-red-500" />
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-corallo-100">
+                  <TrendingUp size={20} className="text-corallo-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-red-900">
+                  <p className="font-semibold text-corallo-900">
                     {a.contratto.fornitore}: +{a.variazione}%
                   </p>
-                  <p className="text-xs text-red-700 mt-0.5">
+                  <p className="text-xs text-corallo-700 mt-0.5">
                     Da {formatEuro(a.precedente)} a {formatEuro(a.ultima)} nell'ultima bolletta
                   </p>
                 </div>
-                <ChevronRight size={18} className="text-red-400" />
+                <ChevronRight size={18} className="text-corallo-400" />
               </div>
             </Card>
           ))}
@@ -1290,8 +1290,8 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
                   </div>
                 )}
                 {totaleEntrateDelMese === 0 && (
-                  <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <Wallet size={20} className="text-purple-600" />
+                  <div className="w-10 h-10 bg-social-100 rounded-xl flex items-center justify-center">
+                    <Wallet size={20} className="text-social-600" />
                   </div>
                 )}
               </div>
@@ -1319,7 +1319,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
                             <p className="text-sm font-medium text-gray-900 truncate">{s.descrizione || cat.label}</p>
                             {spesaSplit && (
                               <button onClick={(e) => { e.stopPropagation(); onViewSplit(spesaSplit.id) }} className="flex-shrink-0">
-                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium bg-social-100 text-social-700">
                                   <Split size={10} /> Split
                                 </span>
                               </button>
@@ -1329,7 +1329,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
                         </div>
                         <div className="flex items-center gap-1.5">
                           {!isEntrata && !spesaSplit && (
-                            <button onClick={(e) => { e.stopPropagation(); onSplit({ tipo: 'spesa', id: s.id, importo: s.importo, descrizione: s.descrizione || cat.label }) }} aria-label="Dividi la spesa" className="p-1 rounded-lg hover:bg-purple-50 text-gray-300 hover:text-purple-500">
+                            <button onClick={(e) => { e.stopPropagation(); onSplit({ tipo: 'spesa', id: s.id, importo: s.importo, descrizione: s.descrizione || cat.label }) }} aria-label="Dividi la spesa" className="p-1 rounded-lg hover:bg-social-50 text-gray-300 hover:text-social-500">
                               <Split size={14} aria-hidden="true" />
                             </button>
                           )}

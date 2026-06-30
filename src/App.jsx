@@ -3838,7 +3838,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
   return (
     <div className="space-y-4 pb-4">
       <div className="flex items-center justify-between">
-        <button onClick={mesePrecedente} className="p-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={20} className="text-gray-500" /></button>
+        <button onClick={mesePrecedente} aria-label="Mese precedente" className="p-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={20} className="text-gray-500" aria-hidden="true" /></button>
         <div className="flex items-center gap-1.5">
           <h1 className="text-lg font-bold text-gray-900">{MESI[meseCorrente]} {annoCorrente}</h1>
           <TooltipContestuale
@@ -3854,7 +3854,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
             ]}
           />
         </div>
-        <button onClick={meseSuccessivo} className="p-2 rounded-xl hover:bg-gray-100"><ChevronRight size={20} className="text-gray-500" /></button>
+        <button onClick={meseSuccessivo} aria-label="Mese successivo" className="p-2 rounded-xl hover:bg-gray-100"><ChevronRight size={20} className="text-gray-500" aria-hidden="true" /></button>
       </div>
 
       <Card className="p-3">
@@ -3871,9 +3871,19 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
             const hasProiezione = dots?.some(b => b.proiezione)
             const hasSpese = c.corrente && spesePerGiorno[c.giorno]?.length > 0
             const selezionato = c.corrente && giornoSelezionato === c.giorno
+            const numBolGiorno = c.corrente ? (dots?.length || 0) : 0
+            const numSpeseGiorno = c.corrente ? (spesePerGiorno[c.giorno]?.length || 0) : 0
+            const dettagliLabel = [
+              numBolGiorno ? `${numBolGiorno} ${numBolGiorno === 1 ? 'bolletta' : 'bollette'}` : null,
+              numSpeseGiorno ? `${numSpeseGiorno} ${numSpeseGiorno === 1 ? 'spesa' : 'spese'}` : null,
+            ].filter(Boolean).join(', ')
+            const ariaLabel = `${c.giorno} ${MESI[meseCorrente].toLowerCase()}${isOggi(c.giorno) ? ', oggi' : ''}${dettagliLabel ? ', ' + dettagliLabel : ''}`
             return (
               <button key={i}
                 onClick={() => c.corrente && setGiornoSelezionato(c.giorno === giornoSelezionato ? null : c.giorno)}
+                disabled={!c.corrente}
+                aria-label={c.corrente ? ariaLabel : undefined}
+                aria-pressed={c.corrente ? selezionato : undefined}
                 className={`flex flex-col items-center py-1.5 rounded-lg transition-colors ${selezionato ? 'bg-bolly-50' : ''} ${c.corrente ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'}`}
               >
                 <span className={`text-sm w-7 h-7 flex items-center justify-center rounded-full ${
@@ -3881,11 +3891,11 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
                   isOggi(c.giorno) ? 'bg-bolly-500 text-white font-medium' :
                   'text-gray-700'
                 }`}>{c.giorno}</span>
-                <div className="flex gap-0.5 mt-1 h-1.5">
+                <div className="flex gap-0.5 mt-1 h-1.5" aria-hidden="true">
                   {hasDomiciliata && <span className="w-1.5 h-1.5 rounded-full bg-bolly-500" />}
                   {hasManuale && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
-                  {hasProiezione && <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />}
-                  {hasSpese && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
+                  {hasProiezione && <span className="w-1.5 h-1.5 rounded-full bg-gray-300" />}
+                  {hasSpese && <span className="w-1.5 h-1.5 rounded-full bg-social-400" />}
                 </div>
               </button>
             )
@@ -3894,10 +3904,10 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
       </Card>
 
       <div className="flex flex-wrap gap-3 px-1">
-        <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-bolly-500" /><span className="text-xs text-gray-500">Domiciliata (RID)</span></div>
-        <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" /><span className="text-xs text-gray-500">Da pagare</span></div>
-        <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-purple-400" /><span className="text-xs text-gray-500">Previsto</span></div>
-        <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400" /><span className="text-xs text-gray-500">Spesa</span></div>
+        <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-bolly-500" aria-hidden="true" /><span className="text-xs text-gray-500">Domiciliata (RID)</span></div>
+        <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400" aria-hidden="true" /><span className="text-xs text-gray-500">Manuale</span></div>
+        <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-gray-300" aria-hidden="true" /><span className="text-xs text-gray-500">Previsto</span></div>
+        <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-social-400" aria-hidden="true" /><span className="text-xs text-gray-500">Spesa</span></div>
       </div>
 
       {/* Scadenze + spese giorno selezionato */}
@@ -3912,7 +3922,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
               }}
               className="flex items-center gap-1 text-xs font-medium text-bolly-500 px-2 py-1 rounded-lg hover:bg-bolly-50"
             >
-              <Plus size={14} /> Spesa
+              <Plus size={14} aria-hidden="true" /> Spesa
             </button>
           </div>
           {bolletteGiornoSelezionato.length === 0 && speseGiornoSelezionato.length === 0 ? (
@@ -3923,21 +3933,25 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
                 const domiciliata = isDomiciliata(b)
                 const isProiezione = b.proiezione
                 const IconComp = b.contratto ? (IconMap[getCategoria(b.contratto.categoria)?.icon] || Package) : Package
+                const cliccabile = !!(b.contratto_id && onSelectContratto)
+                const nomeBolletta = b.contratto?.fornitore || b.descrizione_libera || 'Bolletta'
+                const apri = () => { if (cliccabile) onSelectContratto(b.contratto_id) }
                 return (
                   <div key={b.id || `proj-${b.contratto_id}-${idx}`}
-                    className="flex items-center gap-3 cursor-pointer"
-                    onClick={() => { if (b.contratto_id && onSelectContratto) onSelectContratto(b.contratto_id) }}
+                    className={`flex items-center gap-3 ${cliccabile ? 'cursor-pointer' : ''}`}
+                    onClick={apri}
+                    {...(cliccabile ? { role: 'button', tabIndex: 0, 'aria-label': `${nomeBolletta}, apri contratto`, onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); apri() } } } : {})}
                   >
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isProiezione ? 'bg-purple-50 text-purple-600' : domiciliata ? 'bg-bolly-50 text-bolly-600' : 'bg-amber-50 text-amber-600'}`}>
-                      <IconComp size={18} />
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isProiezione ? 'bg-gray-100 text-gray-500' : domiciliata ? 'bg-bolly-50 text-bolly-600' : 'bg-amber-50 text-amber-600'}`}>
+                      <IconComp size={18} aria-hidden="true" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{b.contratto?.fornitore || b.descrizione_libera || 'Bolletta'}</p>
+                      <p className="text-sm font-medium text-gray-900 truncate">{nomeBolletta}</p>
                       <p className="text-xs text-gray-500">{b.contratto ? getCategoria(b.contratto.categoria)?.label : ''}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-gray-900">{b.importo ? formatEuro(b.importo) : '—'}</p>
-                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${isProiezione ? 'bg-purple-50 text-purple-700' : domiciliata ? 'bg-bolly-50 text-bolly-700' : 'bg-amber-50 text-amber-700'}`}>
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${isProiezione ? 'bg-gray-100 text-gray-600' : domiciliata ? 'bg-bolly-50 text-bolly-700' : 'bg-amber-50 text-amber-700'}`}>
                         {isProiezione ? 'Previsto' : (b.metodo_pagamento === 'rid' || b.contratto?.domiciliazione) ? 'RID' : b.metodo_pagamento === 'bollettino' ? 'Bollettino' : 'Manuale'}
                       </span>
                     </div>
@@ -3955,8 +3969,8 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
                 const Icon = SpesaIconMap[cat.icon] || Package
                 return (
                   <div key={s.id} className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-blue-50">
-                      <Icon size={18} className="text-blue-600" />
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-social-50">
+                      <Icon size={18} className="text-social-600" aria-hidden="true" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{s.descrizione || cat.label}</p>
@@ -3981,7 +3995,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
           </div>
           {statsMese.variazioneComplessiva !== null && (
             <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${statsMese.variazioneComplessiva > 0 ? 'bg-red-50 text-red-600' : statsMese.variazioneComplessiva < 0 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'}`}>
-              <TrendingUp size={12} className={statsMese.variazioneComplessiva < 0 ? 'rotate-180' : ''} />
+              <TrendingUp size={12} className={statsMese.variazioneComplessiva < 0 ? 'rotate-180' : ''} aria-hidden="true" />
               {statsMese.variazioneComplessiva > 0 ? '+' : ''}{statsMese.variazioneComplessiva.toFixed(0)}% vs mese prec.
             </div>
           )}
@@ -4012,9 +4026,9 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
               <p className="text-xs text-bolly-600 font-medium">Utenze</p>
               <p className="text-lg font-bold text-bolly-700">{formatEuro(statsMese.totaleMese)}</p>
             </div>
-            <div className="bg-purple-50 rounded-xl p-3">
-              <p className="text-xs text-purple-600 font-medium">Spese quotidiane</p>
-              <p className="text-lg font-bold text-purple-700">{formatEuro(statsMese.totaleSpeseGiornaliere)}</p>
+            <div className="bg-social-50 rounded-xl p-3">
+              <p className="text-xs text-social-600 font-medium">Spese quotidiane</p>
+              <p className="text-lg font-bold text-social-700">{formatEuro(statsMese.totaleSpeseGiornaliere)}</p>
             </div>
           </div>
         )}
@@ -4035,7 +4049,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
                 return (
                   <div key={catId} className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
-                      <IconComp size={14} style={{ color: cat.color }} />
+                      <IconComp size={14} style={{ color: cat.color }} aria-hidden="true" />
                     </div>
                     <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
                       <span className="text-xs font-medium text-gray-700 truncate">{cat.label}</span>
@@ -4059,7 +4073,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
               return (
                 <div key={catId} className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
-                    <IconComp size={14} style={{ color: cat.color }} />
+                    <IconComp size={14} style={{ color: cat.color }} aria-hidden="true" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
@@ -4085,7 +4099,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
               return (
                 <div key={catId} className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
-                    <IconComp size={14} style={{ color: cat.color }} />
+                    <IconComp size={14} style={{ color: cat.color }} aria-hidden="true" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
@@ -4146,7 +4160,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
                 </div>
                 {varAnno !== null && (
                   <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${varAnno > 0 ? 'bg-red-50 text-red-600' : varAnno < 0 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'}`}>
-                    <TrendingUp size={12} className={varAnno < 0 ? 'rotate-180' : ''} />
+                    <TrendingUp size={12} className={varAnno < 0 ? 'rotate-180' : ''} aria-hidden="true" />
                     {varAnno > 0 ? '+' : ''}{varAnno.toFixed(0)}% vs {annoCorrente - 1}
                   </div>
                 )}
@@ -4159,7 +4173,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
                     return (
                       <div key={catId} className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + '18' }}>
-                          <IconComp size={14} style={{ color: cat.color }} />
+                          <IconComp size={14} style={{ color: cat.color }} aria-hidden="true" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-0.5">

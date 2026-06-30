@@ -65,7 +65,7 @@ function CategoriaIcon({ categoriaId, size = 20 }) {
   )
 }
 
-function Card({ children, className = '', onClick }) {
+function Card({ children, className = '', onClick, ...rest }) {
   const interactive = !!onClick
   return (
     <div
@@ -74,6 +74,7 @@ function Card({ children, className = '', onClick }) {
       role={interactive ? 'button' : undefined}
       tabIndex={interactive ? 0 : undefined}
       onKeyDown={interactive ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(e) } } : undefined}
+      {...rest}
     >
       {children}
     </div>
@@ -114,6 +115,9 @@ function SwipeableCard({ children, className = '', actions = [], onClick }) {
       <div className="absolute right-0 top-0 bottom-0 flex items-stretch" style={{ width: ACTION_WIDTH }}>
         {actions.map((action, i) => (
           <button key={i} onClick={(e) => { e.stopPropagation(); close(); action.onPress() }}
+            tabIndex={swiped ? 0 : -1}
+            aria-hidden={!swiped}
+            aria-label={action.label}
             className={`flex flex-col items-center justify-center gap-1 ${action.className || ''}`}
             style={{ width: 72 }}>
             {action.icon}
@@ -128,6 +132,9 @@ function SwipeableCard({ children, className = '', actions = [], onClick }) {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onClick={() => { if (swiped) { close() } else if (onClick) { onClick() } }}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (swiped) { close() } else { onClick() } } } : undefined}
       >
         {children}
       </div>
@@ -4353,6 +4360,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto, onDeleteBolle
       <div className="flex gap-2">
         <button
           onClick={() => setTab('bollette')}
+          aria-pressed={tab === 'bollette'}
           className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
             tab === 'bollette' ? 'bg-bolly-500 text-white' : 'bg-gray-100 text-gray-500'
           }`}
@@ -4361,6 +4369,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto, onDeleteBolle
         </button>
         <button
           onClick={() => setTab('comunicazioni')}
+          aria-pressed={tab === 'comunicazioni'}
           className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all relative ${
             tab === 'comunicazioni' ? 'bg-bolly-500 text-white' : 'bg-gray-100 text-gray-500'
           }`}
@@ -4375,7 +4384,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto, onDeleteBolle
             <Card className="p-6">
               <div className="text-center">
                 <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                  <Inbox size={24} className="text-gray-400" />
+                  <Inbox size={24} className="text-gray-400" aria-hidden="true" />
                 </div>
                 <p className="text-sm text-gray-500">Nessuna bolletta ricevuta</p>
               </div>
@@ -4389,11 +4398,11 @@ function StoricoBollette({ bollette, contratti, onSelectContratto, onDeleteBolle
                 return (
                   <SwipeableCard key={b.id} className="p-3" onClick={() => { if (b.contratto_id && onSelectContratto) onSelectContratto(b.contratto_id) }}
                     actions={onDeleteBolletta ? [
-                      { icon: <Trash2 size={18} className="text-white" />, label: 'Elimina', className: 'bg-red-500 text-white', onPress: () => onDeleteBolletta(b.id) },
+                      { icon: <Trash2 size={18} className="text-white" aria-hidden="true" />, label: 'Elimina', className: 'bg-red-500 text-white', onPress: () => onDeleteBolletta(b.id) },
                     ] : []}>
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: iconColor + '18' }}>
-                        <IconComp size={20} style={{ color: iconColor }} />
+                        <IconComp size={20} style={{ color: iconColor }} aria-hidden="true" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-900 truncate">{b.contratto?.fornitore || b.descrizione_libera || 'Bolletta'}</p>
@@ -4405,7 +4414,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto, onDeleteBolle
                       <div className="text-right shrink-0">
                         <p className="text-sm font-bold text-gray-900">{b.importo ? formatEuro(b.importo) : '—'}</p>
                         {b.consumo && b.unita_misura && (
-                          <p className="text-xs font-medium text-blue-600 mt-0.5">{Number(b.consumo).toLocaleString('it-IT')} {b.unita_misura}</p>
+                          <p className="text-xs font-medium text-gray-500 mt-0.5">{Number(b.consumo).toLocaleString('it-IT')} {b.unita_misura}</p>
                         )}
                         {formatDataRicezione(b) && <p className="text-xs text-gray-400 mt-0.5">{formatDataRicezione(b)}</p>}
                       </div>
@@ -4424,7 +4433,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto, onDeleteBolle
             <Card className="p-6">
               <div className="text-center">
                 <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                  <Mail size={24} className="text-gray-400" />
+                  <Mail size={24} className="text-gray-400" aria-hidden="true" />
                 </div>
                 <p className="text-sm text-gray-500">Nessuna comunicazione ricevuta</p>
               </div>
@@ -4437,10 +4446,10 @@ function StoricoBollette({ bollette, contratti, onSelectContratto, onDeleteBolle
                 const links = extractLinks(cleanedText)
                 const avviso = rilevaAvvisoBolletta(c)
                 return (
-                  <Card key={c.id} className="p-4" onClick={() => setExpandedComm(isExpanded ? null : c.id)}>
+                  <Card key={c.id} className="p-4" onClick={() => setExpandedComm(isExpanded ? null : c.id)} aria-expanded={isExpanded}>
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50 shrink-0">
-                        <Mail size={20} className="text-blue-500" />
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-100 shrink-0">
+                        <Mail size={20} className="text-gray-500" aria-hidden="true" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-900">{c.email_oggetto || 'Comunicazione'}</p>
@@ -4453,7 +4462,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto, onDeleteBolle
                             <p className="text-xs text-amber-700 mt-1">Scaricala dal portale e caricala con <span className="font-semibold">➕ Carica PDF</span>.</p>
                             {avviso.portaleUrl && (
                               <a href={avviso.portaleUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-white bg-bolly-500 px-3 py-1.5 rounded-lg hover:bg-bolly-600 transition-colors">
-                                <ExternalLink size={13} /> Apri portale {avviso.fornitore}
+                                <ExternalLink size={13} aria-hidden="true" /> Apri portale {avviso.fornitore}
                               </a>
                             )}
                           </div>
@@ -4473,7 +4482,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto, onDeleteBolle
                                     onClick={(e) => e.stopPropagation()}
                                     className="flex items-center gap-2 text-sm text-bolly-600 bg-bolly-50 px-3 py-2 rounded-lg border border-bolly-100 hover:bg-bolly-100 transition-colors break-all"
                                   >
-                                    <ExternalLink size={14} className="shrink-0" />
+                                    <ExternalLink size={14} className="shrink-0" aria-hidden="true" />
                                     <span>{link.length > 50 ? link.substring(0, 50) + '...' : link}</span>
                                   </a>
                                 ))}
@@ -4485,7 +4494,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto, onDeleteBolle
                           <p className="text-xs text-gray-400 mt-1 truncate">{cleanEmailText(c.email_riassunto)?.substring(0, 80) || ''}</p>
                         )}
                       </div>
-                      <ChevronRight size={16} className={`text-gray-300 shrink-0 mt-1 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                      <ChevronRight size={16} className={`text-gray-300 shrink-0 mt-1 transition-transform ${isExpanded ? 'rotate-90' : ''}`} aria-hidden="true" />
                     </div>
                   </Card>
                 )

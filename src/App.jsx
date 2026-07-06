@@ -3668,6 +3668,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
   const [meseCorrente, setMeseCorrente] = useState(oggi.getMonth())
   const [annoCorrente, setAnnoCorrente] = useState(oggi.getFullYear())
   const [giornoSelezionato, setGiornoSelezionato] = useState(null)
+  const [previsioneEspansa, setPrevisioneEspansa] = useState(null)
 
   const mesePrecedente = () => {
     if (meseCorrente === 0) { setMeseCorrente(11); setAnnoCorrente(a => a - 1) }
@@ -3851,6 +3852,61 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
     return { totaleMese, totalePrecedente, variazione, categorieSorted, numBollette: bolMese.length, totaleSpeseGiornaliere, categorieSpeseSort, numSpese: speseMese.length, totaleComplessivo, variazioneComplessiva, totaleEntrate, totaleEntratePrev, categorieEntrateSort, numEntrate: entrateMese.length, totaleUscite, bilancio }
   }, [bollette, contratti, spese, meseCorrente, annoCorrente])
 
+  // Previsione spese fisse dei prossimi 12 mesi: bollette reali + proiezioni delle ricorrenti.
+  // Soglia "mese pesante": +30% sulla media (due livelli — se nessuno sfonda, si evidenzia il più alto in tono tenue).
+  const previsione = useMemo(() => {
+    const FINESTRA = 12
+    const base = new Date(oggi.getFullYear(), oggi.getMonth(), 1)
+    const limite = new Date(base.getFullYear(), base.getMonth() + FINESTRA, 1)
+    const mesi = []
+    for (let i = 0; i < FINESTRA; i++) {
+      const d = new Date(base.getFullYear(), base.getMonth() + i, 1)
+      mesi.push({ anno: d.getFullYear(), mese: d.getMonth(), totale: 0, voci: [], picco: false })
+    }
+    const slot = (anno, mese) => mesi.find(m => m.anno === anno && m.mese === mese)
+
+    // Bollette reali già emesse che cadono nella finestra
+    bollette.forEach(b => {
+      if (!b.scadenza || b.stato_elaborazione === 'errore_parsing' || b.stato_elaborazione === 'comunicazione') return
+      const d = new Date(b.scadenza)
+      const m = slot(d.getFullYear(), d.getMonth())
+      if (!m) return
+      const c = contratti.find(ct => ct.id === b.contratto_id)
+      const imp = Number(b.importo || 0)
+      m.totale += imp
+      m.voci.push({ nome: c?.fornitore || b.descrizione_libera || 'Bolletta', importo: imp, reale: true, contrattoId: b.contratto_id })
+    })
+
+    // Proiezioni dai contratti ricorrenti (solo dove non c'è già una bolletta reale)
+    contratti.forEach(c => {
+      if (!c.ricorrente || !c.prossimo_addebito || !c.frequenza) return
+      const freqMesi = { mensile: 1, bimestrale: 2, trimestrale: 3, semestrale: 6, annuale: 12 }[c.frequenza] || 0
+      if (freqMesi === 0) return
+      const dataFine = c.data_fine ? new Date(c.data_fine + 'T00:00:00') : null
+      let cur = new Date(c.prossimo_addebito + 'T00:00:00')
+      while (cur < base) cur.setMonth(cur.getMonth() + freqMesi)
+      while (cur < limite) {
+        if (dataFine && cur > dataFine) break
+        const m = slot(cur.getFullYear(), cur.getMonth())
+        if (m && !m.voci.some(v => v.reale && v.contrattoId === c.id)) {
+          const imp = Number(c.importo_ricorrente || 0)
+          m.totale += imp
+          m.voci.push({ nome: c.fornitore || 'Ricorrente', importo: imp, reale: false, contrattoId: c.id })
+        }
+        cur.setMonth(cur.getMonth() + freqMesi)
+      }
+    })
+
+    const media = mesi.reduce((s, m) => s + m.totale, 0) / (mesi.length || 1)
+    const soglia = media * 1.3
+    let indiceMax = 0
+    mesi.forEach((m, i) => {
+      if (m.totale > mesi[indiceMax].totale) indiceMax = i
+      m.picco = m.totale > 0 && m.totale >= soglia
+    })
+    return { mesi, media, hasPicco: mesi.some(m => m.picco), indiceMax, maxTot: mesi[indiceMax].totale }
+  }, [bollette, contratti])
+
   return (
     <div className="space-y-4 pb-4">
       <div className="flex items-center justify-between">
@@ -3996,6 +4052,81 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
                   </div>
                 )
               })}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Previsione prossimi mesi (spese fisse) */}
+      {previsione.maxTot > 0 && (
+        <Card className="p-4">
+          <div className="flex items-center gap-1.5 mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">Prossimi mesi</h3>
+            <span className="text-xs text-gray-400">spese fisse previste</span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+            {previsione.mesi.map((m, i) => {
+              const h = m.totale > 0 ? Math.max(6, Math.round((m.totale / previsione.maxTot) * 88)) : 0
+              const isMaxTenue = !previsione.hasPicco && i === previsione.indiceMax
+              const colore = m.picco ? '#FF7043' : isMaxTenue ? '#00695C' : '#00897B'
+              const sel = previsioneEspansa === i
+              return (
+                <button
+                  key={i}
+                  onClick={() => setPrevisioneEspansa(sel ? null : i)}
+                  className={`flex-shrink-0 flex flex-col items-center gap-1 rounded-lg py-1 ${sel ? 'bg-gray-50' : ''}`}
+                  style={{ width: 44 }}
+                  aria-label={`${MESI[m.mese]} ${m.anno}: ${formatEuro(m.totale)} previsti`}
+                >
+                  <div className="flex items-end" style={{ height: 88 }}>
+                    <div style={{ width: 18, height: h, backgroundColor: colore, borderRadius: '3px 3px 0 0' }} />
+                  </div>
+                  <span className="text-xs" style={{ color: m.picco ? '#C1440E' : '#9ca3af', fontWeight: m.picco ? 500 : 400 }}>{MESI[m.mese].slice(0, 3)}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {(() => {
+            const top = previsione.mesi[previsione.indiceMax]
+            if (!top) return null
+            const apri = () => setPrevisioneEspansa(previsione.indiceMax)
+            if (previsione.hasPicco) {
+              return (
+                <button onClick={apri} className="w-full text-left flex items-start gap-2 rounded-xl p-3 mt-1" style={{ backgroundColor: '#FFF1EC' }}>
+                  <AlertTriangle size={18} style={{ color: '#FF7043', marginTop: 1 }} aria-hidden="true" />
+                  <div>
+                    <p className="text-xs font-medium" style={{ color: '#9A3A17' }}>{MESI[top.mese]} sarà il mese più pesante</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#B5603F' }}>Circa {formatEuro(top.totale)} — tocca per il dettaglio</p>
+                  </div>
+                </button>
+              )
+            }
+            return (
+              <button onClick={apri} className="w-full text-left flex items-start gap-2 rounded-xl p-3 mt-1 bg-gray-50">
+                <TrendingUp size={18} className="text-bolly-600" style={{ marginTop: 1 }} aria-hidden="true" />
+                <div>
+                  <p className="text-xs font-medium text-gray-700">Spese stabili nei prossimi mesi</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Il più caro sarà {MESI[top.mese].toLowerCase()} · circa {formatEuro(top.totale)}</p>
+                </div>
+              </button>
+            )
+          })()}
+
+          {previsioneEspansa !== null && previsione.mesi[previsioneEspansa] && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">{MESI[previsione.mesi[previsioneEspansa].mese]} {previsione.mesi[previsioneEspansa].anno}</p>
+              <div className="space-y-2">
+                {[...previsione.mesi[previsioneEspansa].voci].sort((a, b) => b.importo - a.importo).map((v, idx) => (
+                  <div key={idx} className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-gray-700 truncate">{v.nome}{!v.reale && <span className="text-xs text-gray-400"> · previsto</span>}</span>
+                    <span className="text-sm font-semibold text-gray-900 flex-shrink-0">{formatEuro(v.importo)}</span>
+                  </div>
+                ))}
+                {previsione.mesi[previsioneEspansa].voci.length === 0 && (
+                  <p className="text-xs text-gray-400">Nessuna spesa fissa prevista questo mese.</p>
+                )}
+              </div>
             </div>
           )}
         </Card>

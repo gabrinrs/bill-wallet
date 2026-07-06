@@ -3663,7 +3663,7 @@ function DonutCategorie({ data, totale, label, formatEuro }) {
   )
 }
 
-function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiSpesa }) {
+function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiSpesa, pianoInfo = { isPremium: true }, onShowPaywall }) {
   const oggi = new Date()
   const [meseCorrente, setMeseCorrente] = useState(oggi.getMonth())
   const [annoCorrente, setAnnoCorrente] = useState(oggi.getFullYear())
@@ -4057,81 +4057,6 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
         </Card>
       )}
 
-      {/* Previsione prossimi mesi (spese fisse) */}
-      {previsione.maxTot > 0 && (
-        <Card className="p-4">
-          <div className="flex items-center gap-1.5 mb-3">
-            <h3 className="text-sm font-semibold text-gray-900">Prossimi mesi</h3>
-            <span className="text-xs text-gray-400">spese fisse previste</span>
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-            {previsione.mesi.map((m, i) => {
-              const h = m.totale > 0 ? Math.max(6, Math.round((m.totale / previsione.maxTot) * 88)) : 0
-              const isMaxTenue = !previsione.hasPicco && i === previsione.indiceMax
-              const colore = m.picco ? '#FF7043' : isMaxTenue ? '#00695C' : '#00897B'
-              const sel = previsioneEspansa === i
-              return (
-                <button
-                  key={i}
-                  onClick={() => setPrevisioneEspansa(sel ? null : i)}
-                  className={`flex-shrink-0 flex flex-col items-center gap-1 rounded-lg py-1 ${sel ? 'bg-gray-50' : ''}`}
-                  style={{ width: 44 }}
-                  aria-label={`${MESI[m.mese]} ${m.anno}: ${formatEuro(m.totale)} previsti`}
-                >
-                  <div className="flex items-end" style={{ height: 88 }}>
-                    <div style={{ width: 18, height: h, backgroundColor: colore, borderRadius: '3px 3px 0 0' }} />
-                  </div>
-                  <span className="text-xs" style={{ color: m.picco ? '#C1440E' : '#9ca3af', fontWeight: m.picco ? 500 : 400 }}>{MESI[m.mese].slice(0, 3)}</span>
-                </button>
-              )
-            })}
-          </div>
-
-          {(() => {
-            const top = previsione.mesi[previsione.indiceMax]
-            if (!top) return null
-            const apri = () => setPrevisioneEspansa(previsione.indiceMax)
-            if (previsione.hasPicco) {
-              return (
-                <button onClick={apri} className="w-full text-left flex items-start gap-2 rounded-xl p-3 mt-1" style={{ backgroundColor: '#FFF1EC' }}>
-                  <AlertTriangle size={18} style={{ color: '#FF7043', marginTop: 1 }} aria-hidden="true" />
-                  <div>
-                    <p className="text-xs font-medium" style={{ color: '#9A3A17' }}>{MESI[top.mese]} sarà il mese più pesante</p>
-                    <p className="text-xs mt-0.5" style={{ color: '#B5603F' }}>Circa {formatEuro(top.totale)} — tocca per il dettaglio</p>
-                  </div>
-                </button>
-              )
-            }
-            return (
-              <button onClick={apri} className="w-full text-left flex items-start gap-2 rounded-xl p-3 mt-1 bg-gray-50">
-                <TrendingUp size={18} className="text-bolly-600" style={{ marginTop: 1 }} aria-hidden="true" />
-                <div>
-                  <p className="text-xs font-medium text-gray-700">Spese stabili nei prossimi mesi</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Il più caro sarà {MESI[top.mese].toLowerCase()} · circa {formatEuro(top.totale)}</p>
-                </div>
-              </button>
-            )
-          })()}
-
-          {previsioneEspansa !== null && previsione.mesi[previsioneEspansa] && (
-            <div className="mt-3 pt-3 border-t border-gray-100">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">{MESI[previsione.mesi[previsioneEspansa].mese]} {previsione.mesi[previsioneEspansa].anno}</p>
-              <div className="space-y-2">
-                {[...previsione.mesi[previsioneEspansa].voci].sort((a, b) => b.importo - a.importo).map((v, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-gray-700 truncate">{v.nome}{!v.reale && <span className="text-xs text-gray-400"> · previsto</span>}</span>
-                    <span className="text-sm font-semibold text-gray-900 flex-shrink-0">{formatEuro(v.importo)}</span>
-                  </div>
-                ))}
-                {previsione.mesi[previsioneEspansa].voci.length === 0 && (
-                  <p className="text-xs text-gray-400">Nessuna spesa fissa prevista questo mese.</p>
-                )}
-              </div>
-            </div>
-          )}
-        </Card>
-      )}
-
       {/* Riepilogo mensile */}
       <Card className="p-4">
         <h3 className="text-sm font-semibold text-gray-900 mb-3">Riepilogo {MESI[meseCorrente].toLowerCase()}</h3>
@@ -4266,6 +4191,94 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
           <p className="text-xs text-gray-400 text-center py-2">Nessun movimento in questo mese</p>
         )}
       </Card>
+
+      {/* Previsione prossimi mesi (spese fisse) — sotto il resoconto mensile */}
+      {previsione.maxTot > 0 && (
+        <Card className="p-4">
+          <div className="flex items-center gap-1.5 mb-3">
+            <h3 className="text-sm font-semibold text-gray-900">Prossimi mesi</h3>
+            <span className="text-xs text-gray-400">spese fisse previste</span>
+          </div>
+          <div className="relative">
+            <div className={pianoInfo.isPremium ? '' : 'blur-sm select-none pointer-events-none'} aria-hidden={!pianoInfo.isPremium}>
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+                {previsione.mesi.map((m, i) => {
+                  const h = m.totale > 0 ? Math.max(6, Math.round((m.totale / previsione.maxTot) * 88)) : 0
+                  const isMaxTenue = !previsione.hasPicco && i === previsione.indiceMax
+                  const colore = m.picco ? '#FF7043' : isMaxTenue ? '#00695C' : '#00897B'
+                  const sel = previsioneEspansa === i
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => setPrevisioneEspansa(sel ? null : i)}
+                      className={`flex-shrink-0 flex flex-col items-center gap-1 rounded-lg py-1 ${sel ? 'bg-gray-50' : ''}`}
+                      style={{ width: 44 }}
+                      aria-label={`${MESI[m.mese]} ${m.anno}: ${formatEuro(m.totale)} previsti`}
+                    >
+                      <div className="flex items-end" style={{ height: 88 }}>
+                        <div style={{ width: 18, height: h, backgroundColor: colore, borderRadius: '3px 3px 0 0' }} />
+                      </div>
+                      <span className="text-xs" style={{ color: m.picco ? '#C1440E' : '#9ca3af', fontWeight: m.picco ? 500 : 400 }}>{MESI[m.mese].slice(0, 3)}</span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {(() => {
+                const top = previsione.mesi[previsione.indiceMax]
+                if (!top) return null
+                const apri = () => setPrevisioneEspansa(previsione.indiceMax)
+                if (previsione.hasPicco) {
+                  return (
+                    <button onClick={apri} className="w-full text-left flex items-start gap-2 rounded-xl p-3 mt-1" style={{ backgroundColor: '#FFF1EC' }}>
+                      <AlertTriangle size={18} style={{ color: '#FF7043', marginTop: 1 }} aria-hidden="true" />
+                      <div>
+                        <p className="text-xs font-medium" style={{ color: '#9A3A17' }}>{MESI[top.mese]} sarà il mese più pesante</p>
+                        <p className="text-xs mt-0.5" style={{ color: '#B5603F' }}>Circa {formatEuro(top.totale)} — tocca per il dettaglio</p>
+                      </div>
+                    </button>
+                  )
+                }
+                return (
+                  <button onClick={apri} className="w-full text-left flex items-start gap-2 rounded-xl p-3 mt-1 bg-gray-50">
+                    <TrendingUp size={18} className="text-bolly-600" style={{ marginTop: 1 }} aria-hidden="true" />
+                    <div>
+                      <p className="text-xs font-medium text-gray-700">Spese stabili nei prossimi mesi</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Il più caro sarà {MESI[top.mese].toLowerCase()} · circa {formatEuro(top.totale)}</p>
+                    </div>
+                  </button>
+                )
+              })()}
+
+              {previsioneEspansa !== null && previsione.mesi[previsioneEspansa] && (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">{MESI[previsione.mesi[previsioneEspansa].mese]} {previsione.mesi[previsioneEspansa].anno}</p>
+                  <div className="space-y-2">
+                    {[...previsione.mesi[previsioneEspansa].voci].sort((a, b) => b.importo - a.importo).map((v, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-gray-700 truncate">{v.nome}{!v.reale && <span className="text-xs text-gray-400"> · previsto</span>}</span>
+                        <span className="text-sm font-semibold text-gray-900 flex-shrink-0">{formatEuro(v.importo)}</span>
+                      </div>
+                    ))}
+                    {previsione.mesi[previsioneEspansa].voci.length === 0 && (
+                      <p className="text-xs text-gray-400">Nessuna spesa fissa prevista questo mese.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            {!pianoInfo.isPremium && (
+              <button onClick={onShowPaywall} className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-4 text-center rounded-xl" style={{ backgroundColor: 'rgba(245,245,240,0.55)' }} aria-label="Sblocca le previsioni con Premium">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#00897B' }}>
+                  <Lock size={18} className="text-white" aria-hidden="true" />
+                </div>
+                <p className="text-sm font-semibold text-gray-900">Sblocca le previsioni con Premium</p>
+                <p className="text-xs text-gray-500">Scopri quali mesi peseranno di più</p>
+              </button>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Riepilogo annuale */}
       <Card className="p-4">
@@ -8332,7 +8345,7 @@ export default function App() {
       case 'aggiungi-entrata': return <FormEntrata onSave={handleSaveSpesa} onBack={() => setScreen('dashboard')} />
       case 'modifica-spesa': return editingSpesa ? <FormModificaSpesa spesa={editingSpesa} onSave={handleUpdateSpesa} onBack={() => { setEditingSpesa(null); setScreen('dashboard') }} /> : null
       case 'spese-lista': return <ListaSpese spese={spese} onBack={() => setScreen('dashboard')} onDelete={handleDeleteSpesa} />
-      case 'calendario': return <Calendario bollette={bollette} contratti={contratti} spese={spese} onSelectContratto={handleSelectContratto} onAggiungiSpesa={(data) => { setScreen('aggiungi-spesa'); setSpesaDataPrecompilata(data) }} />
+      case 'calendario': return <Calendario bollette={bollette} contratti={contratti} spese={spese} onSelectContratto={handleSelectContratto} onAggiungiSpesa={(data) => { setScreen('aggiungi-spesa'); setSpesaDataPrecompilata(data) }} pianoInfo={pianoInfo} onShowPaywall={() => setShowPaywall(true)} />
       case 'bollette': return <StoricoBollette bollette={bollette} contratti={contratti} onSelectContratto={handleSelectContratto} onDeleteBolletta={handleDeleteBolletta} />
       case 'notifiche': return <Notifiche contratti={contratti} bollette={bollette} dbNotifiche={dbNotifiche} onNotificheLette={(updated) => setDbNotifiche(updated)} />
       case 'form-split': return splitTarget ? <FormSplit target={splitTarget} profile={profile} onBack={() => { setSplitTarget(null); setScreen('dashboard') }} onSave={async () => { setSplitTarget(null); await loadData(); setScreen('dashboard') }} /> : null

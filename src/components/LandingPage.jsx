@@ -4,7 +4,7 @@ import { ChevronDown, Zap, Bell, CalendarDays, Camera, Shield, Star, ArrowRight,
 const FAQ_ITEMS = [
   {
     q: 'Bolly è gratuito?',
-    a: 'Sì, Bolly è gratuito. Puoi gestire fino a 3 contratti senza pagare nulla.'
+    a: 'Sì, Bolly è gratuito: contratti e bollette illimitati, senza carta di credito.'
   },
   {
     q: 'Funziona su iPhone e Android?',
@@ -270,7 +270,7 @@ export default function LandingPage({ onGoToAuth }) {
             {[
               { num: '3', label: 'Modi per raccogliere bollette', sub: 'Email AI · Upload PDF · Scansione foto', color: '#00897B' },
               { num: '0', label: 'Scadenze dimenticate', sub: 'Promemoria automatici prima di ogni pagamento', color: '#FFA726' },
-              { num: '100%', label: 'Gratuito per iniziare', sub: 'Fino a 3 contratti senza limiti di tempo', color: '#5C6BC0' },
+              { num: '100%', label: 'Gratuito per iniziare', sub: 'Contratti illimitati, nessuna carta richiesta', color: '#5C6BC0' },
               { num: '30s', label: 'Per aggiungere una bolletta', sub: 'Scansiona o inoltra — pensa a tutto l\'AI', color: '#E91E63' }
             ].map((item, i) => (
               <FadeIn key={i} delay={i * 100}>

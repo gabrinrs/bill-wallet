@@ -765,7 +765,7 @@ export function getPianoInfo(profile, signupDate = null) {
  * Ritorna { bloccato: bool, motivo: string | null }
  */
 export const LIMITI_FREE = {
-  MAX_CONTRATTI: 3,
+  MAX_CONTRATTI: Infinity, // 6 nov 2026: contratti illimitati anche nel piano Free (prima era 3)
 }
 
 export function checkLimiteFree(pianoInfo, contratti = []) {
@@ -781,7 +781,6 @@ export function checkLimiteFree(pianoInfo, contratti = []) {
  * Usato sia per bloccare gli accessi che per mostrarle nel modale.
  */
 export const FEATURE_PREMIUM = [
-  { id: 'contratti_illimitati', label: 'Contratti illimitati', desc: 'Aggiungi tutti i contratti che vuoi', icon: 'FileText' },
   { id: 'split_spese',         label: 'Divisione spese',       desc: 'Dividi le bollette con chi vuoi',  icon: 'Split' },
   { id: 'multi_abitazione',    label: 'Più abitazioni',        desc: 'Gestisci casa, ufficio, casa vacanze',        icon: 'Building2' },
   { id: 'ocr_scontrini',       label: 'Scan scontrini',        desc: 'Aggiungi spese con una semplice foto',        icon: 'Camera' },

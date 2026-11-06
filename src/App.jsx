@@ -6837,7 +6837,7 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
   const faqItems = [
     { q: 'Cos\'è Bolly?', a: 'Bolly è un portafoglio contratti che ti permette di aggregare tutti i tuoi contratti ricorrenti (utenze, abbonamenti, assicurazioni, finanziamenti) in un unico posto. Ricevi le bollette, visualizzi le scadenze e non dimentichi più un pagamento.' },
     { q: 'Come funziona l\'email dedicata?', a: 'Al momento della registrazione ti viene assegnato un indirizzo email unico (es. nome.xxxx@mail.getbolly.app). Vai sul portale dei tuoi fornitori e aggiungilo come destinatario per le bollette digitali: le bollette future verranno importate automaticamente nell\'app.' },
-    { q: 'Quanti contratti posso aggiungere?', a: 'Con il piano gratuito puoi gestire fino a 3 contratti attivi. In futuro saranno disponibili piani premium con contratti illimitati e funzionalità aggiuntive.' },
+    { q: 'Quanti contratti posso aggiungere?', a: 'Tutti quelli che vuoi: anche con il piano gratuito i contratti sono illimitati.' },
     { q: 'I miei dati sono al sicuro?', a: 'Sì. Bolly non accede ai contenuti delle tue bollette per finalità diverse dall\'erogazione del servizio e non condivide i tuoi dati con terze parti per finalità commerciali. I dati sono protetti e archiviati in modo sicuro.' },
     { q: 'Bolly effettua pagamenti per me?', a: 'No. Bolly è uno strumento di gestione e promemoria. Non ha accesso ai tuoi conti correnti e non effettua pagamenti. Ti aiuta a ricordare le scadenze e a tenere tutto organizzato.' },
     { q: 'Come cancello il mio account?', a: 'Scorri in fondo a questa pagina e tocca "Elimina il mio account". Dopo una doppia conferma, tutti i tuoi dati (contratti, bollette, PDF, spese) verranno eliminati definitivamente.' },
@@ -7515,7 +7515,7 @@ function TerminiCondizioni({ onBack }) {
 
         <div>
           <h3 className="font-semibold text-gray-900 mb-2">Piano Free</h3>
-          <p>Il servizio è attualmente offerto in versione gratuita con le seguenti limitazioni: massimo 3 contratti attivi contemporaneamente, 1 solo intestatario per account, storico bollette limitato a 12 mesi.</p>
+          <p>Il servizio è attualmente offerto in versione gratuita, con contratti illimitati e le seguenti limitazioni: 1 solo intestatario per account, storico bollette limitato a 12 mesi.</p>
           <p className="mt-2">Il Titolare si riserva il diritto di introdurre piani a pagamento con funzionalità aggiuntive. In tal caso, le funzionalità del piano gratuito potranno essere modificate con preavviso di almeno 30 giorni.</p>
         </div>
 

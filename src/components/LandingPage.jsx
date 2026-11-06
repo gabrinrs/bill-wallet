@@ -11,8 +11,8 @@ const FAQ_ITEMS = [
     a: 'Bolly è una web app che funziona su qualsiasi dispositivo con un browser. Puoi installarla come app direttamente dalla pagina di login, senza passare dallo store.'
   },
   {
-    q: 'I miei dati sono al sicuro?',
-    a: 'Assolutamente sì. I tuoi dati sono protetti con crittografia e salvati su server sicuri in Europa. Non condividiamo nulla con terze parti.'
+    q: 'Che fine fanno i miei dati?',
+    a: 'Contratti e bollette sono salvati su server in Europa (Francoforte) e la connessione all\'app è protetta. Non vendiamo i tuoi dati e non li usiamo per pubblicità: li trattano solo i fornitori tecnici che fanno funzionare Bolly, per esempio quello che legge le bollette con l\'intelligenza artificiale. Puoi eliminare il tuo account e tutti i tuoi dati quando vuoi, direttamente dall\'app.'
   },
   {
     q: 'Come ricevo i promemoria?',

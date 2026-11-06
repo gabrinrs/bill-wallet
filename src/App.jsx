@@ -44,6 +44,22 @@ async function apriPdf(e, pdfUrl) {
   else window.location.href = url
 }
 
+// Avviso doppioni (6 nov 2026): Make non crea la bolletta se ne esiste già una con stesso importo e scadenza.
+// Prima dell'invio a Make leggiamo l'ultima bolletta dell'utente; dopo aspettiamo (max 40 s) che ne compaia una nuova.
+// Se non compare, era un doppione. Ritorna una funzione da chiamare dopo l'invio: true = bolletta nuova creata.
+async function preparaAttesaBollettaNuova(userId) {
+  const { data } = await supabase.from('bollette').select('id').eq('user_id', userId).order('id', { ascending: false }).limit(1)
+  const ultimoId = data?.[0]?.id ?? 0
+  return async () => {
+    for (let i = 0; i < 20; i++) {
+      await new Promise(r => setTimeout(r, 2000))
+      const { data: nuove } = await supabase.from('bollette').select('id').eq('user_id', userId).gt('id', ultimoId).neq('fonte', 'ricorrente_auto').limit(1)
+      if (nuove?.length) return true
+    }
+    return false
+  }
+}
+
 const IconMap = { Zap, Flame, Droplets, Phone, Wifi, Shield, Package, Tv, Repeat, CreditCard, Landmark, ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
 
 const ICONE_ABITAZIONE = [
@@ -1716,6 +1732,7 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome, abitazion
       const pdfUrl = `https://iimzetvymamadclfblgy.supabase.co/storage/v1/object/public/bollette-pdf/${filePath}`
 
       setUploadStatus('processing')
+      const attendiBollettaNuova = await preparaAttesaBollettaNuova(userId)
       const webhookRes = await fetch('https://hook.eu1.make.com/5n4w2qn99uf830yktlyjw8o17ogcd1xt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1723,6 +1740,11 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome, abitazion
       })
       if (!webhookRes.ok) throw new Error('Errore nell\'invio al sistema di elaborazione')
 
+      if (!(await attendiBollettaNuova())) {
+        setUploadStatus('duplicate')
+        if (window.posthog) window.posthog.capture('pdf_upload_doppione', { fonte: 'form_contratto' })
+        return
+      }
       setUploadStatus('success')
       if (window.posthog) window.posthog.capture('pdf_upload', { fonte: 'form_contratto' })
       setTimeout(async () => { if (onRefresh) await onRefresh(); if (onGoHome) onGoHome(); else onBack() }, 5000)
@@ -1817,6 +1839,15 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome, abitazion
             </div>
             <p className="text-sm font-medium text-gray-900 mt-3">Bolletta caricata!</p>
             <p className="text-xs text-gray-500 mt-1">Contratto e bolletta verranno creati automaticamente in pochi secondi.</p>
+          </Card>
+        ) : uploadStatus === 'duplicate' ? (
+          <Card className="p-6 text-center" role="status">
+            <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
+              <AlertTriangle size={24} className="text-amber-600" aria-hidden="true" />
+            </div>
+            <p className="text-sm font-medium text-gray-900 mt-3">Questa bolletta c'era già</p>
+            <p className="text-xs text-gray-500 mt-1">Hai già una bolletta con lo stesso importo e la stessa scadenza, quindi non l'abbiamo aggiunta di nuovo.</p>
+            <button onClick={() => { if (onGoHome) onGoHome(); else onBack() }} className="mt-4 w-full py-3 bg-bolly-500 text-white font-semibold rounded-xl">Ho capito</button>
           </Card>
         ) : (
           <>
@@ -2171,6 +2202,7 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
       // così la bolletta viene linkata a quel contratto invece di cercare per fornitore
       const webhookBody = { user_id: userId, pdf_url: pdfUrl }
       if (contrattoId) webhookBody.contratto_id = Number(contrattoId)
+      const attendiBollettaNuova = await preparaAttesaBollettaNuova(userId)
       const webhookRes = await fetch('https://hook.eu1.make.com/5n4w2qn99uf830yktlyjw8o17ogcd1xt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2178,6 +2210,11 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
       })
       if (!webhookRes.ok) throw new Error('Errore nell\'invio al sistema di elaborazione')
 
+      if (!(await attendiBollettaNuova())) {
+        setUploadStatus('duplicate')
+        if (window.posthog) window.posthog.capture('pdf_upload_doppione', { fonte: 'form_bolletta' })
+        return
+      }
       setUploadStatus('success')
       if (window.posthog) window.posthog.capture('pdf_upload', { fonte: 'form_bolletta' })
       setTimeout(async () => { if (onRefresh) await onRefresh(); if (onGoHome) onGoHome(); else onBack() }, 5000)
@@ -2353,6 +2390,15 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
               </div>
               <p className="text-sm font-medium text-gray-900 mt-3">PDF caricato con successo!</p>
               <p className="text-xs text-gray-500 mt-1">La bolletta verrà elaborata in pochi secondi.</p>
+            </Card>
+          ) : uploadStatus === 'duplicate' ? (
+            <Card className="p-6 text-center" role="status">
+              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
+                <AlertTriangle size={24} className="text-amber-600" aria-hidden="true" />
+              </div>
+              <p className="text-sm font-medium text-gray-900 mt-3">Questa bolletta c'era già</p>
+              <p className="text-xs text-gray-500 mt-1">Hai già una bolletta con lo stesso importo e la stessa scadenza, quindi non l'abbiamo aggiunta di nuovo.</p>
+              <button onClick={() => { if (onGoHome) onGoHome(); else onBack() }} className="mt-4 w-full py-3 bg-bolly-500 text-white font-semibold rounded-xl">Ho capito</button>
             </Card>
           ) : (
             <>
@@ -7971,6 +8017,7 @@ export default function App() {
         const pdfUrl = `https://iimzetvymamadclfblgy.supabase.co/storage/v1/object/public/bollette-pdf/${filePath}`
 
         setSharedPdfStatus('processing')
+        const attendiBollettaNuova = await preparaAttesaBollettaNuova(userId)
         const webhookRes = await fetch('https://hook.eu1.make.com/5n4w2qn99uf830yktlyjw8o17ogcd1xt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -7978,6 +8025,12 @@ export default function App() {
         })
         if (!webhookRes.ok) throw new Error('Errore nell\'elaborazione')
 
+        if (!(await attendiBollettaNuova())) {
+          setSharedPdfStatus('duplicate')
+          track('pdf_condiviso_doppione', { fonte: 'web_share_target' })
+          setTimeout(() => setSharedPdfStatus(null), 7000)
+          return
+        }
         setSharedPdfStatus('success')
         track('pdf_condiviso', { fonte: 'web_share_target' })
         setTimeout(async () => { setSharedPdfStatus(null); await loadData() }, 4000)
@@ -8408,11 +8461,12 @@ export default function App() {
       {/* Toast per PDF condiviso da altre app */}
       {sharedPdfStatus && (
         <div className="fixed top-6 left-4 right-4 z-50" style={{ maxWidth: 398, margin: '0 auto' }}>
-          <div className={`rounded-2xl shadow-lg p-4 flex items-center gap-3 ${sharedPdfStatus === 'success' ? 'bg-green-50 border border-green-200' : sharedPdfStatus === 'error' ? 'bg-red-50 border border-red-200' : 'bg-white border border-bolly-200'}`}>
+          <div className={`rounded-2xl shadow-lg p-4 flex items-center gap-3 ${sharedPdfStatus === 'success' ? 'bg-green-50 border border-green-200' : sharedPdfStatus === 'error' ? 'bg-red-50 border border-red-200' : sharedPdfStatus === 'duplicate' ? 'bg-amber-50 border border-amber-200' : 'bg-white border border-bolly-200'}`} role="status">
             {sharedPdfStatus === 'uploading' && <><Loader2 size={20} className="animate-spin text-bolly-500" /><p className="text-sm font-medium text-gray-900">Caricamento bolletta...</p></>}
             {sharedPdfStatus === 'processing' && <><Loader2 size={20} className="animate-spin text-bolly-500" /><p className="text-sm font-medium text-gray-900">Elaborazione AI in corso...</p></>}
             {sharedPdfStatus === 'success' && <><Check size={20} className="text-green-600" /><p className="text-sm font-medium text-gray-900">Bolletta elaborata con successo!</p></>}
             {sharedPdfStatus === 'error' && <><AlertTriangle size={20} className="text-red-600" /><p className="text-sm font-medium text-gray-900">{sharedPdfError || 'Errore nell\'elaborazione'}</p></>}
+            {sharedPdfStatus === 'duplicate' && <><AlertTriangle size={20} className="text-amber-600" aria-hidden="true" /><p className="text-sm font-medium text-gray-900">Questa bolletta c'era già: stesso importo e stessa scadenza, non l'abbiamo aggiunta di nuovo.</p></>}
           </div>
         </div>
       )}

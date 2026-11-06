@@ -22,6 +22,28 @@ import {
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
+// PDF privati, passo 1 (6 nov 2026): "Apri PDF" usa un link temporaneo (5 minuti) firmato da Supabase,
+// valido solo per il proprietario. Se qualcosa va storto apre il vecchio link pubblico,
+// che funziona finché lo spazio bollette-pdf resta pubblico (passo 4 del PIANO-PDF-PRIVATI).
+async function apriPdf(e, pdfUrl) {
+  e.preventDefault()
+  e.stopPropagation()
+  const finestra = window.open('', '_blank') // aperta subito, altrimenti iPhone la blocca come pop-up
+  if (finestra) finestra.opener = null
+  let url = pdfUrl
+  try {
+    const path = pdfUrl.split('/bollette-pdf/')[1]
+    if (path) {
+      const { data } = await supabase.storage.from('bollette-pdf').createSignedUrl(decodeURIComponent(path.split('?')[0]), 300)
+      if (data?.signedUrl) url = data.signedUrl
+    }
+  } catch (err) {
+    console.error('Link temporaneo PDF non creato:', err)
+  }
+  if (finestra) finestra.location.href = url
+  else window.location.href = url
+}
+
 const IconMap = { Zap, Flame, Droplets, Phone, Wifi, Shield, Package, Tv, Repeat, CreditCard, Landmark, ShoppingCart, Car, Gamepad2, Heart, Home, Shirt, UtensilsCrossed, MoreHorizontal }
 
 const ICONE_ABITAZIONE = [
@@ -1169,7 +1191,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
                         href={b.pdf_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={e => e.stopPropagation()}
+                        onClick={e => apriPdf(e, b.pdf_url)}
                         className="inline-flex items-center gap-1 text-xs font-medium text-bolly-700 bg-bolly-50 border border-bolly-200 px-2 py-0.5 rounded-full hover:bg-bolly-100"
                         title="Apri PDF"
                       >
@@ -1611,7 +1633,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
                       </a>
                     )}
                     {b.pdf_url && (
-                      <a href={b.pdf_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="p-1.5 rounded-lg hover:bg-bolly-50 text-bolly-500" title="Apri PDF" aria-label="Apri PDF">
+                      <a href={b.pdf_url} target="_blank" rel="noopener noreferrer" onClick={e => apriPdf(e, b.pdf_url)} className="p-1.5 rounded-lg hover:bg-bolly-50 text-bolly-500" title="Apri PDF" aria-label="Apri PDF">
                         <ExternalLink size={18} aria-hidden="true" />
                       </a>
                     )}
@@ -7505,7 +7527,7 @@ function TerminiCondizioni({ onBack }) {
       </div>
 
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-5 text-sm text-gray-700 leading-relaxed">
-        <p className="text-xs text-gray-400">Ultimo aggiornamento: 29 aprile 2026</p>
+        <p className="text-xs text-gray-400">Ultimo aggiornamento: 6 novembre 2026</p>
 
         <div>
           <h3 className="font-semibold text-gray-900 mb-2">Descrizione del servizio</h3>
@@ -7521,7 +7543,7 @@ function TerminiCondizioni({ onBack }) {
 
         <div>
           <h3 className="font-semibold text-gray-900 mb-2">Analisi automatizzata delle bollette</h3>
-          <p>Bolly utilizza sistemi di intelligenza artificiale (Claude, fornito da Anthropic) per estrarre automaticamente i dati dalle bollette caricate o inoltrate dall'utente (importo, scadenza, fornitore, categoria).</p>
+          <p>Bolly utilizza sistemi di intelligenza artificiale (Claude, fornito da Anthropic) per estrarre automaticamente i dati dalle bollette caricate o inoltrate dall'utente (importo, scadenza, fornitore, categoria). Per farlo, il contenuto della bolletta viene inviato ad Anthropic PBC (Stati Uniti), che lo tratta per conto del Titolare al solo scopo di estrarre questi dati.</p>
           <p className="mt-2">L'utente riconosce e accetta che: l'estrazione automatica potrebbe contenere errori o imprecisioni; l'utente è responsabile della verifica dei dati estratti prima di fare affidamento su di essi; Bolly mette a disposizione strumenti per la correzione manuale dei dati estratti erroneamente; il Titolare non è responsabile per eventuali danni derivanti da errori nell'estrazione automatica dei dati.</p>
         </div>
 
@@ -7685,7 +7707,7 @@ function OrfanaCard({ bolletta, contratti, onUpdate, onDelete, onCreaContrattoPr
       </div>
 
       {bolletta.pdf_url && (
-        <a href={bolletta.pdf_url} target="_blank" rel="noopener noreferrer" className="block mb-3">
+        <a href={bolletta.pdf_url} target="_blank" rel="noopener noreferrer" onClick={e => apriPdf(e, bolletta.pdf_url)} className="block mb-3">
           <div className="flex items-center gap-2 text-sm text-bolly-600 bg-bolly-50 rounded-xl px-3 py-2 border border-bolly-100 hover:bg-bolly-100">
             <ExternalLink size={16} />
             <span className="font-medium">Apri PDF ricevuto</span>

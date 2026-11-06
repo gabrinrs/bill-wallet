@@ -1741,12 +1741,9 @@ function FormContratto({ onSave, onBack, session, onRefresh, onGoHome, abitazion
 
       setUploadStatus('processing')
       const attendiBollettaNuova = await preparaAttesaBollettaNuova(userId)
-      const webhookRes = await fetch('https://hook.eu1.make.com/5n4w2qn99uf830yktlyjw8o17ogcd1xt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, pdf_url: pdfUrl })
-      })
-      if (!webhookRes.ok) throw new Error('Errore nell\'invio al sistema di elaborazione')
+      // 6 nov 2026: niente più chiamata diretta a Make, passa dalla portineria (Edge Function invia-pdf-make)
+      const { error: invioError } = await supabase.functions.invoke('invia-pdf-make', { body: { pdf_url: pdfUrl } })
+      if (invioError) throw new Error('Errore nell\'invio al sistema di elaborazione')
 
       if (!(await attendiBollettaNuova())) {
         setUploadStatus('duplicate')
@@ -2211,12 +2208,9 @@ function FormBolletta({ contratti, contrattoId, onSave, onBack, session, onRefre
       const webhookBody = { user_id: userId, pdf_url: pdfUrl }
       if (contrattoId) webhookBody.contratto_id = Number(contrattoId)
       const attendiBollettaNuova = await preparaAttesaBollettaNuova(userId)
-      const webhookRes = await fetch('https://hook.eu1.make.com/5n4w2qn99uf830yktlyjw8o17ogcd1xt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(webhookBody)
-      })
-      if (!webhookRes.ok) throw new Error('Errore nell\'invio al sistema di elaborazione')
+      // 6 nov 2026: passa dalla portineria (Edge Function invia-pdf-make); user_id lo prende dal login
+      const { error: invioError } = await supabase.functions.invoke('invia-pdf-make', { body: webhookBody })
+      if (invioError) throw new Error('Errore nell\'invio al sistema di elaborazione')
 
       if (!(await attendiBollettaNuova())) {
         setUploadStatus('duplicate')
@@ -8027,12 +8021,9 @@ export default function App() {
 
         setSharedPdfStatus('processing')
         const attendiBollettaNuova = await preparaAttesaBollettaNuova(userId)
-        const webhookRes = await fetch('https://hook.eu1.make.com/5n4w2qn99uf830yktlyjw8o17ogcd1xt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: userId, pdf_url: pdfUrl })
-        })
-        if (!webhookRes.ok) throw new Error('Errore nell\'elaborazione')
+        // 6 nov 2026: passa dalla portineria (Edge Function invia-pdf-make)
+        const { error: invioError } = await supabase.functions.invoke('invia-pdf-make', { body: { pdf_url: pdfUrl } })
+        if (invioError) throw new Error('Errore nell\'elaborazione')
 
         if (!(await attendiBollettaNuova())) {
           setSharedPdfStatus('duplicate')

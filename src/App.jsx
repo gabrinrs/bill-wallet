@@ -313,6 +313,17 @@ function ResetPassword({ onDone }) {
   )
 }
 
+// Avviso conguaglio (6 nov 2026): aumento_pct lo scrive il database quando una bolletta arrivata da sola
+// supera del 30% o più la media delle ultime 3 bollette vere del contratto.
+function AumentoBadge({ pct }) {
+  if (!pct) return null
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-corallo-700 bg-corallo-50 border border-corallo-200 px-2 py-0.5 rounded-full">
+      <TrendingUp size={10} aria-hidden="true" /> +{pct}%<span className="sr-only"> rispetto alla media delle ultime 3 bollette</span>
+    </span>
+  )
+}
+
 function FonteBadge({ fonte }) {
   if (fonte === 'email') return (
     <span className="inline-flex items-center gap-1 text-xs font-medium text-bolly-700 bg-bolly-50 px-2 py-0.5 rounded-full border border-bolly-100">
@@ -915,26 +926,21 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
     }, 0)
   }, [contrattiFiltrati])
 
+  // 6 nov 2026: una regola sola con push ed etichetta. Mostra le bollette non pagate con aumento_pct
+  // (calcolato dal database: +30% o più sulla media delle ultime 3 bollette vere). Prima: +5% sulla precedente.
   const alertTrend = useMemo(() => {
     const alerts = []
     contrattiFiltrati.forEach(c => {
-      const bolContratto = bolletteFiltrate
-        .filter(b => b.contratto_id === c.id && b.periodo && b.importo)
-        .sort((a, b) => new Date(a.periodo) - new Date(b.periodo))
-      if (bolContratto.length < 2) return
-      const ultima = Number(bolContratto[bolContratto.length - 1].importo)
-      const precedente = Number(bolContratto[bolContratto.length - 2].importo)
-      if (precedente <= 0) return
-      const variazione = ((ultima - precedente) / precedente) * 100
-      if (variazione > 5) {
-        alerts.push({
-          contratto: c,
-          variazione: variazione.toFixed(0),
-          ultima,
-          precedente,
-          categoria: getCategoria(c.categoria)
-        })
-      }
+      const conAumento = bolletteFiltrate
+        .filter(b => b.contratto_id === c.id && b.aumento_pct && !b.pagata)
+        .sort((a, b) => new Date(b.scadenza) - new Date(a.scadenza))
+      if (!conAumento.length) return
+      alerts.push({
+        contratto: c,
+        variazione: conAumento[0].aumento_pct,
+        ultima: Number(conAumento[0].importo),
+        categoria: getCategoria(c.categoria)
+      })
     })
     return alerts.sort((a, b) => Number(b.variazione) - Number(a.variazione))
   }, [contrattiFiltrati, bolletteFiltrate])
@@ -1168,7 +1174,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
                     {a.contratto.fornitore}: +{a.variazione}%
                   </p>
                   <p className="text-xs text-corallo-700 mt-0.5">
-                    Da {formatEuro(a.precedente)} a {formatEuro(a.ultima)} nell'ultima bolletta
+                    Bolletta da {formatEuro(a.ultima)}, più alta della media delle ultime 3. Controlla se è un conguaglio.
                   </p>
                 </div>
                 <ChevronRight size={18} className="text-corallo-400" />
@@ -1203,6 +1209,7 @@ function Dashboard({ contratti, bollette, spese, onSelectContratto, onNavigate, 
                         </span>
                       )}
                     <FonteBadge fonte={b.fonte} />
+                    <AumentoBadge pct={b.aumento_pct} />
                     {b.pdf_url && (
                       <a
                         href={b.pdf_url}
@@ -1635,7 +1642,7 @@ function DettaglioContratto({ contratto, bollette, onBack, onAggiungiBolletta, o
                       )}
                     </div>
                     <p className="text-sm text-gray-500">{b.periodo ? `${formatPeriodo(b.periodo)}${b.periodo_fine && b.periodo_fine !== b.periodo ? ' → ' + formatPeriodo(b.periodo_fine) : ''} · ` : ''}Scade {b.scadenza ? formatData(b.scadenza) : '—'}</p>
-                    <div className="mt-1"><FonteBadge fonte={b.fonte} /></div>
+                    <div className="mt-1 flex items-center gap-2"><FonteBadge fonte={b.fonte} /><AumentoBadge pct={b.aumento_pct} /></div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge stato={stato} />
@@ -2932,7 +2939,7 @@ function Notifiche({ contratti, bollette, dbNotifiche = [], onNotificheLette }) 
     return list.sort((a, b) => { const p = { scaduta: 0, urgente: 1, promemoria: 2 }; return (p[a.tipo] ?? 9) - (p[b.tipo] ?? 9) })
   }, [contratti, bollette])
 
-  const cfg = { urgente: 'bg-amber-50 border-amber-200 text-amber-600', scaduta: 'bg-red-50 border-red-200 text-red-600', promemoria: 'bg-bolly-50 border-bolly-200 text-bolly-500', broadcast: 'bg-gray-50 border-gray-200 text-gray-600' }
+  const cfg = { urgente: 'bg-amber-50 border-amber-200 text-amber-600', scaduta: 'bg-red-50 border-red-200 text-red-600', promemoria: 'bg-bolly-50 border-bolly-200 text-bolly-500', broadcast: 'bg-gray-50 border-gray-200 text-gray-600', anomalia_importo: 'bg-corallo-50 border-corallo-200 text-corallo-600' }
 
   const handleNotificaClick = (n) => {
     if (!n.url) return
@@ -4631,6 +4638,7 @@ function StoricoBollette({ bollette, contratti, onSelectContratto, onDeleteBolle
                         <div className="flex items-center gap-2 mt-0.5">
                           {b.scadenza && <p className="text-xs text-gray-500">Scade il {formatData(b.scadenza)}</p>}
                           <FonteBadge fonte={b.fonte} />
+                          <AumentoBadge pct={b.aumento_pct} />
                         </div>
                       </div>
                       <div className="text-right shrink-0">

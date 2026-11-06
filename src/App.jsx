@@ -45,13 +45,14 @@ async function apriPdf(e, pdfUrl) {
 }
 
 // Avviso doppioni (6 nov 2026): Make non crea la bolletta se ne esiste già una con stesso importo e scadenza.
-// Prima dell'invio a Make leggiamo l'ultima bolletta dell'utente; dopo aspettiamo (max 40 s) che ne compaia una nuova.
+// Prima dell'invio a Make leggiamo l'ultima bolletta dell'utente; dopo aspettiamo (max 20 s) che ne compaia una nuova.
+// Make ci mette ~4 s (misurato il 6 nov); 40 s su iPhone diventavano quasi un minuto e sembrava bloccato.
 // Se non compare, era un doppione. Ritorna una funzione da chiamare dopo l'invio: true = bolletta nuova creata.
 async function preparaAttesaBollettaNuova(userId) {
   const { data } = await supabase.from('bollette').select('id').eq('user_id', userId).order('id', { ascending: false }).limit(1)
   const ultimoId = data?.[0]?.id ?? 0
   return async () => {
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 10; i++) {
       await new Promise(r => setTimeout(r, 2000))
       const { data: nuove } = await supabase.from('bollette').select('id').eq('user_id', userId).gt('id', ultimoId).neq('fonte', 'ricorrente_auto').limit(1)
       if (nuove?.length) return true

@@ -4284,7 +4284,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
                   return (
                     <button
                       key={i}
-                      onClick={() => setPrevisioneEspansa(sel ? null : i)}
+                      onClick={() => { if (!sel) track('previsione_mese_aperto', { mese: i + 1 }); setPrevisioneEspansa(sel ? null : i) }}
                       className={`flex-shrink-0 flex flex-col items-center gap-1 rounded-lg py-1 ${sel ? 'bg-gray-50' : ''}`}
                       style={{ width: 44 }}
                       aria-label={`${MESI[m.mese]} ${m.anno}: ${formatEuro(m.totale)} previsti`}
@@ -4301,7 +4301,7 @@ function Calendario({ bollette, contratti, spese, onSelectContratto, onAggiungiS
               {(() => {
                 const top = previsione.mesi[previsione.indiceMax]
                 if (!top) return null
-                const apri = () => setPrevisioneEspansa(previsione.indiceMax)
+                const apri = () => { track('previsione_mese_aperto', { mese: previsione.indiceMax + 1 }); setPrevisioneEspansa(previsione.indiceMax) }
                 if (previsione.hasPicco) {
                   return (
                     <button onClick={apri} className="w-full text-left flex items-start gap-2 rounded-xl p-3 mt-1" style={{ backgroundColor: '#FFF1EC' }}>
@@ -6829,6 +6829,7 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
         await updateAbitazione(editingAbitazione.id, { nome: trimmed, icona: abitazioneIcona, indirizzo: abitazioneIndirizzo.trim() || null })
       } else {
         await createAbitazione({ nome: trimmed, icona: abitazioneIcona, indirizzo: abitazioneIndirizzo.trim() || null })
+        track('abitazione_aggiunta', { totale: (abitazioni?.length || 0) + 1 })
       }
       setShowAbitazioneForm(false)
       setEditingAbitazione(null)
@@ -6879,6 +6880,7 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(profile?.email_dedicata || '')
+      track('indirizzo_copiato', { dove: 'menu' })
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (e) {
@@ -8164,6 +8166,11 @@ export default function App() {
       setBollette(b)
       setSpese(s)
       setAbitazioni(ab)
+      // PostHog (6 nov 2026): proprietà utente per confrontare chi usa l'inoltro email con chi no
+      setUserProperties({
+        numero_contratti: c.length,
+        usa_inoltro_email: b.some(x => x.fonte === 'email' && x.stato_elaborazione === 'ok'),
+      })
       setAmiciCount(amici.length + esterni.length)
       setRichiesteCount(richieste.length)
       setSplits(sp)
@@ -8240,6 +8247,7 @@ export default function App() {
         }}
         onCreateContratto={async (form) => {
           const result = await createContratto(form)
+          track('contratto_creato', { categoria: form.categoria, fornitore: form.fornitore, dove: 'onboarding', primo: contratti.length === 0 })
           return result
         }}
         onCreateBolletta={async (form) => {
@@ -8261,7 +8269,7 @@ export default function App() {
 
   const handleSaveContratto = async (form) => {
     await createContratto(form)
-    track('contratto_creato', { categoria: form.categoria, fornitore: form.fornitore })
+    track('contratto_creato', { categoria: form.categoria, fornitore: form.fornitore, dove: 'app', primo: contratti.length === 0 })
     await loadData()
     setScreen('dashboard')
   }

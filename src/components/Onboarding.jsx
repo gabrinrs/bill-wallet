@@ -1,8 +1,9 @@
 // Onboarding.jsx — Welcome screens + guida primo contratto/bolletta per nuovi utenti Bolly
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Bell, Mail, ChevronRight, ChevronLeft, Sparkles, Check, Package, PenLine, HelpCircle } from 'lucide-react'
 import { subscribeToPush } from '../lib/pushNotifications'
+import { track } from '../lib/analytics'
 import { CATEGORIE, FORNITORI } from '../lib/categorie'
 import { Zap, Flame, Droplets, Phone, Wifi, Shield, Tv, Repeat, CreditCard, Landmark } from 'lucide-react'
 
@@ -44,16 +45,34 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
   const updateContratto = (f, v) => setContrattoForm(p => ({ ...p, [f]: v }))
   const updateBolletta = (f, v) => setBollettaForm(p => ({ ...p, [f]: v }))
 
+  // PostHog (6 nov 2026): un evento per ogni schermata del primo avvio, per vedere dove ci si ferma
+  const nomePasso = phase === 'slides'
+    ? `slide_${step + 1}`
+    : phase === 'contratto'
+      ? (['contratto_categoria', 'contratto_fornitore', 'contratto_dettagli'][contrattoStep] || `contratto_${contrattoStep}`)
+      : phase
+  useEffect(() => { track('onboarding_passo', { passo: nomePasso }) }, [nomePasso])
+
   const handleActivatePush = async () => {
     setPushLoading(true)
     const success = await subscribeToPush(userId)
     setPushResult(success ? 'ok' : 'denied')
+    if (!success) track('push_rifiutate', { dove: 'onboarding', motivo: 'telefono' })
     setPushLoading(false)
   }
 
-  const handleSkipPush = () => setPushResult('denied')
+  const handleSkipPush = () => {
+    track('push_rifiutate', { dove: 'onboarding', motivo: 'non_ora' })
+    setPushResult('denied')
+  }
 
   const handleFinish = () => {
+    onComplete()
+  }
+
+  // "Salta": separato da "completato", così in PostHog si vede chi salta e da quale schermata
+  const handleSalta = () => {
+    track('onboarding_saltato', { passo: nomePasso })
     onComplete()
   }
 
@@ -172,7 +191,7 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <div className="flex justify-end px-6 pt-4">
-          <button onClick={handleFinish} className="text-gray-400 text-sm font-medium px-3 py-1">Salta</button>
+          <button onClick={handleSalta} className="text-gray-400 text-sm font-medium px-3 py-1">Salta</button>
         </div>
 
         <div className="flex-1 flex items-center justify-center">{slides[step]}</div>
@@ -214,7 +233,7 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
       return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
           <div className="flex justify-end px-6 pt-4">
-            <button onClick={handleFinish} className="text-gray-400 text-sm font-medium px-3 py-1">Salta</button>
+            <button onClick={handleSalta} className="text-gray-400 text-sm font-medium px-3 py-1">Salta</button>
           </div>
           <div className="flex-1 px-6 pt-2 pb-6 overflow-y-auto">
             <div className="text-center mb-6">
@@ -260,7 +279,7 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
         return (
           <div className="min-h-screen bg-gray-50 flex flex-col">
             <div className="flex justify-end px-6 pt-4">
-              <button onClick={handleFinish} className="text-gray-400 text-sm font-medium px-3 py-1">Salta</button>
+              <button onClick={handleSalta} className="text-gray-400 text-sm font-medium px-3 py-1">Salta</button>
             </div>
             <div className="flex-1 px-6 pt-2 pb-6">
               <div className="flex items-center gap-3 mb-4">
@@ -282,7 +301,7 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
       return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
           <div className="flex justify-end px-6 pt-4">
-            <button onClick={handleFinish} className="text-gray-400 text-sm font-medium px-3 py-1">Salta</button>
+            <button onClick={handleSalta} className="text-gray-400 text-sm font-medium px-3 py-1">Salta</button>
           </div>
           <div className="flex-1 px-6 pt-2 pb-6 overflow-y-auto">
             <div className="flex items-center gap-3 mb-4">
@@ -311,7 +330,7 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <div className="flex justify-end px-6 pt-4">
-          <button onClick={handleFinish} className="text-gray-400 text-sm font-medium px-3 py-1">Salta</button>
+          <button onClick={handleSalta} className="text-gray-400 text-sm font-medium px-3 py-1">Salta</button>
         </div>
         <div className="flex-1 px-6 pt-2 pb-6 overflow-y-auto">
           <div className="flex items-center gap-3 mb-4">
@@ -437,7 +456,7 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <div className="flex justify-end px-6 pt-4">
-          <button onClick={handleFinish} className="text-gray-400 text-sm font-medium px-3 py-1">Salta</button>
+          <button onClick={handleSalta} className="text-gray-400 text-sm font-medium px-3 py-1">Salta</button>
         </div>
         <div className="flex-1 px-6 pt-2 pb-6 overflow-y-auto">
           <div className="text-center mb-6">

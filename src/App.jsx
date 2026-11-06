@@ -3039,7 +3039,7 @@ function Notifiche({ contratti, bollette, dbNotifiche = [], onNotificheLette }) 
 // FORM SPESA GIORNALIERA
 // ============================================================
 
-function FormSpesa({ onSave, onBack, dataPrecompilata }) {
+function FormSpesa({ onSave, onBack, dataPrecompilata, pianoInfo, onShowPaywall }) {
   const now = new Date()
   const oggi = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
   const [importo, setImporto] = useState('')
@@ -3193,7 +3193,11 @@ function FormSpesa({ onSave, onBack, dataPrecompilata }) {
         className="hidden"
       />
       <button
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => {
+          // Scansione scontrini = funzione Premium (decisione 6 nov 2026). In beta è sbloccata per tutti.
+          if (pianoInfo && !pianoInfo.isPremium) { if (onShowPaywall) onShowPaywall(); return }
+          fileInputRef.current?.click()
+        }}
         disabled={scanning}
         className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 shadow-sm disabled:opacity-60"
       >
@@ -7010,9 +7014,11 @@ function MenuPanel({ profile, session, onBack, onLogout, onNavigate, onUpdatePro
         const isPremium = pianoInfo.isPremium
         const isInTrial = pianoInfo.isInTrial
         const giorni = pianoInfo.giorniRimasti
-        const pianoLabel = isPremium
-          ? (isInTrial ? `Trial — ${giorni} ${giorni === 1 ? 'giorno rimasto' : 'giorni rimasti'}` : 'Premium')
-          : 'Gratuito'
+        const pianoLabel = pianoInfo.inBeta
+          ? 'Premium · incluso gratis durante la beta'
+          : isPremium
+            ? (isInTrial ? `Trial — ${giorni} ${giorni === 1 ? 'giorno rimasto' : 'giorni rimasti'}` : 'Premium')
+            : 'Gratuito'
         const pianoBg = isPremium ? '#00897B18' : '#F3F4F6'
         const pianoColor = isPremium ? '#00695C' : '#6B7280'
         const pianoIconBg = isPremium ? '#00897B' : '#9CA3AF'
@@ -8416,7 +8422,7 @@ export default function App() {
       case 'aggiungi-contratto': return <FormContratto onSave={handleSaveContratto} onBack={() => { setPrecompFromOrfana(null); setScreen(precompFromOrfana ? 'bollette-orfane' : 'aggiungi') }} session={session} onRefresh={loadData} onGoHome={() => { setPrecompFromOrfana(null); setScreen('dashboard') }} abitazioni={abitazioni} initialForm={precompFromOrfana} />
       case 'modifica-contratto': return editingContratto ? <FormModificaContratto contratto={editingContratto} onSave={handleUpdateContratto} onBack={() => { setEditingContratto(null); setScreen('dettaglio') }} abitazioni={abitazioni} bollette={bollette} /> : null
       case 'aggiungi-bolletta': return <FormBolletta contratti={contratti} contrattoId={selectedContrattoId} onSave={handleSaveBolletta} onBack={() => selectedContrattoId ? setScreen('dettaglio') : setScreen('aggiungi')} session={session} onRefresh={loadData} onGoHome={() => setScreen('dashboard')} />
-      case 'aggiungi-spesa': return <FormSpesa onSave={handleSaveSpesa} onBack={async () => { setSpesaDataPrecompilata(null); await loadData(); setScreen('dashboard') }} dataPrecompilata={spesaDataPrecompilata} />
+      case 'aggiungi-spesa': return <FormSpesa onSave={handleSaveSpesa} onBack={async () => { setSpesaDataPrecompilata(null); await loadData(); setScreen('dashboard') }} dataPrecompilata={spesaDataPrecompilata} pianoInfo={pianoInfo} onShowPaywall={() => setShowPaywall(true)} />
       case 'aggiungi-entrata': return <FormEntrata onSave={handleSaveSpesa} onBack={() => setScreen('dashboard')} />
       case 'modifica-spesa': return editingSpesa ? <FormModificaSpesa spesa={editingSpesa} onSave={handleUpdateSpesa} onBack={() => { setEditingSpesa(null); setScreen('dashboard') }} /> : null
       case 'spese-lista': return <ListaSpese spese={spese} onBack={() => setScreen('dashboard')} onDelete={handleDeleteSpesa} />
@@ -8456,7 +8462,7 @@ export default function App() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pt-6 pb-6 safe-top">{renderScreen()}</div>
 
       {/* Paywall overlay */}
-      {showPaywall && <ModalePaywall onClose={() => setShowPaywall(false)} pianoInfo={pianoInfo} />}
+      {showPaywall && !pianoInfo.isPremium && <ModalePaywall onClose={() => setShowPaywall(false)} pianoInfo={pianoInfo} />}
 
       {/* Toast per PDF condiviso da altre app */}
       {sharedPdfStatus && (

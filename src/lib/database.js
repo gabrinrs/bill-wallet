@@ -723,9 +723,18 @@ export function isEarlyAdopterSignup(signupDate) {
   return signup >= launch && signup <= windowEnd
 }
 
+// 6 nov 2026 — decisione Gabri: durante la beta Premium è incluso per tutti, senza data di fine.
+// Nessun paywall finché non ci sono pagamenti. Per riattivare piani e paywall: mettere false.
+// (Con true i piani nel database restano com'erano: free/trial/premium non vengono toccati.)
+export const PREMIUM_GRATIS_BETA = true
+
 export function getPianoInfo(profile, signupDate = null) {
   const isEarlyAdopter = isEarlyAdopterSignup(signupDate)
   const base = { isEarlyAdopter }
+
+  if (PREMIUM_GRATIS_BETA) {
+    return { piano: 'premium', isPremium: true, isInTrial: false, giorniRimasti: null, trialScaduto: false, inBeta: true, ...base }
+  }
 
   if (!profile) return { piano: 'free', isPremium: false, isInTrial: false, giorniRimasti: 0, trialScaduto: false, ...base }
 

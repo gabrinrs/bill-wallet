@@ -1,4 +1,7 @@
 {
+  "redirects": [
+    { "source": "/ig", "destination": "/?utm_source=instagram&utm_medium=social", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/blog", "destination": "https://bolly-blog.vercel.app/blog/" },
     { "source": "/blog/(.*)", "destination": "https://bolly-blog.vercel.app/blog/$1" }

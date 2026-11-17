@@ -41,6 +41,8 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
     importo: '', scadenza: '', periodo: '', metodo_pagamento: null,
   })
   const [savingBolletta, setSavingBolletta] = useState(false)
+  // 17 nov 2026: chi non ha la bolletta sotto mano può finire senza inventarsi un importo
+  const [senzaBolletta, setSenzaBolletta] = useState(false)
 
   const updateContratto = (f, v) => setContrattoForm(p => ({ ...p, [f]: v }))
   const updateBolletta = (f, v) => setBollettaForm(p => ({ ...p, [f]: v }))
@@ -90,6 +92,12 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
       setPhase('bolletta')
     } catch (e) { console.error(e) }
     setSavingContratto(false)
+  }
+
+  const handleBollettaDopo = () => {
+    track('onboarding_bolletta_dopo')
+    setSenzaBolletta(true)
+    setPhase('done')
   }
 
   const handleSaveBolletta = async () => {
@@ -467,6 +475,11 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
             <p className="text-sm text-gray-500">Ora aggiungiamo la prima bolletta</p>
           </div>
 
+          <button onClick={handleBollettaDopo}
+            className="w-full py-3 mb-4 border border-bolly-300 text-bolly-600 font-medium rounded-xl bg-white active:scale-[0.98] transition-transform">
+            Non ce l'ho sotto mano, la aggiungo dopo
+          </button>
+
           <Tooltip text="Inserisci i dati dell'ultima bolletta che hai ricevuto per questo contratto. Così Bolly saprà quando scade il prossimo pagamento." />
 
           <div className="space-y-4 mt-3">
@@ -507,7 +520,7 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
             </div>
           </div>
 
-          <button onClick={handleSaveBolletta} disabled={savingBolletta || !bollettaForm.importo || !bollettaForm.scadenza}
+          <button onClick={handleSaveBolletta} disabled={savingBolletta || !(parseFloat(bollettaForm.importo) > 0) || !bollettaForm.scadenza}
             className="w-full py-3 mt-6 bg-bolly-500 text-white font-semibold rounded-xl disabled:opacity-40 active:scale-[0.98] transition-transform">
             {savingBolletta ? 'Salvataggio...' : 'Salva bolletta'}
           </button>
@@ -533,9 +546,20 @@ export default function Onboarding({ emailDedicata, userId, onComplete, onCreate
         <Check size={40} className="text-green-600" />
       </div>
       <h1 className="text-2xl font-bold text-gray-900 mb-3 text-center">Tutto pronto!</h1>
-      <p className="text-gray-500 text-center leading-relaxed mb-8">
-        Il tuo primo contratto e la tua prima bolletta sono stati salvati. Bolly ti avviserà prima di ogni scadenza.
-      </p>
+      {senzaBolletta ? (
+        <div className="text-gray-500 text-center leading-relaxed mb-8 space-y-3">
+          <p>Il tuo primo contratto è salvato.</p>
+          <p>
+            Quando arriva la bolletta, caricala con il pulsante <strong>+ Aggiungi</strong> in basso (PDF o foto: i dati li leggiamo noi)
+            {emailDedicata ? <> oppure girala a <strong className="text-bolly-600 break-all">{emailDedicata}</strong></> : null}.
+            Da lì Bolly ti avviserà prima della scadenza.
+          </p>
+        </div>
+      ) : (
+        <p className="text-gray-500 text-center leading-relaxed mb-8">
+          Il tuo primo contratto e la tua prima bolletta sono stati salvati. Bolly ti avviserà prima di ogni scadenza.
+        </p>
+      )}
       <button onClick={handleFinish}
         className="w-full py-3.5 rounded-xl font-semibold text-white shadow-sm transition-all active:scale-[0.98]"
         style={{ background: 'linear-gradient(145deg, #00897B, #00695C)' }}>

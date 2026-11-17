@@ -5,7 +5,7 @@ import { CATEGORIE, FORNITORI, cercaFornitore, getCategoria, PORTALI_PAGAMENTO, 
 import { formatEuro, formatData, formatPeriodo, giorniDa, getStatoBolletta, STATO_CONFIG } from './lib/helpers'
 import { subscribeToPush, isPushSubscribed } from './lib/pushNotifications'
 import { identifyUser, track, trackScreen, resetAnalytics, setUserProperties } from './lib/analytics'
-import Auth from './components/Auth'
+import Auth, { arrivoDaLinkScaduto } from './components/Auth'
 import Onboarding from './components/Onboarding'
 import LandingPage from './components/LandingPage'
 import VideoSplash from './components/VideoSplash'
@@ -7939,7 +7939,8 @@ export default function App() {
   const [session, setSession] = useState(null)
   const [isRecovery, setIsRecovery] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [showAuth, setShowAuth] = useState(false)
+  // Arrivo da un link email scaduto → apri subito la schermata di accesso con l'avviso
+  const [showAuth, setShowAuth] = useState(arrivoDaLinkScaduto)
   const [profile, setProfile] = useState(null)
   const [contratti, setContratti] = useState([])
   const [bollette, setBollette] = useState([])
